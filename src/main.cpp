@@ -25,7 +25,7 @@ void loop() {
   //Serial.println("hello");
   //debug_if(true,"debug_if:%d\n",data);
   debug("%d\n",data);
-  debug("%d\n",data);
+
   /*
    vTaskSuspendAll();       // 开启调度锁      
         printf("任务vTaskLed1正在运行\r\n");   
