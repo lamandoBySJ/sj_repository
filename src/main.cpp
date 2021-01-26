@@ -16,58 +16,7 @@ void setup() {
   
   LoRa.dumpRegisters(Serial);
 
-  debug("%d\n",Heltec.display->getStringWidth("a"));
-  debug("%d\n",Heltec.display->getStringWidth("b"));
-  debug("%d\n",Heltec.display->getStringWidth("c"));
-  debug("%d\n",Heltec.display->getStringWidth("d"));
-  debug("%d\n",Heltec.display->getStringWidth("e"));
-  debug("%d\n",Heltec.display->getStringWidth("f"));
-  debug("%d\n",Heltec.display->getStringWidth("g"));
-  debug("%d\n",Heltec.display->getStringWidth("h"));
-  debug("%d\n",Heltec.display->getStringWidth("i"));
-  debug("%d\n",Heltec.display->getStringWidth("j"));
-  debug("%d\n",Heltec.display->getStringWidth("k"));
-  debug("%d\n",Heltec.display->getStringWidth("l"));
-  debug("%d\n",Heltec.display->getStringWidth("m"));
-  debug("%d\n",Heltec.display->getStringWidth("n"));
-  debug("%d\n",Heltec.display->getStringWidth("o"));
-  debug("%d\n",Heltec.display->getStringWidth("p"));
-  debug("%d\n",Heltec.display->getStringWidth("q"));
-  debug("%d\n",Heltec.display->getStringWidth("r"));
-  debug("%d\n",Heltec.display->getStringWidth("s"));
-  debug("%d\n",Heltec.display->getStringWidth("t"));
-  debug("%d\n",Heltec.display->getStringWidth("u"));
-  debug("%d\n",Heltec.display->getStringWidth("v"));
-  debug("%d\n",Heltec.display->getStringWidth("w"));
-  debug("%d\n",Heltec.display->getStringWidth("x"));
-  debug("%d\n",Heltec.display->getStringWidth("y"));
-  debug("%d\n",Heltec.display->getStringWidth("z"));
-  debug("%d\n",Heltec.display->getStringWidth("A"));
-  debug("%d\n",Heltec.display->getStringWidth("B"));
-  debug("%d\n",Heltec.display->getStringWidth("C"));
-  debug("%d\n",Heltec.display->getStringWidth("D"));
-  debug("%d\n",Heltec.display->getStringWidth("E"));
-  debug("%d\n",Heltec.display->getStringWidth("F"));
-  debug("%d\n",Heltec.display->getStringWidth("G"));
-  debug("%d\n",Heltec.display->getStringWidth("H"));
-  debug("%d\n",Heltec.display->getStringWidth("I"));
-  debug("%d\n",Heltec.display->getStringWidth("J"));
-  debug("%d\n",Heltec.display->getStringWidth("K"));
-  debug("%d\n",Heltec.display->getStringWidth("L"));
-  debug("%d\n",Heltec.display->getStringWidth("M"));
-  debug("%d\n",Heltec.display->getStringWidth("N"));
-  debug("%d\n",Heltec.display->getStringWidth("O"));
-  debug("%d\n",Heltec.display->getStringWidth("P"));
-  debug("%d\n",Heltec.display->getStringWidth("Q"));
-  debug("%d\n",Heltec.display->getStringWidth("R"));
-  debug("%d\n",Heltec.display->getStringWidth("S"));
-  debug("%d\n",Heltec.display->getStringWidth("T"));
-  debug("%d\n",Heltec.display->getStringWidth("U"));
-  debug("%d\n",Heltec.display->getStringWidth("V"));
-  debug("%d\n",Heltec.display->getStringWidth("W"));
-  debug("%d\n",Heltec.display->getStringWidth("X"));
-  debug("%d\n",Heltec.display->getStringWidth("Y"));
-  debug("%d\n",Heltec.display->getStringWidth("Z"));
+
 }
 
 void loop() {
