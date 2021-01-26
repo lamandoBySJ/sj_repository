@@ -21,9 +21,8 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-
   //Serial.println("hello");
-  //debug_if(true,"debug_if:%d\n",data);
+  debug_if(true,"debug_if:%d\n",data);
   debug("%d\n",data);
 
   /*
