@@ -7,7 +7,7 @@ using namespace rtos;
 
 #define BAND    433E6 
 
-Mutex  mutex;
+rtos::Mutex  mutex;
 char data[]="hello sj~";
 void setup() {
   // put your setup code here, to run once:
@@ -15,14 +15,14 @@ void setup() {
   Heltec.begin(true /*DisplayEnable Enable*/, true /*LoRa Disable*/, true /*Serial Enable*/, true /*PABOOST Enable*/, BAND /*long BAND*/);
   
   LoRa.dumpRegisters(Serial);
-
+  //Serial.
 
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   //Serial.println("hello");
-  debug_if(true,"debug_if:%d\n",data);
+  //debug_if(true,"debug_if:%d\n",data);
   debug("%d\n",data);
 
   /*
