@@ -2,20 +2,35 @@
 #include <heltec.h>
 //#include <ArduinoJson.h>
 #include "platform/mbed.h"
-
 using namespace rtos;
 
 #define BAND    433E6 
+#if CONFIG_FREERTOS_UNICORE
+#define ARDUINO_RUNNING_CORE 0
+#else
+#define ARDUINO_RUNNING_CORE 1
+#endif
 
 rtos::Mutex  mutex;
 char data[]="hello sj~";
+
+void TaskDebug( void *pvParameters );
+
 void setup() {
   // put your setup code here, to run once:
     //WIFI Kit series V1 not support Vext control
   Heltec.begin(true /*DisplayEnable Enable*/, true /*LoRa Disable*/, true /*Serial Enable*/, true /*PABOOST Enable*/, BAND /*long BAND*/);
   
   LoRa.dumpRegisters(Serial);
-  //Serial.
+  
+  xTaskCreatePinnedToCore(
+    TaskDebug
+    ,  "TaskCtrlSystem"
+    ,  8*1024  
+    ,  NULL
+    ,  1  
+    ,  NULL
+    ,  ARDUINO_RUNNING_CORE);
 
 }
 
@@ -37,4 +52,12 @@ void loop() {
   //std_mutex.lock();
   //delay(10000);
   ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
+}
+
+void TaskDebug( void *pvParameters )
+{
+  for(;;){
+      debug("task debug ...\n");
+      ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
+  }
 }
