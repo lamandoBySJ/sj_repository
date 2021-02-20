@@ -45,7 +45,8 @@ void setup() {
   
   //LoRa.dumpRegisters(Serial);
   
- 
+
+
   xTaskCreatePinnedToCore(
     TaskDebug
     ,  "TaskDebug"
