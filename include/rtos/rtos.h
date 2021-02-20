@@ -3,9 +3,10 @@
 
 //#include "rtos/internal/mbed_rtos_storage.h"
 #include "rtos/Kernel.h"
-//#include "rtos/Thread.h"
+#include "rtos/Thread.h"
 #include "rtos/ThisThread.h"
 #include "rtos/Mutex.h"
+#include <platform/Callback.h>
 //#include "rtos/Semaphore.h"
 //#include "rtos/Mail.h"
 //#include "rtos/MemoryPool.h"
@@ -20,6 +21,7 @@
 
 #ifndef MBED_NO_GLOBAL_USING_DIRECTIVE
 using namespace rtos;
+using namespace mbed;
 #endif
 
 #endif

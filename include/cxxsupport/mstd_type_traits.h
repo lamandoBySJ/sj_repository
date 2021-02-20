@@ -96,7 +96,7 @@ template<class...>
 struct conjunction : std::true_type { };
 template<class B>
 struct conjunction<B> : B { };
-#if __cplusplus > 201103L
+#if __cplusplus >= 201103L
 template<class B, class... BN>
 struct conjunction<B, BN...> : std::conditional_t<bool(B::value), conjunction<BN...>, B> { };
 #endif
@@ -169,23 +169,21 @@ using is_detected_convertible = std::is_convertible<detected_t<Op, Args...>, To>
 /* More post-C++14 stuff */
 namespace mstd {
 
-#if __cplusplus > 201103L
 using std::remove_const_t;
-#endif
 using std::remove_const;
-//using std::remove_const_t;
+using std::remove_const_t;
 using std::remove_volatile;
-//using std::remove_volatile_t;
+using std::remove_volatile_t;
 using std::remove_cv;
-//using std::remove_cv_t;
+using std::remove_cv_t;
 using std::add_const;
-//using std::add_const_t;
+using std::add_const_t;
 using std::add_volatile;
-//using std::add_volatile_t;
+using std::add_volatile_t;
 using std::add_cv;
-//using std::add_cv_t;
+using std::add_cv_t;
 using std::remove_reference;
-//using std::remove_reference_t;
+using std::remove_reference_t;
 using std::add_lvalue_reference;
 using std::add_rvalue_reference;
 using std::is_void;
@@ -259,36 +257,36 @@ using std::has_virtual_destructor;
 using std::alignment_of;
 using std::rank;
 using std::extent;
-//using std::is_convertible;
+using std::is_convertible;
 using std::is_base_of;
 
 using std::make_signed;
-//using std::make_signed_t;
+using std::make_signed_t;
 using std::make_unsigned;
-//using std::make_unsigned_t;
+using std::make_unsigned_t;
 using std::remove_extent;
-//using std::remove_extent_t;
+using std::remove_extent_t;
 using std::remove_all_extents;
-//using std::remove_all_extents_t;
+using std::remove_all_extents_t;
 using std::remove_pointer;
-//using std::remove_pointer_t;
+using std::remove_pointer_t;
 using std::add_pointer;
-//using std::add_pointer_t;
+using std::add_pointer_t;
 using std::aligned_storage;
-//using std::aligned_storage_t;
+using std::aligned_storage_t;
 using std::decay;
-//using std::decay_t;
+using std::decay_t;
 using std::common_type;
-//using std::common_type_t;
+using std::common_type_t;
 using std::result_of;
-//using std::result_of_t;
+using std::result_of_t;
 
 /* C++20 remove_cvref */
-//template <typename T>
-//struct remove_cvref : type_identity<std::remove_cv_t<std::remove_reference_t<T>>> { };
+template <typename T>
+struct remove_cvref : type_identity<std::remove_cv_t<std::remove_reference_t<T>>> { };
 
-//template <typename T>
-//using remove_cvref_t = typename remove_cvref<T>::type;
+template <typename T>
+using remove_cvref_t = typename remove_cvref<T>::type;
 
 }
 
@@ -323,7 +321,7 @@ struct is_reference_wrapper : std::false_type { };
 template <typename T>
 struct is_reference_wrapper<std::reference_wrapper<T>> : std::true_type { };
 
-#if __cplusplus > 201103L
+#if __cplusplus >= 201103L
 /* F is pointer to member function, and 1st arg decays to matching class */
 template<typename Base, typename F, typename T1, class... Args>
 auto INVOKE(F Base::* fn, T1 &&target, Args &&...args)

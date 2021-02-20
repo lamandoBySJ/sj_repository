@@ -164,7 +164,7 @@ private:
     mbed_rtos_storage_mutex_t _obj_mem;
     uint32_t                  _count;
 #endif
- SemaphoreHandle_t _semaphore = xSemaphoreCreateMutex();
+ SemaphoreHandle_t _semaphore = NULL;
 };
 
 #define MBED_CONF_RTOS_PRESENT 1

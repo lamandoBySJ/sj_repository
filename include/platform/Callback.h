@@ -29,13 +29,14 @@
 // Controlling switches from config:
 // MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL - support storing non-trivial function objects
 // MBED_CONF_PLATFORM_CALLBACK_COMPARABLE - support memcmp comparing stored objects (requires zero padding)
-
-#ifdef __ICCARM__
+//#define __ICCARM__ 1
+#ifdef __ICCARM__ 
 /* Force platform.callback-nontrivial for IAR */
 #undef MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL
 #define MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL 1
 #endif
 
+#define __cpp_lib_nonmember_container_access 201411
 
 namespace mbed {
 /** \addtogroup platform-public-api */
@@ -109,7 +110,7 @@ struct unqualify_fn<R(Args...) const volatile & noexcept> : mstd::type_identity<
 
 template <typename T>
 using unqualify_fn_t = typename unqualify_fn<T>::type;
-#if __cplusplus > 201103L
+#if __cplusplus >= 201103L
 template <typename R, typename F, typename... Args, typename std::enable_if_t<!std::is_void<R>::value, int> = 0>
 R invoke_r(F&& f, Args&&... args)
 {
@@ -125,7 +126,7 @@ R invoke_r(F&& f, Args&&... args)
 template<typename F>
 struct can_null_check :
         mstd::disjunction<
-                std::is_function<std::remove_pointer_t<F>>,
+                std::is_function<mstd::remove_pointer_t<F>>,
                 std::is_member_pointer<F>
         > {
 };
@@ -224,7 +225,8 @@ struct [[gnu::may_alias]] CallbackBase {
         return _call;
 #endif
     }
-#if __cplusplus > 201103L
+
+#if MBED_CONF_PLATFORM_CALLBACK
     auto call_fn() const
     {
 #if MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL
@@ -233,6 +235,15 @@ struct [[gnu::may_alias]] CallbackBase {
         return _call;
 #endif
     }
+#else
+    const Control call_fn() const
+        {
+    #if MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL
+            return _ops->call;
+    #else
+            return _call;
+    #endif
+        }
 #endif
     // Clear to empty - does not destroy
     void clear() noexcept
@@ -343,12 +354,14 @@ public:
     Callback(const Callback &other) = default;
     Callback(Callback &&other) = default;
 #endif // MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL
-    #if __cpp_lib_nonmember_container_access >= 201411
+  
+   
     /** Create a Callback with a member function
      *  @param obj      Pointer to object to invoke member function on
      *  @param method   Member function to attach
      */
-    template<typename Obj, typename Method, typename std::enable_if_t<mstd::is_invocable_r<R, Method, Obj, ArgTs...>::value, int> = 0>
+    //, typename std::enable_if_t<mstd::is_invocable_r<R, Method, Obj, ArgTs...>::value, int> =0
+    template<typename Obj, typename Method>
     Callback(Obj obj, Method method) : CallbackBase()
     {
         generate([obj, method](ArgTs... args) {
@@ -360,7 +373,7 @@ public:
      *  @param func     Static function to attach
      *  @param arg      Pointer argument to function
      */
-    template<typename Fn, typename BoundArg, typename std::enable_if_t<mstd::is_invocable_r<R, Fn, BoundArg, ArgTs...>::value, int> = 0>
+    template<typename Fn, typename BoundArg, typename std::enable_if_t<mstd::is_invocable_r<R, Fn, BoundArg, ArgTs...>::value, int> =0>
     Callback(Fn func, BoundArg arg) : CallbackBase()
     {
         generate([func, arg](ArgTs... args) {
@@ -400,7 +413,7 @@ public:
         }
     }
     // *INDENT-ON*
-    #endif
+   
     /** Destroy a callback
      */
 #if MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL
@@ -458,7 +471,7 @@ public:
     Callback &operator=(Callback &&that) = default;
 #endif // MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL
 
-    #if __cplusplus > 201103L
+    #if __cplusplus >= 201103L
     /** Assign a callback
      */
     // C++ std::function lacks the is_same restriction here, which would mean non-const lvalue references hit this,
@@ -506,7 +519,7 @@ public:
     R call(ArgTs... args) const
     {
         //MBED_ASSERT(bool(*this));
-        //auto op_call = reinterpret_cast<call_type *>(call_fn());
+        auto op_call = reinterpret_cast<call_type *>(call_fn());
         return op_call(this, args...);
     }
 
@@ -606,7 +619,7 @@ public:
 private:
     using call_type = R(const CallbackBase *, ArgTs...);
     
-    #if __cplusplus > 201103L
+  
     // *INDENT-OFF*
     // Generate operations for function object
     // Storage assumed to be uninitialised - destructor should have already been called if it was previously used
@@ -642,7 +655,7 @@ private:
         // Move the functor into storage
         static_assert(sizeof(F) <= sizeof(Store) && alignof(F) <= alignof(Store),
                       "Type F must not exceed the size of the Callback class");
-        new (&_storage) F(std::move(f));
+        new (&_storage) (F)(std::move(f));
 
 #if MBED_CONF_PLATFORM_CALLBACK_COMPARABLE
         // Zero out any padding - required for Callback-to-Callback comparisons.
@@ -652,9 +665,9 @@ private:
 #endif
     }
     // *INDENT-ON*
-#endif
+
     // Target call routine - custom needed for each <F,R,ArgTs...> tuple
-    #if __cplusplus > 201103L
+ 
     template <typename F>
     static R target_call(const CallbackBase *p, ArgTs... args)
     {
@@ -662,7 +675,7 @@ private:
         F &f = const_cast<F &>(reinterpret_cast<const F &>(p->_storage));
         return detail::invoke_r<R>(f, std::forward<ArgTs>(args)...);
     }
-    #endif
+ 
 };
 
 // Internally used event type
