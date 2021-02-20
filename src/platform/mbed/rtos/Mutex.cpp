@@ -5,7 +5,7 @@ using namespace rtos;
 
 Mutex::Mutex()
 {
-    
+   _semaphore = xSemaphoreCreateMutex();
 }
 Mutex::~Mutex()
 {
