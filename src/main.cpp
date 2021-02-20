@@ -107,14 +107,3 @@ void TaskTest( void *pvParameters )
       ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
   }
 }
-
-  
-
-  /*
-   vTaskSuspendAll();       // 开启调度锁      
-        printf("任务vTaskLed1正在运行\r\n");   
-        if(!xTaskResumeAll())      // 关闭调度锁，如果需要任务切换，此函数返回pdTRUE，否则返回pdFALSE 
-        {
-            taskYIELD ();
-        }    
-  */
