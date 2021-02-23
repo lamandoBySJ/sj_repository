@@ -4,6 +4,8 @@
 #include "platform/mbed.h"
 #include <rtos/Thread.h>
 #include <rtos/rtos.h>
+#include "TimeMachine.h"
+
 using namespace rtos;
 
 #define BAND    433E6 
@@ -13,6 +15,7 @@ using namespace rtos;
 #define ARDUINO_RUNNING_CORE 1
 #endif
 
+TimeMachine RTC;
 //rtos::Mutex  std_mutex;
 Thread thread;
 char data[]="hello sj~";
@@ -45,8 +48,9 @@ void setup() {
   
   //LoRa.dumpRegisters(Serial);
   
+  RTC.startup(NULL);
 
-
+  /*
   xTaskCreatePinnedToCore(
     TaskDebug
     ,  "TaskDebug"
@@ -68,8 +72,8 @@ void setup() {
   attachInterrupt(0, []  {
     vTaskSuspend(handleTaskDebug);
   }, FALLING);   
-  
-  //debug("__cplusplus:%d", __cplusplus):
+  */
+  debug("__cplusplus:%d , RTC:%d,%s\n", __cplusplus,RTC.getEpoch(),RTC.getDateTime());
  
   test.startup();
   

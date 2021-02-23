@@ -9,12 +9,13 @@ class TimeMachine
 public:
     TimeMachine(DS1307& rtc,rtos::Mutex& mutex);
     ~TimeMachine()=default;
-   void startup(void *pvParameters);
-   void startup(time_t timestamp);
+    void startup(void *pvParameters);
+    void startup(time_t timestamp);
+    time_t getEpoch();
+    String getDateTime();
 private:
     DS1307& _rtc;
-    rtos::Mutex* _mutex;
-    time_t _timestamp;
+    rtos::Mutex& _mutex;
 };
 
 #endif
