@@ -9,14 +9,18 @@
 using namespace rtos;
 
 #define BAND    433E6 
+#if CONFIG_AUTOSTART_ARDUINO
 #if CONFIG_FREERTOS_UNICORE
 #define ARDUINO_RUNNING_CORE 0
 #else
 #define ARDUINO_RUNNING_CORE 1
 #endif
+#endif
 
-TimeMachine RTC;
-//rtos::Mutex  std_mutex;
+rtos::Mutex std_mutex;
+DS1307 RTC(Wire,21,22,13);
+TimeMachine timeMachine(RTC,std_mutex);
+
 Thread thread;
 char data[]="hello sj~";
 
@@ -30,7 +34,8 @@ public:
     ~Test(){};
     void run(){
       for(;;){
-        debug("Test Callback ...\n");
+        String&& rtc = RTC.getDateTime();
+        debug("Callback: __cplusplus:%s , RTC:%d,%s\n", String(__cplusplus,DEC).c_str(),(int32_t)RTC.getEpoch(),rtc.c_str() );
         ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
       }
     }
@@ -45,10 +50,9 @@ void setup() {
   // put your setup code here, to run once:
     //WIFI Kit series V1 not support Vext control
   Heltec.begin(true /*DisplayEnable Enable*/, true /*LoRa Disable*/, true /*Serial Enable*/, true /*PABOOST Enable*/, BAND /*long BAND*/);
-  
   //LoRa.dumpRegisters(Serial);
-  
-  RTC.startup(NULL);
+
+  timeMachine.startup(NULL);
 
   /*
   xTaskCreatePinnedToCore(
@@ -73,7 +77,8 @@ void setup() {
     vTaskSuspend(handleTaskDebug);
   }, FALLING);   
   */
-  debug("__cplusplus:%d , RTC:%d,%s\n", __cplusplus,RTC.getEpoch(),RTC.getDateTime());
+  String&& debugtime=RTC.getDateTime();
+  debug("RTC:%d,%s\n",(int)RTC.getEpoch(),debugtime.c_str());
  
   test.startup();
   
@@ -87,9 +92,10 @@ void loop() {
   ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
   if(++cnt==10){
     cnt=0;
-    vTaskResume(handleTaskDebug);
+   // vTaskResume(handleTaskDebug);
   }
   debug("%s:%d\n",data,cnt);
+  vTaskDelete(NULL);
 }
 
 void TaskDebug( void *pvParameters )

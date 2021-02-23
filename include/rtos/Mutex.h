@@ -172,6 +172,7 @@ private:
 #if !MBED_CONF_RTOS_PRESENT
 inline Mutex::Mutex()
 {
+  
 }
 
 inline Mutex::Mutex(const char *)
@@ -184,6 +185,7 @@ inline Mutex::~Mutex()
 
 inline void Mutex::lock()
 {
+   debug("inline void Mutex::lock()\n");
 }
 
 inline bool Mutex::trylock()
@@ -213,6 +215,7 @@ inline bool Mutex::trylock_until(Kernel::Clock::time_point)
 
 inline void Mutex::unlock()
 {
+  debug("inline void Mutex::unlock()\n");
 }
 #endif
 

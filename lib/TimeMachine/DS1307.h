@@ -50,8 +50,10 @@
 class DS1307 //: public RTCDateTime
 {
     public:
-        DS1307(TwoWire* wire,uint8_t  sda,uint8_t scl,uint8_t rst,uint32_t frequency=100000){
-            _wire=wire;
+        DS1307() = delete;
+        DS1307(TwoWire& wire,uint8_t  sda,uint8_t scl,uint8_t rst,uint32_t frequency=100000):_wire(wire)
+        {
+            
             this->_sda=sda;
             this->_scl=scl;
             this->_rst=rst;
@@ -105,7 +107,7 @@ class DS1307 //: public RTCDateTime
         bool isOutPinEnabled();
         bool isSqweEnabled();
 
-        TwoWire* _wire;
+        TwoWire& _wire;
         static String datetime;
     private:
       
@@ -120,8 +122,8 @@ class DS1307 //: public RTCDateTime
 class NVRAM
 {
     public:
-        NVRAM(TwoWire* wire){
-             _wire=wire;
+        NVRAM(TwoWire& wire):_wire(wire){
+
         }
         ~NVRAM(){
           
@@ -135,7 +137,7 @@ class NVRAM
     private:
      uint8_t             _sda;
         uint8_t             _scl;
-        TwoWire* _wire;
+        TwoWire& _wire;
 };
 
 /* Instantiate class

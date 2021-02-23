@@ -8,12 +8,10 @@ TimeMachine::TimeMachine(DS1307& rtc,rtos::Mutex& mutex):_rtc(rtc),_mutex(mutex)
 void TimeMachine::startup(void *pvParameters)
  {
      _mutex.lock();
-
      _rtc.begin();
      _rtc.setEpoch(1610000000);
      _rtc.setHourMode(CLOCK_H24);
      _rtc.startClock();
-
     _mutex.unlock();
  }
  time_t TimeMachine::getEpoch()

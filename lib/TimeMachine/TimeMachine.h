@@ -7,10 +7,10 @@
 class TimeMachine
 {
 public:
+    TimeMachine()=delete;
     TimeMachine(DS1307& rtc,rtos::Mutex& mutex);
     ~TimeMachine()=default;
     void startup(void *pvParameters);
-    void startup(time_t timestamp);
     time_t getEpoch();
     String getDateTime();
 private:
