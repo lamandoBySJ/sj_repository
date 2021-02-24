@@ -5,7 +5,7 @@ using namespace rtos;
 
 Mutex::Mutex()
 {
-    
+   _semaphore = xSemaphoreCreateMutex();
 }
 Mutex::~Mutex()
 {
@@ -25,26 +25,41 @@ void Mutex::lock()
 
 bool Mutex::trylock()
 {
+    if( xSemaphoreTake(_semaphore, ( TickType_t ) 100) != pdTRUE ){
+       return false;
+    }
     return true;
 }
 
 bool Mutex::trylock_for(uint32_t millisec)
 {
+    if( xSemaphoreTake(_semaphore, ( TickType_t ) millisec) != pdTRUE ){
+       return false;
+    }
     return true;
 }
 
 bool Mutex::trylock_for(Kernel::Clock::duration_u32 rel_time)
 {
+    if( xSemaphoreTake(_semaphore, ( TickType_t ) rel_time.count()) != pdTRUE ){
+       return false;
+    }
     return true;
 }
 
 bool Mutex::trylock_until(uint64_t millisec)
 {
+    if( xSemaphoreTake(_semaphore, ( TickType_t ) millisec) != pdTRUE ){
+       return false;
+    }
     return true;
 }
 
 bool Mutex::trylock_until(Kernel::Clock::time_point abs_time)
 {
+    if( xSemaphoreTake(_semaphore, ( TickType_t )abs_time.time_since_epoch().count()) != pdTRUE ){
+       return false;
+    }
     return true;
 }
 
