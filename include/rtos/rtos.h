@@ -7,6 +7,7 @@
 #include "rtos/ThisThread.h"
 #include "rtos/Mutex.h"
 #include <platform/Callback.h>
+#include <platform/mbed_debug.h>
 //#include "rtos/Semaphore.h"
 //#include "rtos/Mail.h"
 //#include "rtos/MemoryPool.h"

@@ -11,6 +11,7 @@ class TimeMachine
 public:
     TimeMachine()=delete;
     TimeMachine(DS1307& rtc,rtos::Mutex& mutex);
+    TimeMachine(DS1307& rtc,rtos::Mutex& mutex,uint8_t rst);
     ~TimeMachine()=default;
     void startup(void *pvParameters);
     time_t getEpoch();
@@ -18,6 +19,7 @@ public:
 private:
     DS1307& _rtc;
     rtos::Mutex& _mutex;
+    uint8_t _rst;
 };
 
 #endif

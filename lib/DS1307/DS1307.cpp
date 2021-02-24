@@ -513,7 +513,8 @@ setTime
 
 void DS1307::setTime(uint8_t hour, uint8_t minute, uint8_t second)
 {
-	bool h_mode, meridiem;
+	bool h_mode;
+ // bool meridiem;
 	h_mode = getHourMode();
  
       _wire.beginTransmission(DS1307_ADDR);
@@ -605,7 +606,7 @@ void DS1307::setEpoch(time_t epoch)
   
 	time_t rawtime;
 	struct tm epoch_tm, * ptr_epoch_tm;
-	uint16_t year;
+	//uint16_t year;
 	rawtime = epoch;
 	ptr_epoch_tm = gmtime(&rawtime);
 	epoch_tm = *ptr_epoch_tm;

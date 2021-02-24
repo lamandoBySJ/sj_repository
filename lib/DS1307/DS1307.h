@@ -32,8 +32,8 @@
 #define SQW08kHz 18
 #define SQW32kHz 32
 
-#include <time.h>
 #include <Arduino.h>
+#include <time.h>
 #include <Wire.h>
 #include <iostream>
 #include <iomanip>
@@ -51,12 +51,11 @@ class DS1307 //: public RTCDateTime
 {
     public:
         DS1307() = delete;
-        DS1307(TwoWire& wire,uint8_t  sda,uint8_t scl,uint8_t rst,uint32_t frequency=100000):_wire(wire)
+        DS1307(TwoWire& wire,uint8_t  sda,uint8_t scl,uint32_t frequency=100000):_wire(wire)
         {
             
             this->_sda=sda;
             this->_scl=scl;
-            this->_rst=rst;
             this->_frequency =frequency;
         }
     
@@ -115,7 +114,6 @@ class DS1307 //: public RTCDateTime
         uint8_t bcd2bin (uint8_t val);
         uint8_t             _sda;
         uint8_t             _scl;
-        uint8_t             _rst;
         uint32_t _frequency;
 };
 
