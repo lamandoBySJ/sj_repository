@@ -37,7 +37,7 @@ namespace mstd {
 // [func.invoke]
 #if __cpp_lib_invoke >= 201411
 using std::invoke;
-#elif __cplusplus > 201103L
+#elif __cplusplus >= 201103L
 template <typename F, typename... Args>
 invoke_result_t<F, Args...> invoke(F&& f, Args&&... args)
 {

@@ -1,19 +1,24 @@
-#include <Arduino.h>
 #include <heltec.h>
 //#include <ArduinoJson.h>
-#include "platform/mbed.h"
-#include <rtos/Thread.h>
 #include <rtos/rtos.h>
+#include <TimeMachine/TimeMachine.h>
+
 using namespace rtos;
 
 #define BAND    433E6 
+#if CONFIG_AUTOSTART_ARDUINO
 #if CONFIG_FREERTOS_UNICORE
 #define ARDUINO_RUNNING_CORE 0
 #else
 #define ARDUINO_RUNNING_CORE 1
 #endif
+#endif
 
-//rtos::Mutex  std_mutex;
+
+rtos::Mutex std_mutex;
+DS1307 RTC(Wire,32,33);
+TimeMachine timeMachine(RTC,std_mutex);
+
 Thread thread;
 char data[]="hello sj~";
 
@@ -27,7 +32,8 @@ public:
     ~Test(){};
     void run(){
       for(;;){
-        debug("Test Callback ...\n");
+        String&& rtc = RTC.getDateTime();
+        debug("Callback: __cplusplus:%s , RTC:%d,%s\n", String(__cplusplus,DEC).c_str(),(int32_t)RTC.getEpoch(),rtc.c_str() );
         ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
       }
     }
@@ -42,10 +48,11 @@ void setup() {
   // put your setup code here, to run once:
     //WIFI Kit series V1 not support Vext control
   Heltec.begin(true /*DisplayEnable Enable*/, true /*LoRa Disable*/, true /*Serial Enable*/, true /*PABOOST Enable*/, BAND /*long BAND*/);
-  
   //LoRa.dumpRegisters(Serial);
-  
- 
+
+  timeMachine.startup(NULL);
+
+  /*
   xTaskCreatePinnedToCore(
     TaskDebug
     ,  "TaskDebug"
@@ -67,8 +74,10 @@ void setup() {
   attachInterrupt(0, []  {
     vTaskSuspend(handleTaskDebug);
   }, FALLING);   
-  
-  //debug("__cplusplus:%d", __cplusplus):
+
+  */
+  String&& debugtime=RTC.getDateTime();
+  debug("RTC:%d,%s\n",(int)RTC.getEpoch(),debugtime.c_str());
  
   test.startup();
   
@@ -79,31 +88,28 @@ void loop() {
   //Serial.println("hello");
   //debug_if(true,"debug_if:%d\n",data);
   //delay(10000);
-  ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
+ // ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
   if(++cnt==10){
     cnt=0;
-    vTaskResume(handleTaskDebug);
+   // vTaskResume(handleTaskDebug);
   }
-  debug("%s:%d\n",data,cnt);
+  //debug("%s:%d\n",data,cnt);
+  vTaskDelete(NULL);
 }
 
 void TaskDebug( void *pvParameters )
 {
-  int x = 0;
+  //int x = 0;
   for(;;){
-      //std_mutex.lock();
-      debug("task debug ...%d\n",++x);
-      //std_mutex.unlock();
-      ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
+      //debug("task debug ...%d\n",++x);
+      //ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
   }
 }
 void TaskTest( void *pvParameters )
 {
-  int x = 0;
+  //int x = 0;
   for(;;){
-      //std_mutex.lock();
-      debug("task test ......%d\n",++x);
-      //std_mutex.unlock();
-      ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
+     // debug("task test ......%d\n",++x);
+      //ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
   }
 }
