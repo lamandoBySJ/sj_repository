@@ -20,7 +20,7 @@ DS1307 RTC(Wire,32,33);
 TimeMachine timeMachine(RTC,std_mutex);
 
 
-Thread thread;
+
 Thread thread1("Thd1",1024*2,1);
 Thread thread2("Thd2",1024*2,2);
 
@@ -69,7 +69,7 @@ public:
     ~Test(){};
     void run(){
       for(;;){
-        String&& rtc = RTC.getDateTime();
+        String&& rtc = timeMachine.getDateTime();
         debug("Callback: __cplusplus:%s , RTC:%d,%s\n", String(__cplusplus,DEC).c_str(),(int32_t)RTC.getEpoch(),rtc.c_str() );
         ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
       }
@@ -79,7 +79,7 @@ public:
       thread.start(callback(this,&Test::run));
     }
 private:
-  
+    Thread thread;
 };
   int a =1993;
 Test test;
