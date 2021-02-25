@@ -18,25 +18,24 @@
 #define MBED_CALLBACK_H
 
 #include <cstring>
-#include "cxxsupport/mstd_cstddef.h"
+#include <cxxsupport/mstd_cstddef.h>
 #include <stdint.h>
-#include "cxxsupport/mstd_new.h"
-#include "mbed_assert.h"
-#include "mbed_toolchain.h"
-#include "cxxsupport/mstd_type_traits.h"
-#include "cxxsupport/mstd_functional.h"
-#include "cxxsupport/mstd_type_traits.h"
+#include <cxxsupport/mstd_new.h>
+#include "platform/mbed_assert.h"
+#include "platform/mbed_toolchain.h"
+#include <cxxsupport/mstd_type_traits.h>
+#include <cxxsupport/mstd_functional.h>
+
 // Controlling switches from config:
 // MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL - support storing non-trivial function objects
 // MBED_CONF_PLATFORM_CALLBACK_COMPARABLE - support memcmp comparing stored objects (requires zero padding)
-//#define __ICCARM__ 1
-#ifdef __ICCARM__ 
+
+#ifdef __ICCARM__
 /* Force platform.callback-nontrivial for IAR */
 #undef MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL
 #define MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL 1
 #endif
 
-#define __cpp_lib_nonmember_container_access 201411
 
 namespace mbed {
 /** \addtogroup platform-public-api */
@@ -110,7 +109,7 @@ struct unqualify_fn<R(Args...) const volatile & noexcept> : mstd::type_identity<
 
 template <typename T>
 using unqualify_fn_t = typename unqualify_fn<T>::type;
-#if __cplusplus >= 201103L
+
 template <typename R, typename F, typename... Args, typename std::enable_if_t<!std::is_void<R>::value, int> = 0>
 R invoke_r(F&& f, Args&&... args)
 {
@@ -126,11 +125,10 @@ R invoke_r(F&& f, Args&&... args)
 template<typename F>
 struct can_null_check :
         mstd::disjunction<
-                std::is_function<mstd::remove_pointer_t<F>>,
+                std::is_function<std::remove_pointer_t<F>>,
                 std::is_member_pointer<F>
         > {
 };
-#endif
 // *INDENT-ON*
 
 struct [[gnu::may_alias]] CallbackBase {
@@ -226,8 +224,7 @@ struct [[gnu::may_alias]] CallbackBase {
 #endif
     }
 
-#if MBED_CONF_PLATFORM_CALLBACK
-    auto call_fn() const
+    auto call_fn() const -> decltype(_call) 
     {
 #if MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL
         return _ops->call;
@@ -235,16 +232,7 @@ struct [[gnu::may_alias]] CallbackBase {
         return _call;
 #endif
     }
-#else
-    const Control call_fn() const
-        {
-    #if MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL
-            return _ops->call;
-    #else
-            return _call;
-    #endif
-        }
-#endif
+
     // Clear to empty - does not destroy
     void clear() noexcept
     {
@@ -354,14 +342,12 @@ public:
     Callback(const Callback &other) = default;
     Callback(Callback &&other) = default;
 #endif // MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL
-  
-   
+
     /** Create a Callback with a member function
      *  @param obj      Pointer to object to invoke member function on
      *  @param method   Member function to attach
      */
-    //, typename std::enable_if_t<mstd::is_invocable_r<R, Method, Obj, ArgTs...>::value, int> =0
-    template<typename Obj, typename Method>
+    template<typename Obj, typename Method, typename std::enable_if_t<mstd::is_invocable_r<R, Method, Obj, ArgTs...>::value, int> = 0>
     Callback(Obj obj, Method method) : CallbackBase()
     {
         generate([obj, method](ArgTs... args) {
@@ -373,7 +359,7 @@ public:
      *  @param func     Static function to attach
      *  @param arg      Pointer argument to function
      */
-    template<typename Fn, typename BoundArg, typename std::enable_if_t<mstd::is_invocable_r<R, Fn, BoundArg, ArgTs...>::value, int> =0>
+    template<typename Fn, typename BoundArg, typename std::enable_if_t<mstd::is_invocable_r<R, Fn, BoundArg, ArgTs...>::value, int> = 0>
     Callback(Fn func, BoundArg arg) : CallbackBase()
     {
         generate([func, arg](ArgTs... args) {
@@ -413,7 +399,7 @@ public:
         }
     }
     // *INDENT-ON*
-   
+
     /** Destroy a callback
      */
 #if MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL
@@ -471,7 +457,6 @@ public:
     Callback &operator=(Callback &&that) = default;
 #endif // MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL
 
-    #if __cplusplus >= 201103L
     /** Assign a callback
      */
     // C++ std::function lacks the is_same restriction here, which would mean non-const lvalue references hit this,
@@ -493,7 +478,7 @@ public:
         return *this;
     }
     // *INDENT-ON*
-    #endif
+
     template <typename F>
     Callback &operator=(std::reference_wrapper<F> f) noexcept
     {
@@ -518,7 +503,7 @@ public:
      */
     R call(ArgTs... args) const
     {
-        //MBED_ASSERT(bool(*this));
+        MBED_ASSERT(bool(*this));
         auto op_call = reinterpret_cast<call_type *>(call_fn());
         return op_call(this, args...);
     }
@@ -618,8 +603,7 @@ public:
 
 private:
     using call_type = R(const CallbackBase *, ArgTs...);
-    
-  
+
     // *INDENT-OFF*
     // Generate operations for function object
     // Storage assumed to be uninitialised - destructor should have already been called if it was previously used
@@ -655,7 +639,7 @@ private:
         // Move the functor into storage
         static_assert(sizeof(F) <= sizeof(Store) && alignof(F) <= alignof(Store),
                       "Type F must not exceed the size of the Callback class");
-        new (&_storage) (F)(std::move(f));
+        new (&_storage) (F) (std::move(f));
 
 #if MBED_CONF_PLATFORM_CALLBACK_COMPARABLE
         // Zero out any padding - required for Callback-to-Callback comparisons.
@@ -667,7 +651,6 @@ private:
     // *INDENT-ON*
 
     // Target call routine - custom needed for each <F,R,ArgTs...> tuple
- 
     template <typename F>
     static R target_call(const CallbackBase *p, ArgTs... args)
     {
@@ -675,7 +658,6 @@ private:
         F &f = const_cast<F &>(reinterpret_cast<const F &>(p->_storage));
         return detail::invoke_r<R>(f, std::forward<ArgTs>(args)...);
     }
- 
 };
 
 // Internally used event type
@@ -804,7 +786,6 @@ Callback<R(ArgTs...)> callback(R(*func)(const volatile T *, ArgTs...), const vol
     return Callback<R(ArgTs...)>(func, arg);
 }
 
-#if __cplusplus > 201103L
 /** Create a Create a callback class with type inferred from the arguments
  *  @param f Function object to attach
  *  @note The function object is limited to a single word of storage
@@ -815,7 +796,7 @@ callback(F &&f)
 {
     return Callback<detail::unqualify_fn_t<detail::member_type_t<decltype(&mstd::remove_cvref_t<F>::operator())>>>(std::forward<F>(f));
 }
-#endif
+
 #if __cplusplus >= 201703 || __cpp_deduction_guides >= 201703
 /* Deduction guides that can replace callback() helper */
 template <typename R, typename... Args>

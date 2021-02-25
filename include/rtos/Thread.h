@@ -107,6 +107,7 @@ public:
     {
         constructor( pcName, usStackDepth ,uxPriority,pvCreatedTask,xCoreID);
     }
+    
     /*
     Thread(TaskFunction_t pvTaskCode,
 										const char * const pcName,

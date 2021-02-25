@@ -30,7 +30,7 @@
  *   - mstd::is_constant_evaluated
  */
 
-#include "mstd_cstddef.h"
+#include <cxxsupport/mstd_cstddef.h>
 #include <type_traits>
 
 // The template stuff in here is too confusing for astyle
@@ -78,9 +78,9 @@ namespace mstd {
 
 using std::is_same;
 using std::conditional;
-//using std::conditional_t;
+using std::conditional_t;
 using std::enable_if;
-//using std::enable_if_t;
+using std::enable_if_t;
 using std::is_convertible;
 using std::is_object;
 using std::is_reference;
@@ -94,20 +94,18 @@ using std::negation;
 #else
 template<class...>
 struct conjunction : std::true_type { };
-template<class B>
-struct conjunction<B> : B { };
-#if __cplusplus >= 201103L
-template<class B, class... BN>
-struct conjunction<B, BN...> : std::conditional_t<bool(B::value), conjunction<BN...>, B> { };
-#endif
+template<class B_1>
+struct conjunction<B_1> : B_1 { };
+template<class B_1, class... BN>
+struct conjunction<B_1, BN...> : std::conditional_t<bool(B_1::value), conjunction<BN...>, B_1> { };
+
 template<class...>
 struct disjunction : std::false_type { };
-template<class B>
-struct disjunction<B> : B { };
-#if __cplusplus > 201103L
-template<class B, class... BN>
-struct disjunction<B, BN...> : std::conditional_t<bool(B::value), B, disjunction<BN...>> { };
-#endif
+template<class B_1>
+struct disjunction<B_1> : B_1 { };
+template<class B_1, class... BN>
+struct disjunction<B_1, BN...> : std::conditional_t<bool(B_1::value), B_1, disjunction<BN...>> { };
+
 template<class B>
 struct negation : bool_constant<!bool(B::value)> { };
 #endif
@@ -169,7 +167,6 @@ using is_detected_convertible = std::is_convertible<detected_t<Op, Args...>, To>
 /* More post-C++14 stuff */
 namespace mstd {
 
-using std::remove_const_t;
 using std::remove_const;
 using std::remove_const_t;
 using std::remove_volatile;
@@ -259,7 +256,6 @@ using std::rank;
 using std::extent;
 using std::is_convertible;
 using std::is_base_of;
-
 using std::make_signed;
 using std::make_signed_t;
 using std::make_unsigned;
@@ -321,7 +317,6 @@ struct is_reference_wrapper : std::false_type { };
 template <typename T>
 struct is_reference_wrapper<std::reference_wrapper<T>> : std::true_type { };
 
-#if __cplusplus >= 201103L
 /* F is pointer to member function, and 1st arg decays to matching class */
 template<typename Base, typename F, typename T1, class... Args>
 auto INVOKE(F Base::* fn, T1 &&target, Args &&...args)
@@ -395,7 +390,6 @@ auto INVOKE(F&& f, Args&&... args)
 {
     return std::forward<F>(f)(std::forward<Args>(args)...);
 }
-#endif
 #endif // __cpp_lib_invoke
 
 template <typename Void, typename F, typename... Args>
