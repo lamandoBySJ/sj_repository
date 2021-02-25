@@ -21,7 +21,7 @@ void TimeMachine::startup(void *pvParameters)
 
      _mutex.lock();
      _rtc.begin();
-     _rtc.setEpoch(1610000000);
+     _rtc.setEpoch(1614240624);
      _rtc.setHourMode(CLOCK_H24);
      _rtc.startClock();
     _mutex.unlock();
