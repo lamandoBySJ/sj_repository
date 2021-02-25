@@ -112,12 +112,12 @@ void setup() {
   debug("RTC:%d,%s\n",(int)RTC.getEpoch(),debugtime.c_str());
   
   
-  Work<int> work;
-  work.call();
+  //Work<int> work;
+  //work.call();
   ThisThread::sleep_for(Kernel::Clock::duration_u32(3000));
-  //test.startup();
-  //thread1.start(callback(TaskTest0));
- // thread2.start(callback(TaskTest,&a));
+  test.startup();
+  thread1.start(callback(TaskTest0));
+  thread2.start(callback(TaskTest,&a));
 
 
 }
