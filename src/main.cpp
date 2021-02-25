@@ -35,7 +35,6 @@ void TaskTest0()
   for(;;){
      // stdmutex.lock();
       debug("task test0 ......%d\n",++x);
-     
       ThisThread::sleep_for(Kernel::Clock::duration_u32(10000));
       //stdmutex.unlock();
   }
