@@ -97,6 +97,16 @@ void setup() {
     //LoRa.dumpRegisters(Serial);
 
   timeMachine.startup(NULL);
+  int timeout= 3;
+  do
+  {
+    ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
+    if(timeout-- == 0){
+        //todo send message
+        debug("RTC ERROR,please check out RTC DS1307\n");
+        break;
+    }
+  }while(timeMachine.getEpoch()==0);
 
  
   xTaskCreatePinnedToCore(
@@ -114,12 +124,14 @@ void setup() {
 
   
   String&& debugtime=RTC.getDateTime();
-  
-
   debug("RTC:%d,%s\n",(int)RTC.getEpoch(),debugtime.c_str());
   ThisThread::sleep_for(Kernel::Clock::duration_u32(3000));
   test.startup();
 
+  ThisThread::sleep_for(Kernel::Clock::duration_u32(3000));
+  test.startup();
+  thread1.start(callback(TaskTest0));
+  thread2.start(callback(TaskTest,&a));
 }
 
 void loop() {

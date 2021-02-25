@@ -5,7 +5,7 @@
 
 TimeMachine::TimeMachine(DS1307& rtc,rtos::Mutex& mutex):_rtc(rtc),_mutex(mutex)
 {
-    _rst = -1;
+    _rst = 0;
 }
 TimeMachine::TimeMachine(DS1307& rtc,rtos::Mutex& mutex,uint8_t rst):_rtc(rtc),_mutex(mutex)
 {
@@ -14,7 +14,7 @@ TimeMachine::TimeMachine(DS1307& rtc,rtos::Mutex& mutex,uint8_t rst):_rtc(rtc),_
  
 void TimeMachine::startup(void *pvParameters)
  {
-    if(_rst!=-1){
+    if(pvParameters != NULL){
       digitalWrite(_rst,HIGH);
       ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
     }
@@ -26,6 +26,7 @@ void TimeMachine::startup(void *pvParameters)
      _rtc.startClock();
     _mutex.unlock();
  }
+ 
  time_t TimeMachine::getEpoch()
  {
      time_t epoch=0;
@@ -35,7 +36,13 @@ void TimeMachine::startup(void *pvParameters)
      }
     _mutex.unlock();
     return epoch;
- }
+}
+void TimeMachine::setEpoch(time_t epoch)
+{
+     _mutex.lock();
+     _rtc.setEpoch(epoch);
+    _mutex.unlock();
+}
 
 String TimeMachine::getDateTime()
  {
