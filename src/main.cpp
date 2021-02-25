@@ -19,11 +19,10 @@ rtos::Mutex std_mutex;
 DS1307 RTC(Wire,32,33);
 TimeMachine timeMachine(RTC,std_mutex);
 
-xTaskHandle g_xTaskHandleTest0=NULL;
-xTaskHandle g_xTaskHandleTest=NULL;
+
 Thread thread;
-Thread thread1("Thd1",1024*2,1,&g_xTaskHandleTest0);
-Thread thread2("Thd2",1024*2,2,&g_xTaskHandleTest);
+Thread thread1("Thd1",1024*2,1);
+Thread thread2("Thd2",1024*2,2);
 
 char data[]="hello sj~";
 

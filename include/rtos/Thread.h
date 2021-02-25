@@ -98,27 +98,14 @@ public:
       @note You cannot call this function from ISR context.
     */
  
-    Thread(	const char * const pcName="default",
-										const uint32_t usStackDepth = 1024*2,
-									//	void * const pvParameters,
-										UBaseType_t uxPriority = 1,
-										TaskHandle_t* const pvCreatedTask = NULL,
-										const BaseType_t xCoreID = 1)
+    Thread(const char *pcName="default",
+            const uint32_t usStackDepth = 1024*2,
+          	UBaseType_t uxPriority = 1
+            ):_pcName(pcName),_usStackDepth(usStackDepth),_uxPriority(uxPriority)
     {
-        constructor( pcName, usStackDepth ,uxPriority,pvCreatedTask,xCoreID);
+        //constructor( pcName, usStackDepth ,uxPriority);
     }
-    
-    /*
-    Thread(TaskFunction_t pvTaskCode,
-										const char * const pcName,
-										const uint32_t usStackDepth,
-									//	void * const pvParameters,
-										UBaseType_t uxPriority,
-										TaskHandle_t* const pvCreatedTask,
-										const BaseType_t xCoreID)
-    {
-        constructor(pvTaskCode, pcName, usStackDepth ,uxPriority,pvCreatedTask,xCoreID);
-    }*/
+  
     /** Allocate a new thread without starting execution
       @param   tz_module      trustzone thread identifier (osThreadAttr_t::tz_module)
                               Context of RTOS threads in non-secure state must be saved when calling secure functions.
@@ -129,9 +116,17 @@ public:
       @param   stack_mem      pointer to the stack area to be used by this thread (default: nullptr).
       @param   name           name to be used for this thread. It has to stay allocated for the lifetime of the thread (default: nullptr)
       @note You cannot call this function from ISR context.
-    */
-
-  
+   
+    Thread(TaskFunction_t pvTaskCode=NULL,
+										const char * const pcName,
+										const uint32_t usStackDepth,
+										void * const pvParameters,
+										UBaseType_t uxPriority,
+										TaskHandle_t* const pvCreatedTask,
+										const BaseType_t xCoreID)
+    {
+        constructor( pcName, usStackDepth,uxPriority);
+    } */
     /** Starts a thread executing the specified function.
       @param   task           function to be executed by this thread.
       @return  status code that indicates the execution status of the function.
@@ -245,11 +240,14 @@ public:
 private:
     // Required to share definitions without
     // delegated constructors
-    void constructor(const char *pcName,
+    /*void constructor(const char *pcName,
 										const uint32_t usStackDepth,
-										UBaseType_t uxPriority,
-										TaskHandle_t* const pvCreatedTask,
-										const BaseType_t xCoreID);
+										UBaseType_t uxPriority
+									//	TaskHandle_t* const pvCreatedTask,
+									//	const BaseType_t xCoreID
+                    );
+    */
+    void constructor(const char * pcName,const uint32_t usStackDepth,const UBaseType_t uxPriority);
     
     static void _thunk(void *thread_ptr);
 
@@ -261,13 +259,14 @@ private:
   //  Semaphore                  _join_sem;
     //mutable Mutex              _mutex;
     //mbed_rtos_storage_thread_t _obj_mem;
-    TaskFunction_t _pvTaskCode;
+   // TaskFunction_t _pvTaskCode;
     const char *  _pcName;
 	  uint32_t _usStackDepth;
-		void *  _pvParameters;
+		//void *  _pvParameters;
 		UBaseType_t _uxPriority;
-		TaskHandle_t*  _pvCreatedTask;
-		BaseType_t _xCoreID;
+    TaskHandle_t  _pvCreatedTask = NULL;
+		const BaseType_t  _xCoreID =1;
+	
 };
 /** @}*/
 /** @}*/
