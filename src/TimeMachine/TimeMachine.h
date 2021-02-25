@@ -16,6 +16,7 @@ public:
     void startup(void *pvParameters);
     time_t getEpoch();
     String getDateTime();
+    void setEpoch(time_t epoch);
 private:
     DS1307& _rtc;
     rtos::Mutex& _mutex;

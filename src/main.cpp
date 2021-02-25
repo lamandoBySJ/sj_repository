@@ -71,7 +71,7 @@ public:
       for(;;){
         String&& rtc = RTC.getDateTime();
         debug("Callback: __cplusplus:%s , RTC:%d,%s\n", String(__cplusplus,DEC).c_str(),(int32_t)RTC.getEpoch(),rtc.c_str() );
-        ThisThread::sleep_for(1000);
+        ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
       }
     }
  
@@ -94,19 +94,19 @@ void setup() {
   int timeout= 3;
   do
   {
-    ThisThread::sleep_for(1000);
+    ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
     if(timeout-- == 0){
         //todo send message
         debug("RTC ERROR,please check out RTC DS1307\n");
         break;
     }
-  }while(timeMachine.getEpoch()!=0);
+  }while(timeMachine.getEpoch()==0);
 
-  String&& debugtime=RTC.getDateTime(false);
+  timeMachine.setEpoch(1614236396+8*60*60);
+  String&& debugtime=RTC.getDateTime();
   debug("RTC:%d,%s\n",(int)RTC.getEpoch(),debugtime.c_str());
 
-
-  ThisThread::sleep_for(3000);
+  ThisThread::sleep_for(Kernel::Clock::duration_u32(3000));
   test.startup();
   thread1.start(callback(TaskTest0));
   thread2.start(callback(TaskTest,&a));
@@ -114,7 +114,7 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  debug("%s,__cplusplus:%d\n",data,__cplusplus);
+  debug("%s,__cplusplus:%ld\n",data,__cplusplus);
   vTaskDelete(NULL);
 }
 

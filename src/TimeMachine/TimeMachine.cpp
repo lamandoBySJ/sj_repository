@@ -36,7 +36,13 @@ void TimeMachine::startup(void *pvParameters)
      }
     _mutex.unlock();
     return epoch;
- }
+}
+void TimeMachine::setEpoch(time_t epoch)
+{
+     _mutex.lock();
+     _rtc.setEpoch(epoch);
+    _mutex.unlock();
+}
 
 String TimeMachine::getDateTime()
  {

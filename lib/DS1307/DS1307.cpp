@@ -613,12 +613,12 @@ void DS1307::setEpoch(time_t epoch)
 	setSeconds(epoch_tm.tm_sec); //0x00 - Seconds
 	setMinutes(epoch_tm.tm_min);
 	setHours(epoch_tm.tm_hour);
-	setWeek(epoch_tm.tm_wday + 1);
+	setWeek(epoch_tm.tm_wday+1);
 	setDay(epoch_tm.tm_mday);
-	setMonth(epoch_tm.tm_mon + 1);
+	setMonth(epoch_tm.tm_mon);
 	setYear(epoch_tm.tm_year + 1900);
 	_wire.endTransmission();
-  
+ 
 }
 
 /*-----------------------------------------------------------
@@ -632,10 +632,10 @@ time_t DS1307::getEpoch()
 	epoch_tm.tm_sec = getSeconds();
 	epoch_tm.tm_min = getMinutes();
 	epoch_tm.tm_hour = getHours();
-	epoch_tm.tm_wday = getWeek() - 1;
+	epoch_tm.tm_wday = getWeek();
 	epoch_tm.tm_mday = getDay();
-	epoch_tm.tm_mon = getMonth() - 1;
-	epoch_tm.tm_year = getYear() - 1900;
+	epoch_tm.tm_mon = getMonth()+1;
+	epoch_tm.tm_year = getYear();
 	epoch = mktime(&epoch_tm);
   datetime = String(epoch_tm.tm_year,DEC) + 
           String("-")+ 
@@ -643,8 +643,6 @@ time_t DS1307::getEpoch()
           String("-")+ 
           String(epoch_tm.tm_mday,DEC)+
           String(" ")+ 
-          String(epoch_tm.tm_mon,DEC)+
-          String(":")+ 
           String(epoch_tm.tm_hour,DEC)+
           String(":")+ 
           String(epoch_tm.tm_min,DEC)+
