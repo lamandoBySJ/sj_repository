@@ -71,7 +71,7 @@ public:
       for(;;){
         String&& rtc = RTC.getDateTime();
         debug("Callback: __cplusplus:%s , RTC:%d,%s\n", String(__cplusplus,DEC).c_str(),(int32_t)RTC.getEpoch(),rtc.c_str() );
-        ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
+        ThisThread::sleep_for(1000);
       }
     }
  
@@ -91,8 +91,49 @@ void setup() {
   //LoRa.dumpRegisters(Serial);
 
   timeMachine.startup(NULL);
+  int timeout= 3;
+  do
+  {
+    ThisThread::sleep_for(1000);
+    if(timeout-- == 0){
+        //todo send message
+        debug("RTC ERROR,please check out RTC DS1307\n");
+        break;
+    }
+  }while(timeMachine.getEpoch()!=0);
 
-  /*
+  String&& debugtime=RTC.getDateTime(false);
+  debug("RTC:%d,%s\n",(int)RTC.getEpoch(),debugtime.c_str());
+
+
+  ThisThread::sleep_for(3000);
+  test.startup();
+  thread1.start(callback(TaskTest0));
+  thread2.start(callback(TaskTest,&a));
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  debug("%s,__cplusplus:%d\n",data,__cplusplus);
+  vTaskDelete(NULL);
+}
+
+void TaskDebug( void *pvParameters )
+{
+  //int cnt=0;
+  for(;;){
+     // vTaskResume(handleTaskDebug);
+      //Serial.println("hello");
+    //debug_if(true,"debug_if:%d\n",data);
+    //delay(10000);
+   // ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
+      //debug("task debug ...%d\n",++x);
+      //ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
+  }
+  
+}
+
+ /*
   xTaskCreatePinnedToCore(
     TaskDebug
     ,  "TaskDebug"
@@ -106,43 +147,6 @@ void setup() {
   }, FALLING);   
 
   */
-  String&& debugtime=RTC.getDateTime();
   
-
-  debug("RTC:%d,%s\n",(int)RTC.getEpoch(),debugtime.c_str());
-  
-  
-  //Work<int> work;
-  //work.call();
-  ThisThread::sleep_for(Kernel::Clock::duration_u32(3000));
-  test.startup();
-  thread1.start(callback(TaskTest0));
-  thread2.start(callback(TaskTest,&a));
-
-
-}
-int cnt=0;
-void loop() {
-  // put your main code here, to run repeatedly:
-  //Serial.println("hello");
-  //debug_if(true,"debug_if:%d\n",data);
-  //delay(10000);
- // ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
-  if(++cnt==10){
-    cnt=0;
-   // vTaskResume(handleTaskDebug);
-  }
-  //debug("%s:%d\n",data,cnt);
-  vTaskDelete(NULL);
-}
-
-void TaskDebug( void *pvParameters )
-{
-  //int x = 0;
-  for(;;){
-      //debug("task debug ...%d\n",++x);
-      //ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
-  }
-}
 
 
