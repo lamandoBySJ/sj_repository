@@ -653,8 +653,11 @@ time_t DS1307::getEpoch()
 	return (epoch);
 }
 
-String DS1307::getDateTime()
+String DS1307::getDateTime(bool duplicate)
 {
+  if(duplicate){
+    getEpoch();
+  }
 	return DS1307::datetime;
 }
 /* NVRAM Functions */

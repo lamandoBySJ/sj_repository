@@ -65,7 +65,7 @@ class DS1307 //: public RTCDateTime
         //void setDateTime(time_t timestamp);
        // time_t datetime(String& nowtime);
        // virtual time_t timestamp(String& nowtime) override;
-        String getDateTime();
+        String getDateTime(bool duplicate);
         bool begin();
 
         bool isRunning(void);
