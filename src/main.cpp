@@ -19,22 +19,28 @@ rtos::Mutex std_mutex;
 DS1307 RTC(Wire,32,33);
 TimeMachine timeMachine(RTC,std_mutex);
 
-
+Thread thread3("Thd3",1024*2,3);
+Thread thread4("Thd4",1024*2,4);
+Thread thread5("Thd5",1024*2,5);
+Thread thread6("Thd6",1024*2,6);
+Thread thread7("Thd7",1024*2,7);
 
 Thread thread1("Thd1",1024*2,1);
 Thread thread2("Thd2",1024*2,2);
 
 char data[]="hello sj~";
 
+//Serial.println(uxTaskPriorityGet(myTask));configMAX_PRIORITIES
 
 void TaskDebug( void *pvParameters );
 
 void TaskTest0()
 {
-  int x = 0;
+ String datetime="";
   for(;;){
      // stdmutex.lock();
-      debug("task test0 ......%d\n",++x);
+      String&& datetime = timeMachine.getDateTime();
+      debug("Test0: __cplusplus:%s , %s\n", String(__cplusplus,DEC).c_str(),datetime.c_str() );
       ThisThread::sleep_for(Kernel::Clock::duration_u32(10000));
       //stdmutex.unlock();
   }
@@ -42,10 +48,11 @@ void TaskTest0()
 
 void TaskTest(int *pvParameters  )
 {
+ 
   for(;;){
      // stdmutex.lock();
-      debug("task test ......%d\n",*pvParameters );
-     
+      String&& datetime = timeMachine.getDateTime();
+      debug("Test1: __cplusplus:%s , %s\n", String(__cplusplus,DEC).c_str(),datetime.c_str() );
       ThisThread::sleep_for(Kernel::Clock::duration_u32(10000));
       //stdmutex.unlock();
   }
@@ -68,9 +75,10 @@ public:
     Test(){};
     ~Test(){};
     void run(){
+      
       for(;;){
-        String&& rtc = timeMachine.getDateTime();
-        debug("Callback: __cplusplus:%s , RTC:%d,%s\n", String(__cplusplus,DEC).c_str(),(int32_t)RTC.getEpoch(),rtc.c_str() );
+        String&& datetime = timeMachine.getDateTime();
+        debug("Callback: ESP.getFreeHeap():%d ,%s\n",ESP.getFreeHeap(),datetime.c_str() );
         ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
       }
     }
@@ -81,7 +89,7 @@ public:
 private:
     Thread thread;
 };
-  int a =1993;
+int a =1993;
 Test test;
 Test* t;
 void setup() {
@@ -97,7 +105,7 @@ void setup() {
     ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
     if(timeout-- == 0){
         //todo send message
-        debug("RTC ERROR,please check out RTC DS1307\n");
+        debug("RTC ERROR,please check out RTC DS1307,cplusplus:%ld\n",__cplusplus);
         break;
     }
   }while(timeMachine.getEpoch()==0);
@@ -110,6 +118,12 @@ void setup() {
   test.startup();
   thread1.start(callback(TaskTest0));
   thread2.start(callback(TaskTest,&a));
+
+  thread3.start(callback(TaskTest0));
+  thread4.start(callback(TaskTest0));
+  thread5.start(callback(TaskTest0));
+  thread6.start(callback(TaskTest0));
+  thread7.start(callback(TaskTest0));
 }
 
 void loop() {
