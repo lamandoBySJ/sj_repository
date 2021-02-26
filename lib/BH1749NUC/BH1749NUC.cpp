@@ -1,4 +1,4 @@
-#include "BH1749NUC.h"
+#include <BH1749NUC.h>
 
 
 BH1749NUC::~BH1749NUC()

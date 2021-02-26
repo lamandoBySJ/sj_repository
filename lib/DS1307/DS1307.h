@@ -38,7 +38,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-
+#include <RTCBase.h>
 /*
  * DateTime Class
  * */
@@ -47,13 +47,12 @@
 
 
  
-class DS1307 //: public RTCDateTime
+class DS1307 : public RTCBase
 {
     public:
         DS1307() = delete;
         DS1307(TwoWire& wire,uint8_t  sda,uint8_t scl,uint32_t frequency=100000):_wire(wire)
         {
-            
             this->_sda=sda;
             this->_scl=scl;
             this->_frequency =frequency;
@@ -106,10 +105,10 @@ class DS1307 //: public RTCDateTime
         bool isOutPinEnabled();
         bool isSqweEnabled();
 
-        TwoWire& _wire;
+        
         static String datetime;
     private:
-      
+        TwoWire& _wire;
         uint8_t bin2bcd (uint8_t val);
         uint8_t bcd2bin (uint8_t val);
         uint8_t             _sda;

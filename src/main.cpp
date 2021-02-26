@@ -1,7 +1,9 @@
 #include <heltec.h>
 //#include <ArduinoJson.h>
 #include <rtos/rtos.h>
-#include <TimeMachine/TimeMachine.h>
+#include <app/TimeMachine/TimeMachine.h>
+#include <app/ColorSensor/ColorSensor.h>
+#include <ColorSensorBase.h>
 
 using namespace rtos;
 
@@ -14,10 +16,16 @@ using namespace rtos;
 #endif
 #endif
 
-rtos::Mutex stdmutex;
+
 rtos::Mutex std_mutex;
 DS1307 RTC(Wire,32,33);
-TimeMachine timeMachine(RTC,std_mutex);
+TimeMachine<DS1307> timeMachine(RTC,std_mutex);
+TimeMachine<RTCBase> timeMachine2(&RTC,std_mutex);
+
+rtos::Mutex mutex;
+BH1749NUC bh1749nuc(Wire1,21,22,100000);
+ColorSensor<BH1749NUC> colorSensor(bh1749nuc,mutex);
+ColorSensor<ColorSensorBase> colorSensor2(&bh1749nuc,mutex);
 
 Thread thread3("Thd3",1024*2,3);
 Thread thread4("Thd4",1024*2,4);
@@ -116,14 +124,15 @@ void setup() {
 
   ThisThread::sleep_for(Kernel::Clock::duration_u32(3000));
   test.startup();
-  thread1.start(callback(TaskTest0));
+ /* thread1.start(callback(TaskTest0));
   thread2.start(callback(TaskTest,&a));
 
   thread3.start(callback(TaskTest0));
   thread4.start(callback(TaskTest0));
   thread5.start(callback(TaskTest0));
   thread6.start(callback(TaskTest0));
-  thread7.start(callback(TaskTest0));
+  thread7.start(callback(TaskTest0));*/
+
 }
 
 void loop() {
