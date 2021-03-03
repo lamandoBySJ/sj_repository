@@ -1,5 +1,6 @@
+#include "Arduino.h"
+#include "platform/mbed_debug.h"
 #include "hal/ticker_api.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -25,12 +26,13 @@ void ticker_insert_event_us(const ticker_data_t *const ticker, ticker_event_t *o
 }
 
 timestamp_t ticker_read(const ticker_data_t *const ticker){
-    return 0;
+
+    return millis();
 }
 
 
 us_timestamp_t ticker_read_us(const ticker_data_t *const ticker){
-    return 0;
+    return millis()/1000;
 }
 
 int ticker_get_next_timestamp(const ticker_data_t *const ticker, timestamp_t *timestamp){
