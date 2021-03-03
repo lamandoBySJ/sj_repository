@@ -21,6 +21,7 @@ using namespace rtos;
 #endif
 #endif
 
+using std::chrono::system_clock;
 
 rtos::Mutex std_mutex;
 DS1307 RTC(Wire,32,33);
@@ -147,8 +148,14 @@ void setup() {
   thread6.start(callback(TaskTest0));
   thread7.start(callback(TaskTest0));*/
   //spiBus.begin(26, 12, 13,15);
-  for(;;){
 
+ 
+ 
+  
+  for(;;){
+    static system_clock::time_point today = system_clock::now();
+    std::time_t tt = system_clock::to_time_t(today);
+    debug( "today is:%s\n ",ctime(&tt));
     ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
   }
 }
@@ -178,9 +185,6 @@ void loop() {
   // put your main code here, to run repeatedly:
  // debug("%s,__cplusplus:%ld\n",data,__cplusplus);
   //vTaskDelete(NULL);
-
-
-
  rfid.PCD_Init(); // Init MFRC522 
  // Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
   if ( ! rfid.PICC_IsNewCardPresent()){
