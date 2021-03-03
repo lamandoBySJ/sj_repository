@@ -4,6 +4,8 @@
 #include <app/TimeMachine/TimeMachine.h>
 #include <app/ColorSensor/ColorSensor.h>
 #include <ColorSensorBase.h>
+#include <SPI.h>
+#include <MFRC522.h>
 
 using namespace rtos;
 
@@ -37,8 +39,6 @@ Thread thread1("Thd1",1024*2,1);
 Thread thread2("Thd2",1024*2,2);
 
 char data[]="hello sj~";
-
-//Serial.println(uxTaskPriorityGet(myTask));configMAX_PRIORITIES
 
 void TaskDebug( void *pvParameters );
 
@@ -99,14 +99,21 @@ private:
 };
 int a =1993;
 Test test;
-Test* t;
+//Serial.println(uxTaskPriorityGet(myTask));configMAX_PRIORITIES
+constexpr uint8_t RST_PIN = 22;          // Configurable, see typical pin layout above
+constexpr uint8_t SS_PIN =  16;         // Configurable, see typical pin layout above
+
+SPIClass spiBus(HSPI);
+MFRC522_SPI spiDevice =MFRC522_SPI(SS_PIN, RST_PIN,&spiBus);
+MFRC522 rfid = MFRC522(&spiDevice);  // Create MFRC522 instance
+
 void setup() {
   // put your setup code here, to run once:
     //WIFI Kit series V1 not support Vext control
-  Heltec.begin(true /*DisplayEnable Enable*/, true /*LoRa Disable*/, true /*Serial Enable*/, true /*PABOOST Enable*/, BAND /*long BAND*/);
+  Heltec.begin(true , false , true , true, BAND);
   //LoRa.dumpRegisters(Serial);
 
-  timeMachine.startup(NULL);
+  /* timeMachine.startup(NULL);
   int timeout= 3;
   do
   {
@@ -124,7 +131,7 @@ void setup() {
 
   ThisThread::sleep_for(Kernel::Clock::duration_u32(3000));
   test.startup();
- /* thread1.start(callback(TaskTest0));
+ thread1.start(callback(TaskTest0));
   thread2.start(callback(TaskTest,&a));
 
   thread3.start(callback(TaskTest0));
@@ -132,13 +139,115 @@ void setup() {
   thread5.start(callback(TaskTest0));
   thread6.start(callback(TaskTest0));
   thread7.start(callback(TaskTest0));*/
+  //spiBus.begin(26, 12, 13,15);
 
+  
+  
+}
+
+
+
+//MFRC522 rfid(SS_PIN, RST_PIN); // Instance of the class
+
+MFRC522::MIFARE_Key key; 
+
+// Init array that will store new NUID 
+byte nuidPICC[4];
+void printHex(byte *buffer, byte bufferSize) {
+  for (byte i = 0; i < bufferSize; i++) {
+    Serial.print(buffer[i] < 0x10 ? " 0" : " ");
+    Serial.print(buffer[i], HEX);
+  }
+}
+void printDec(byte *buffer, byte bufferSize) {
+  for (byte i = 0; i < bufferSize; i++) {
+    Serial.print(buffer[i] < 0x10 ? " 0" : " ");
+    Serial.print(buffer[i], DEC);
+  }
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  debug("%s,__cplusplus:%ld\n",data,__cplusplus);
-  vTaskDelete(NULL);
+ // debug("%s,__cplusplus:%ld\n",data,__cplusplus);
+  //vTaskDelete(NULL);
+  // 出厂默认使用FF FF FF FF FF FF作为密码A和B
+/*
+  if (! mfrc522.PICC_IsNewCardPresent()) {
+      Serial.println(F("#######################New Card#######################"));
+  }
+
+  // Select one of the cards
+  if ( ! mfrc522.PICC_ReadCardSerial()) {
+    Serial.println("Bad read (was card removed too quickly?)");
+   // return;
+  }
+
+  
+  mfrc522.PICC_HaltA();
+*/
+
+ spiBus.begin(14,12,13,16);
+
+ rfid.PCD_Init(); // Init MFRC522 
+ // Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
+  if ( ! rfid.PICC_IsNewCardPresent()){
+
+     Serial.println(F("No found RFID Card..."));
+     ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
+     return;
+  }
+   
+
+  // Verify if the NUID has been readed
+  if ( ! rfid.PICC_ReadCardSerial()){
+    Serial.println(F("Not PICC_ReadCardSerial"));
+     ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
+    return;
+  }
+   
+
+  Serial.print(F("PICC type: "));
+  MFRC522::PICC_Type piccType = rfid.PICC_GetType(rfid.uid.sak);
+  Serial.println(rfid.PICC_GetTypeName(piccType));
+
+  // Check is the PICC of Classic MIFARE type
+  if (piccType != MFRC522::PICC_TYPE_MIFARE_MINI &&  
+    piccType != MFRC522::PICC_TYPE_MIFARE_1K &&
+    piccType != MFRC522::PICC_TYPE_MIFARE_4K) {
+    Serial.println(F("Your tag is not of type MIFARE Classic."));
+  }
+
+  if (rfid.uid.uidByte[0] != nuidPICC[0] || 
+    rfid.uid.uidByte[1] != nuidPICC[1] || 
+    rfid.uid.uidByte[2] != nuidPICC[2] || 
+    rfid.uid.uidByte[3] != nuidPICC[3] ) {
+    Serial.println(F("A new card has been detected."));
+
+    // Store NUID into nuidPICC array
+    for (byte i = 0; i < 4; i++) {
+      nuidPICC[i] = rfid.uid.uidByte[i];
+    }
+   
+    Serial.println(F("The NUID tag is:"));
+    Serial.print(F("In hex: "));
+    printHex(rfid.uid.uidByte, rfid.uid.size);
+    Serial.println();
+    Serial.print(F("In dec: "));
+    printDec(rfid.uid.uidByte, rfid.uid.size);
+    Serial.println();
+    nuidPICC[0]=0;
+    nuidPICC[1]=0;
+    nuidPICC[2]=0;
+    nuidPICC[3]=0;
+  }
+  else Serial.println(F("Card read previously."));
+
+  // Halt PICC
+  rfid.PICC_HaltA();
+
+  // Stop encryption on PCD
+  rfid.PCD_StopCrypto1();
+  ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
 }
 
 void TaskDebug( void *pvParameters )
