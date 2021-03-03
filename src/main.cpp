@@ -103,9 +103,13 @@ Test test;
 constexpr uint8_t RST_PIN = 22;          // Configurable, see typical pin layout above
 constexpr uint8_t SS_PIN =  16;         // Configurable, see typical pin layout above
 
-SPIClass spiBus(HSPI);
-MFRC522_SPI spiDevice =MFRC522_SPI(SS_PIN, RST_PIN,&spiBus);
-MFRC522 rfid = MFRC522(&spiDevice);  // Create MFRC522 instance
+//SPIClass spiBus(HSPI);
+//MFRC522_SPI spiDevice =MFRC522_SPI(SS_PIN, RST_PIN,&spiBus);
+//MFRC522 rfid = MFRC522(&spiDevice); 
+
+//SPIClass spiBus(HSPI);
+MFRC522_UART uartDevice =MFRC522_UART(SS_PIN, RST_PIN);
+MFRC522 rfid = MFRC522(&uartDevice); 
 
 void setup() {
   // put your setup code here, to run once:
@@ -170,23 +174,8 @@ void loop() {
   // put your main code here, to run repeatedly:
  // debug("%s,__cplusplus:%ld\n",data,__cplusplus);
   //vTaskDelete(NULL);
-  // 出厂默认使用FF FF FF FF FF FF作为密码A和B
-/*
-  if (! mfrc522.PICC_IsNewCardPresent()) {
-      Serial.println(F("#######################New Card#######################"));
-  }
 
-  // Select one of the cards
-  if ( ! mfrc522.PICC_ReadCardSerial()) {
-    Serial.println("Bad read (was card removed too quickly?)");
-   // return;
-  }
 
-  
-  mfrc522.PICC_HaltA();
-*/
-
- spiBus.begin(14,12,13,16);
 
  rfid.PCD_Init(); // Init MFRC522 
  // Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
