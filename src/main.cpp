@@ -7,6 +7,9 @@
 #include <SPI.h>
 #include <MFRC522.h>
 
+#include <chrono>
+
+using namespace mstd;
 using namespace rtos;
 
 #define BAND    433E6 
@@ -87,7 +90,7 @@ public:
       for(;;){
         String&& datetime = timeMachine.getDateTime();
         debug("Callback: ESP.getFreeHeap():%d ,%s\n",ESP.getFreeHeap(),datetime.c_str() );
-        ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
+        ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
       }
     }
  
@@ -144,9 +147,10 @@ void setup() {
   thread6.start(callback(TaskTest0));
   thread7.start(callback(TaskTest0));*/
   //spiBus.begin(26, 12, 13,15);
+  for(;;){
 
-  
-  
+    ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+  }
 }
 
 
@@ -182,7 +186,7 @@ void loop() {
   if ( ! rfid.PICC_IsNewCardPresent()){
 
      Serial.println(F("No found RFID Card..."));
-     ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
+     ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
      return;
   }
    
@@ -190,7 +194,7 @@ void loop() {
   // Verify if the NUID has been readed
   if ( ! rfid.PICC_ReadCardSerial()){
     Serial.println(F("Not PICC_ReadCardSerial"));
-     ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
+    ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
     return;
   }
    
@@ -236,7 +240,8 @@ void loop() {
 
   // Stop encryption on PCD
   rfid.PCD_StopCrypto1();
-  ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
+  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+  
 }
 
 void TaskDebug( void *pvParameters )
