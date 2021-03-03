@@ -150,12 +150,16 @@ void setup() {
   //spiBus.begin(26, 12, 13,15);
 
  
- 
+
   
   for(;;){
-    static system_clock::time_point today = system_clock::now();
-    std::time_t tt = system_clock::to_time_t(today);
-    debug( "today is:%s\n ",ctime(&tt));
+    //TickerDataClock clock(NULL);
+    //TickerDataClock::time_point today =  clock.now();
+    //time_t tt= today.time_since_epoch().count();
+
+    //static system_clock::time_point today = system_clock::now();
+   // std::time_t tt = system_clock::to_time_t(today);
+    //debug( "today is:%s\n ",ctime(&tt));
     ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
   }
 }
