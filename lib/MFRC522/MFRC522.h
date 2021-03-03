@@ -456,6 +456,22 @@ public:
         virtual byte PCD_ReadRegister(MFRC522::PCD_Register reg);
         virtual void PCD_ReadRegister(MFRC522::PCD_Register reg, byte count, byte *values, byte rxAlign = 0);
 };
+#include <HardwareSerial.h>
+class MFRC522_UART : public MFRC522_BUS_DEVICE {
+public:
+        MFRC522_UART(byte resetPowerDownPin = UNUSED_PIN,
+                byte chipAddress = MFRC522_I2C_DEFAULT_ADDR, HardwareSerial & serial = Serial)
+                : _resetPowerDownPin(resetPowerDownPin),  _chipAddress(chipAddress), _serial(serial) {};
+	bool PCD_Init();
+        void PCD_WriteRegister(MFRC522::PCD_Register reg, byte value);
+        void PCD_WriteRegister(MFRC522::PCD_Register reg, byte count, byte *values);
+        byte PCD_ReadRegister(MFRC522::PCD_Register reg);
+        void PCD_ReadRegister(MFRC522::PCD_Register reg, byte count, byte *values, byte rxAlign = 0);
+private:
+        byte _resetPowerDownPin;        // Optional, soft-rest will be used if set to UNUSEDPIN
+        byte _chipAddress;              // Default is 0x3C
+        HardwareSerial & _serial;                // Bus, defaults to the first i2c bus: Wire;
+};
 
 #include <Wire.h>
 class MFRC522_I2C : public MFRC522_BUS_DEVICE {
