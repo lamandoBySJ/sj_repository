@@ -170,8 +170,11 @@ typedef struct {
   uint8_t part_id       : 6;
   uint8_t int_reset     : 1;
   uint8_t sw_reset      : 1;
-} bh1749nuc_system_control_reg_t;
-
+} bh1749nuc_system_control_reg_bitfield_t;
+typedef union {
+  bh1749nuc_system_control_reg_bitfield_t bitfield;
+  uint8_t reg; 
+} bh1749nuc_system_control_t;
 
 
 #define BH1749NUC_MODE_CONTROL1_REG_ADDR    0x41U
@@ -180,7 +183,13 @@ typedef struct {
   uint8_t rgb_gain              : 2;
   uint8_t ir_gain               : 2;
   uint8_t not_used_01           : 1;
-} bh1749nuc_mode_control1_reg_t;
+} bh1749nuc_mode_control1_reg_bitfield_t;
+
+typedef union  {
+  bh1749nuc_mode_control1_reg_bitfield_t bitfield;
+  uint8_t reg;
+}bh1749nuc_mode_control1_t;
+
 
 #define BH1749NUC_MODE_CONTROL2_REG_ADDR     0x42U
 typedef struct {
@@ -188,7 +197,12 @@ typedef struct {
   uint8_t rgb_en            : 1;
   uint8_t not_used_02       : 2;
   uint8_t valid             : 1;
-} bh1749nuc_mode_control2_reg_t;
+} bh1749nuc_mode_control2_reg_bitfield_t;
+typedef union {
+  bh1749nuc_mode_control2_reg_bitfield_t bitfield;
+  uint8_t reg;
+} bh1749nuc_mode_control2_t;
+
 
 #define BH1749NUC_RED_DATA_L8BIT_REG_ADDR         0x50U
 typedef struct {
@@ -250,7 +264,12 @@ typedef struct {
   uint8_t int_source        : 2;
   uint8_t not_used_02      : 3;
   uint8_t int_status      : 1;
-} bh1749nuc_interrupt_reg_t;
+} bh1749nuc_interrupt_reg_bitfield_t;
+typedef struct {
+  bh1749nuc_interrupt_reg_bitfield_t bitfield;
+  uint8_t reg;
+} bh1749nuc_interrupt_t;
+
 
 #define BH1749NUC_TH_HIGH_L8BIT_REG_ADDR        0x62U
 typedef struct {
@@ -285,9 +304,9 @@ typedef struct {
   *
   */
 typedef union{
-    bh1749nuc_system_control_reg_t system_control_reg;
-    bh1749nuc_mode_control1_reg_t mode_control1_reg;
-    bh1749nuc_mode_control2_reg_t mode_control2_reg;
+    bh1749nuc_system_control_t system_control;
+    bh1749nuc_mode_control1_t mode_control1;
+    bh1749nuc_mode_control2_t mode_control2;
     bh1749nuc_red_data_bit8low_reg_t red_data_bit8low_reg;
     bh1749nuc_red_data_bit8high_reg_t red_data_bit8high_reg;
     bh1749nuc_green_data_bit8low_reg_t green_data_bit8low_reg;
@@ -298,7 +317,7 @@ typedef union{
     bh1749nuc_ir_data_bit8high_reg_t ir_data_bit8high_reg;
     bh1749nuc_green2_data_bit8low_reg_t green2_data_bit8low_reg;
     bh1749nuc_green2_data_bit8high_reg_t green2_data_bit8high_reg;
-    bh1749nuc_interrupt_reg_t interrupt_reg;
+    bh1749nuc_interrupt_t interrupt;
     bh1749nuc_th_high_bit8low_reg_t th_high_bit8low_reg;
     bh1749nuc_th_high_bit8high_reg_t th_high_bit8high_reg;
     bh1749nuc_th_low_bit8low_reg_t th_low_bit8low;
@@ -329,11 +348,11 @@ int32_t bh1749nuc_rgb_gain_set(bh1749nuc_ctx_t *ctx, uint8_t val);
 int32_t bh1749nuc_measurement_mode_get(bh1749nuc_ctx_t *ctx, uint8_t *val);
 int32_t bh1749nuc_measurement_mode_set(bh1749nuc_ctx_t *ctx, uint8_t val);
 
-int32_t bh1749nuc_mode_control1_get(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control1_reg_t *val);
-int32_t bh1749nuc_mode_control1_set(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control1_reg_t *val);
+int32_t bh1749nuc_mode_control1_get(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control1_t *val);
+int32_t bh1749nuc_mode_control1_set(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control1_t *val);
 
-int32_t bh1749nuc_mode_control2_get(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control2_reg_t *val);
-int32_t bh1749nuc_mode_control2_set(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control2_reg_t *val);
+int32_t bh1749nuc_mode_control2_get(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control2_t *val);
+int32_t bh1749nuc_mode_control2_set(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control2_t *val);
 
 int32_t bh1749nuc_red_data_get(bh1749nuc_ctx_t *ctx, uint16_t *val);
 int32_t bh1749nuc_green_data_get(bh1749nuc_ctx_t *ctx, uint16_t *val);
@@ -341,17 +360,17 @@ int32_t bh1749nuc_blue_data_get(bh1749nuc_ctx_t *ctx, uint16_t *val);
 int32_t bh1749nuc_ir_data_get(bh1749nuc_ctx_t *ctx, uint16_t *val);
 int32_t bh1749nuc_green2_data_get(bh1749nuc_ctx_t *ctx, uint16_t *val);
 
-int32_t bh1749nuc_interrupt_get(bh1749nuc_ctx_t *ctx, bh1749nuc_interrupt_reg_t *val);
-int32_t bh1749nuc_interrupt_set(bh1749nuc_ctx_t *ctx, bh1749nuc_interrupt_reg_t *val);
+int32_t bh1749nuc_interrupt_get(bh1749nuc_ctx_t *ctx, bh1749nuc_interrupt_t *val);
+int32_t bh1749nuc_interrupt_set(bh1749nuc_ctx_t *ctx, bh1749nuc_interrupt_t *val);
 
-int32_t bh1749nuc_interrupt_get(bh1749nuc_ctx_t *ctx, bh1749nuc_interrupt_reg_t *val);
-int32_t bh1749nuc_interrupt_set(bh1749nuc_ctx_t *ctx, bh1749nuc_interrupt_reg_t *val);
+int32_t bh1749nuc_interrupt_get(bh1749nuc_ctx_t *ctx, bh1749nuc_interrupt_t *val);
+int32_t bh1749nuc_interrupt_set(bh1749nuc_ctx_t *ctx, bh1749nuc_interrupt_t *val);
 //int32_t bh1749nuc_boot_set(bh1749nuc_ctx_t *ctx, uint8_t val);
 //int32_t bh1749nuc_boot_get(bh1749nuc_ctx_t *ctx, uint8_t *val);
 //int32_t bh1749nuc_status_get(bh1749nuc_ctx_t *ctx, bh1749nuc_status_reg_t *val);
-int32_t bh1749nuc_system_control_get(bh1749nuc_ctx_t *ctx, bh1749nuc_system_control_reg_t *val);
+int32_t bh1749nuc_system_control_get(bh1749nuc_ctx_t *ctx, bh1749nuc_system_control_t *val);
 
-int32_t bh1749nuc_system_control_set(bh1749nuc_ctx_t *ctx, bh1749nuc_system_control_reg_t *val);
+int32_t bh1749nuc_system_control_set(bh1749nuc_ctx_t *ctx, bh1749nuc_system_control_t *val);
 
 #ifdef __cplusplus
 }

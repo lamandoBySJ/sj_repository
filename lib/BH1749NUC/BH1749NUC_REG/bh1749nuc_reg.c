@@ -123,14 +123,14 @@ int32_t bh1749nuc_device_id_get(bh1749nuc_ctx_t *ctx, uint8_t *buff)
 int32_t bh1749nuc_boot_set(bh1749nuc_ctx_t *ctx, uint8_t val)
 {
   //bh1749nuc_ctrl_reg5_t ctrl_reg5;
-  int32_t ret;
+  //int32_t ret;
 
   //ret = bh1749nuc_read_reg(ctx, LIS2DE12_CTRL_REG5, (uint8_t*)&ctrl_reg5, 1);
  // if (ret == 0) {
   //  ctrl_reg5.boot = val;
  //   ret = bh1749nuc_write_reg(ctx, LIS2DE12_CTRL_REG5, (uint8_t*)&ctrl_reg5, 1);
  // }
-  return ret;
+  return 0;
 }
 
 /**
@@ -144,12 +144,12 @@ int32_t bh1749nuc_boot_set(bh1749nuc_ctx_t *ctx, uint8_t val)
 int32_t bh1749nuc_boot_get(bh1749nuc_ctx_t *ctx, uint8_t *val)
 {
  // bh1749nuc_ctrl_reg5_t ctrl_reg5;
-  int32_t ret;
+  //int32_t ret;
 
  // ret = bh1749nuc_read_reg(ctx, LIS2DE12_CTRL_REG5, (uint8_t*)&ctrl_reg5, 1);
  // *val = (uint8_t)ctrl_reg5.boot;
 
-  return ret;
+  return 0;
 }
 
 /**
@@ -169,22 +169,18 @@ int32_t bh1749nuc_status_get(bh1749nuc_ctx_t *ctx, lis2de12_status_reg_t *val)
 */
 int32_t bh1749nuc_ir_gain_get(bh1749nuc_ctx_t *ctx, uint8_t *val)
 {
-    bh1749nuc_mode_control1_reg_t mode_control1_reg;
-    int32_t ret;
-    ret = bh1749nuc_read_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, (uint8_t*)&mode_control1_reg, 1);
-    *val=mode_control1_reg.ir_gain;
+    int32_t ret = bh1749nuc_read_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, val, 1);
     return ret;
 }
 
 int32_t bh1749nuc_ir_gain_set(bh1749nuc_ctx_t *ctx, uint8_t val)
 {
-    bh1749nuc_mode_control1_reg_t mode_control1_reg;
-    int32_t ret;
-    ret = bh1749nuc_read_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, (uint8_t*)&mode_control1_reg, 1);
+    bh1749nuc_mode_control1_t mode_control1;
+    int32_t ret = bh1749nuc_read_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, &mode_control1.reg, 1);
 
     if (ret == 0) {
-        mode_control1_reg.ir_gain = (uint8_t)val;
-        ret = bh1749nuc_write_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, (uint8_t*)&mode_control1_reg, 1);
+        mode_control1.bitfield.ir_gain = val;
+        ret = bh1749nuc_write_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, &mode_control1.reg, 1);
     }
 
     return ret;
@@ -192,22 +188,19 @@ int32_t bh1749nuc_ir_gain_set(bh1749nuc_ctx_t *ctx, uint8_t val)
 
 int32_t bh1749nuc_rgb_gain_get(bh1749nuc_ctx_t *ctx, uint8_t *val)
 {
-    bh1749nuc_mode_control1_reg_t mode_control1_reg;
-    int32_t ret;
-    ret = bh1749nuc_read_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, (uint8_t*)&mode_control1_reg, 1);
-    *val=mode_control1_reg.rgb_gain;
+    int32_t ret = bh1749nuc_read_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR,val, 1);
     return ret;
 }
 
 int32_t bh1749nuc_rgb_gain_set(bh1749nuc_ctx_t *ctx, uint8_t val)
 {
-    bh1749nuc_mode_control1_reg_t mode_control1_reg;
+    bh1749nuc_mode_control1_t mode_control1;
     int32_t ret;
-    ret = bh1749nuc_read_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, (uint8_t*)&mode_control1_reg, 1);
+    ret = bh1749nuc_read_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, &mode_control1.reg, 1);
 
     if (ret == 0) {
-        mode_control1_reg.rgb_gain = (uint8_t)val;
-        ret = bh1749nuc_write_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, (uint8_t*)&mode_control1_reg, 1);
+        mode_control1.bitfield.rgb_gain = (uint8_t)val;
+        ret = bh1749nuc_write_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, &mode_control1.reg, 1);
     }
 
     return ret;
@@ -215,22 +208,17 @@ int32_t bh1749nuc_rgb_gain_set(bh1749nuc_ctx_t *ctx, uint8_t val)
 
 int32_t bh1749nuc_measurement_mode_get(bh1749nuc_ctx_t *ctx, uint8_t *val)
 {
-    bh1749nuc_mode_control1_reg_t mode_control1_reg;
-    int32_t ret;
-    ret = bh1749nuc_read_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, (uint8_t*)&mode_control1_reg, 1);
-    *val=mode_control1_reg.measurement_mode;
+    int32_t ret = bh1749nuc_read_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, val, 1);
     return ret;
 }
 
 int32_t bh1749nuc_measurement_mode_set(bh1749nuc_ctx_t *ctx, uint8_t val)
 {
-    bh1749nuc_mode_control1_reg_t mode_control1_reg;
     int32_t ret;
-    ret = bh1749nuc_read_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, (uint8_t*)&mode_control1_reg, 1);
-
+    uint8_t dummy;
+    ret = bh1749nuc_read_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, &dummy, 1);
     if (ret == 0) {
-        mode_control1_reg.measurement_mode = (uint8_t)val;
-        ret = bh1749nuc_write_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, (uint8_t*)&mode_control1_reg, 1);
+        ret = bh1749nuc_write_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, &val, 1);
     }
 
     return ret;
@@ -243,17 +231,15 @@ int32_t bh1749nuc_measurement_mode_set(bh1749nuc_ctx_t *ctx, uint8_t val)
   * @retval          interface status (MANDATORY: return 0 -> no Error)
   *
 */
-int32_t bh1749nuc_mode_control1_get(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control1_reg_t *val)
+int32_t bh1749nuc_mode_control1_get(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control1_t *val)
 {
-    int32_t ret;
-    ret = bh1749nuc_read_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, (uint8_t*) val, 1);
+    int32_t ret = bh1749nuc_read_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, &val->reg, 1);
     return ret;
 }
 
-int32_t bh1749nuc_mode_control1_set(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control1_reg_t *val)
+int32_t bh1749nuc_mode_control1_set(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control1_t *val)
 {
-    int32_t ret;
-    ret = bh1749nuc_write_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, (uint8_t*)val, 1);
+    int32_t ret = bh1749nuc_write_reg(ctx, BH1749NUC_MODE_CONTROL1_REG_ADDR, &val->reg, 1);
     return ret;
 }
 /**
@@ -264,17 +250,15 @@ int32_t bh1749nuc_mode_control1_set(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control
   * @retval          interface status (MANDATORY: return 0 -> no Error)
   *
 */
-int32_t bh1749nuc_mode_control2_get(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control2_reg_t *val)
+int32_t bh1749nuc_mode_control2_get(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control2_t *val)
 {
-    int32_t ret;
-    ret = bh1749nuc_read_reg(ctx, BH1749NUC_MODE_CONTROL2_REG_ADDR, (uint8_t*) val, 1);
+    int32_t ret = bh1749nuc_read_reg(ctx, BH1749NUC_MODE_CONTROL2_REG_ADDR,  &val->reg, 1);
     return ret;
 }
 
-int32_t bh1749nuc_mode_control2_set(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control2_reg_t *val)
+int32_t bh1749nuc_mode_control2_set(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control2_t *val)
 {
-    int32_t ret;
-        ret = bh1749nuc_write_reg(ctx, BH1749NUC_MODE_CONTROL2_REG_ADDR, (uint8_t*)val, 1);
+    int32_t ret = bh1749nuc_write_reg(ctx, BH1749NUC_MODE_CONTROL2_REG_ADDR, &val->reg, 1);
     return ret;
 }
 /**
@@ -332,17 +316,15 @@ int32_t bh1749nuc_green2_data_get(bh1749nuc_ctx_t *ctx, uint16_t *val)
     return ret;
 }
 
-int32_t bh1749nuc_system_control_get(bh1749nuc_ctx_t *ctx, bh1749nuc_system_control_reg_t *val)
+int32_t bh1749nuc_system_control_get(bh1749nuc_ctx_t *ctx, bh1749nuc_system_control_t *val)
 {
-    int32_t ret;
-    ret = bh1749nuc_read_reg(ctx, BH1749NUC_SYSTEM_CONTROL_REG_ADDR, (uint8_t*) val, 1);
+    int32_t ret = bh1749nuc_read_reg(ctx, BH1749NUC_SYSTEM_CONTROL_REG_ADDR, &val->reg, 1);
     return ret;
 }
 
-int32_t bh1749nuc_system_control_set(bh1749nuc_ctx_t *ctx, bh1749nuc_system_control_reg_t *val)
+int32_t bh1749nuc_system_control_set(bh1749nuc_ctx_t *ctx, bh1749nuc_system_control_t *val)
 {
-    int32_t ret;
-    ret = bh1749nuc_write_reg(ctx, BH1749NUC_SYSTEM_CONTROL_REG_ADDR, (uint8_t*)val, 1);
+    int32_t ret = bh1749nuc_write_reg(ctx, BH1749NUC_SYSTEM_CONTROL_REG_ADDR, &val->reg, 1);
     return ret;
 }
 

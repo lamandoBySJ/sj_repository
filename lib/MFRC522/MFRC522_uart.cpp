@@ -16,7 +16,7 @@ void MFRC522_UART::PCD_WriteRegister(MFRC522::PCD_Register reg,		///< The regist
 		}
 		_serial.flush();
 		_serial.write(buff,2);
-		delay(2);
+		delay(5);
 		tmp=_serial.read();
 	}
 	
@@ -50,14 +50,14 @@ byte MFRC522_UART::PCD_ReadRegister(MFRC522::PCD_Register  reg	///< The register
 	
 	byte value;
 	_serial.flush();
-	delay(2);
+	delay(5);
 	while(_serial.available()>0){
 		_serial.read();
 	}
 	
 	
 	_serial.write( 0x80 | reg);
-	delay(2);
+	delay(5);
 	//Serial1.print( "Address: ");
 	//Serial1.println( 0x80 | reg,HEX);
 	while(!(_serial.available()>0));
@@ -86,7 +86,7 @@ void MFRC522_UART::PCD_ReadRegister(MFRC522::PCD_Register  reg,		///< The regist
 		return;
 	}
 	_serial.flush();
-	delay(2);
+	delay(5);
 	while(_serial.available()>0){
 		_serial.read();
 	}
@@ -96,7 +96,7 @@ void MFRC522_UART::PCD_ReadRegister(MFRC522::PCD_Register  reg,		///< The regist
 	
 	
 	_serial.write( 0x80 | reg);
-	delay(2);
+	delay(5);
 	//Serial1.print( "Address: ");
 	//Serial1.println( 0x80 | reg,HEX);
 	while(!(_serial.available()>0));
@@ -112,17 +112,17 @@ void MFRC522_UART::PCD_ReadRegister(MFRC522::PCD_Register  reg,		///< The regist
 			}
 			// Read value and tell that we want to read the same address again.
 			byte value = _serial.read();
-			delay(2);
+			delay(5);
 			_serial.write( 0x80 | reg);
-			delay(2);
+			delay(5);
 			// Apply mask to both current value of values[0] and the new data in value.
 			values[0] = (values[index] & ~mask) | (value & mask);
 		}
 		else { // Normal case
 			values[index] = _serial.read();
-			delay(2);
+			delay(5);
 			_serial.write( 0x80 | reg);
-			delay(2);
+			delay(5);
 			while(!(_serial.available()>0));
 		}
 		index++;

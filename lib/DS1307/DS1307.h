@@ -88,7 +88,7 @@ class DS1307 : public RTCBase
         void setDate(uint8_t day, uint8_t month, uint16_t year);
         void setTime(uint8_t hour, uint8_t minute, uint8_t second);
 
-        void setDateTime(char* date, char* time);
+        void setDateTime(const char* date,const  char* time) override;
 
         uint8_t getSeconds();
         uint8_t getMinutes();

@@ -27,7 +27,7 @@ public:
    virtual void setDate(uint8_t day, uint8_t month, uint16_t year) = 0;
    virtual void setTime(uint8_t hour, uint8_t minute, uint8_t second) = 0;
 
-   virtual void setDateTime(char* date, char* time) = 0;
+   virtual void setDateTime(const char* date,const char* time) = 0;
 
    virtual uint8_t getSeconds() = 0;
    virtual uint8_t getMinutes() = 0;

@@ -6,8 +6,9 @@
 #include <ColorSensorBase.h>
 #include <SPI.h>
 #include <MFRC522.h>
-
+#include <Test.h>
 #include <chrono>
+#include <DelegateClass.hpp>
 
 using namespace mstd;
 using namespace rtos;
@@ -21,156 +22,53 @@ using namespace rtos;
 #endif
 #endif
 
+
+
+Test test;
+
 using std::chrono::system_clock;
 
 rtos::Mutex std_mutex;
-DS1307 RTC(Wire,32,33);
-TimeMachine<DS1307> timeMachine(RTC,std_mutex);
-TimeMachine<RTCBase> timeMachine2(&RTC,std_mutex);
+DS1307 ds1307(Wire,21,22);
+TimeMachine<DS1307> timeMachine(ds1307,std_mutex,13);  
+//TimeMachine<RTCBase> timeMachine(&RTC,std_mutex);
 
 rtos::Mutex mutex;
-BH1749NUC bh1749nuc(Wire1,21,22,100000);
-ColorSensor<BH1749NUC> colorSensor(bh1749nuc,mutex);
-ColorSensor<ColorSensorBase> colorSensor2(&bh1749nuc,mutex);
-
-Thread thread3("Thd3",1024*2,3);
-Thread thread4("Thd4",1024*2,4);
-Thread thread5("Thd5",1024*2,5);
-Thread thread6("Thd6",1024*2,6);
-Thread thread7("Thd7",1024*2,7);
+BH1749NUC bh1749nuc(Wire1,4,15);
+ColorSensor<BH1749NUC> colorSensor(bh1749nuc,mutex,2);
+//ColorSensor<ColorSensorBase> colorSensor2(&bh1749nuc,mutex);
 
 Thread thread1("Thd1",1024*2,1);
 Thread thread2("Thd2",1024*2,2);
 
-char data[]="hello sj~";
+ExceptionCatcher e;
+String ExceptionCatcher::exceptionType="";
 
-void TaskDebug( void *pvParameters );
-
-void TaskTest0()
-{
- String datetime="";
-  for(;;){
-     // stdmutex.lock();
-      String&& datetime = timeMachine.getDateTime();
-      debug("Test0: __cplusplus:%s , %s\n", String(__cplusplus,DEC).c_str(),datetime.c_str() );
-      ThisThread::sleep_for(Kernel::Clock::duration_u32(10000));
-      //stdmutex.unlock();
-  }
-}
-
-void TaskTest(int *pvParameters  )
-{
- 
-  for(;;){
-     // stdmutex.lock();
-      String&& datetime = timeMachine.getDateTime();
-      debug("Test1: __cplusplus:%s , %s\n", String(__cplusplus,DEC).c_str(),datetime.c_str() );
-      ThisThread::sleep_for(Kernel::Clock::duration_u32(10000));
-      //stdmutex.unlock();
-  }
-}
-int (*_call)();
-template <typename R>
-class Work : private detail::CallbackBase
-{
-public:
-  auto call() -> decltype(_call) 
-  {
-    //MBED_ASSERT(bool(*this));
-    return _call;
-  }
-};
-
-class Test
-{
-public:
-    Test(){};
-    ~Test(){};
-    void run(){
-      
-      for(;;){
-        String&& datetime = timeMachine.getDateTime();
-        debug("Callback: ESP.getFreeHeap():%d ,%s\n",ESP.getFreeHeap(),datetime.c_str() );
-        ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-      }
-    }
- 
-    void startup(){
-      thread.start(callback(this,&Test::run));
-    }
-private:
-    Thread thread;
-};
-int a =1993;
-Test test;
-//Serial.println(uxTaskPriorityGet(myTask));configMAX_PRIORITIES
-constexpr uint8_t RST_PIN = 22;          // Configurable, see typical pin layout above
-constexpr uint8_t SS_PIN =  16;         // Configurable, see typical pin layout above
-
-//SPIClass spiBus(HSPI);
-//MFRC522_SPI spiDevice =MFRC522_SPI(SS_PIN, RST_PIN,&spiBus);
-//MFRC522 rfid = MFRC522(&spiDevice); 
-
-//SPIClass spiBus(HSPI);
-MFRC522_UART uartDevice =MFRC522_UART(SS_PIN, RST_PIN);
+MFRC522_UART uartDevice =MFRC522_UART(21,Serial2);
 MFRC522 rfid = MFRC522(&uartDevice); 
 
 void setup() {
+  
+  pinMode(18,OUTPUT);
+  pinMode(23,OUTPUT);
+  pinMode(5,OUTPUT);
+  pinMode(19,OUTPUT);
   // put your setup code here, to run once:
     //WIFI Kit series V1 not support Vext control
   Heltec.begin(true , false , true , true, BAND);
   //LoRa.dumpRegisters(Serial);
-
-  /* timeMachine.startup(NULL);
-  int timeout= 3;
-  do
-  {
-    ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
-    if(timeout-- == 0){
-        //todo send message
-        debug("RTC ERROR,please check out RTC DS1307,cplusplus:%ld\n",__cplusplus);
-        break;
-    }
-  }while(timeMachine.getEpoch()==0);
-
-  timeMachine.setEpoch(1614236396+8*60*60);
-  String&& debugtime=RTC.getDateTime();
-  debug("RTC:%d,%s\n",(int)RTC.getEpoch(),debugtime.c_str());
-
-  ThisThread::sleep_for(Kernel::Clock::duration_u32(3000));
-  test.startup();
- thread1.start(callback(TaskTest0));
-  thread2.start(callback(TaskTest,&a));
-
-  thread3.start(callback(TaskTest0));
-  thread4.start(callback(TaskTest0));
-  thread5.start(callback(TaskTest0));
-  thread6.start(callback(TaskTest0));
-  thread7.start(callback(TaskTest0));*/
-  //spiBus.begin(26, 12, 13,15);
-
- 
-
+  /*timeMachine.attach(delegate(&e,&ExceptionCatcher::PrintTrace));
+  timeMachine.startup();
   
-  for(;;){
-    //TickerDataClock clock(NULL);
-    //TickerDataClock::time_point today =  clock.now();
-    //time_t tt= today.time_since_epoch().count();
 
-    //static system_clock::time_point today = system_clock::now();
-   // std::time_t tt = system_clock::to_time_t(today);
-    //debug( "today is:%s\n ",ctime(&tt));
-    ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-  }
+  //timeMachine.setEpoch(1614764209+8*60*60);
+  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+  colorSensor.attach(delegate(&e,&ExceptionCatcher::PrintTrace));
+  colorSensor.startup();
+*/
+  rfid.PCD_Init(); // Init MFRC522 
 }
 
-
-
-//MFRC522 rfid(SS_PIN, RST_PIN); // Instance of the class
-
-MFRC522::MIFARE_Key key; 
-
-// Init array that will store new NUID 
 byte nuidPICC[4];
 void printHex(byte *buffer, byte bufferSize) {
   for (byte i = 0; i < bufferSize; i++) {
@@ -185,11 +83,18 @@ void printDec(byte *buffer, byte bufferSize) {
   }
 }
 
+std::array<uint16_t,4> dataRGB;
 void loop() {
+  
   // put your main code here, to run repeatedly:
  // debug("%s,__cplusplus:%ld\n",data,__cplusplus);
-  //vTaskDelete(NULL);
- rfid.PCD_Init(); // Init MFRC522 
+ /* ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+  colorSensor.measurementModeActive();
+  colorSensor.getRGB(dataRGB);
+  colorSensor.measurementModeInactive();
+  debug("%d,%d,%d,%d\n",dataRGB[0],dataRGB[1],dataRGB[2],dataRGB[3]);
+  */
+ Serial.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
  // Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
   if ( ! rfid.PICC_IsNewCardPresent()){
 
@@ -249,38 +154,9 @@ void loop() {
   // Stop encryption on PCD
   rfid.PCD_StopCrypto1();
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-  
+  //vTaskDelete(NULL);
 }
 
-void TaskDebug( void *pvParameters )
-{
-  //int cnt=0;
-  for(;;){
-     // vTaskResume(handleTaskDebug);
-      //Serial.println("hello");
-    //debug_if(true,"debug_if:%d\n",data);
-    //delay(10000);
-   // ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
-      //debug("task debug ...%d\n",++x);
-      //ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
-  }
-  
-}
-
- /*
-  xTaskCreatePinnedToCore(
-    TaskDebug
-    ,  "TaskDebug"
-    ,  8*1024  
-    ,  NULL
-    ,  1  
-    ,  &handleTaskDebug
-    ,  ARDUINO_RUNNING_CORE);
-  attachInterrupt(0, []  {
-    vTaskSuspend(handleTaskDebug);
-  }, FALLING);   
-
-  */
   
 
 

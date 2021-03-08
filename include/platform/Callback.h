@@ -25,7 +25,8 @@
 #include "platform/mbed_toolchain.h"
 #include <cxxsupport/mstd_type_traits.h>
 #include <cxxsupport/mstd_functional.h>
-
+#include <arduino.h>
+#include <HardwareSerial.h>
 // Controlling switches from config:
 // MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL - support storing non-trivial function objects
 // MBED_CONF_PLATFORM_CALLBACK_COMPARABLE - support memcmp comparing stored objects (requires zero padding)
