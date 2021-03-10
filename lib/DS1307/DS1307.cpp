@@ -111,8 +111,6 @@ bool DS1307::isRunning(void)
   uint8_t data;
   bool flag;
   
-   
-     
        _wire.beginTransmission(DS1307_ADDR);
        _wire.write(0x00);
       _wire.endTransmission();
@@ -120,9 +118,6 @@ bool DS1307::isRunning(void)
         _wire.requestFrom(DS1307_ADDR, 1);
         data = _wire.read();
         flag = bitRead(data, 7);
-
-    
-
 	return (!flag);
 }
 
@@ -358,10 +353,12 @@ uint8_t DS1307::getHours()
 
 	 return daybcd;
 }
-
+#define UNUSED(expr) do { (void)(expr); } while (0)
 void  DS1307::setHours(uint8_t hour)
 {
 	bool h_mode, meridiem;
+  UNUSED(meridiem);
+
 	h_mode = getHourMode();
   
       _wire.beginTransmission(DS1307_ADDR);
@@ -569,7 +566,7 @@ setDateTime()
 Taken from https://github.com/adafruit/RTClib/
 -----------------------------------------------------------*/
 
-void DS1307::setDateTime(char* date, char* time)
+void DS1307::setDateTime(const char* date,const char* time)
 {
 	uint8_t day, month, hour, minute, second;
 	uint16_t year;
@@ -586,6 +583,7 @@ void DS1307::setDateTime(char* date, char* time)
 	case 'O': month = 10; break;
 	case 'N': month = 11; break;
 	case 'D': month = 12; break;
+  default:month=0;break;
 	}
 	setMonth(month);
 	day = atoi(date + 4);
@@ -596,6 +594,7 @@ void DS1307::setDateTime(char* date, char* time)
 	setMinutes(minute);
 	second = atoi(time + 6);
 	setSeconds(second);
+ 
 }
 /*-----------------------------------------------------------
 setEpoch()
@@ -613,12 +612,12 @@ void DS1307::setEpoch(time_t epoch)
 	setSeconds(epoch_tm.tm_sec); //0x00 - Seconds
 	setMinutes(epoch_tm.tm_min);
 	setHours(epoch_tm.tm_hour);
-	setWeek(epoch_tm.tm_wday + 1);
+	setWeek(epoch_tm.tm_wday+1);
 	setDay(epoch_tm.tm_mday);
-	setMonth(epoch_tm.tm_mon + 1);
+	setMonth(epoch_tm.tm_mon);
 	setYear(epoch_tm.tm_year + 1900);
 	_wire.endTransmission();
-  
+ 
 }
 
 /*-----------------------------------------------------------
@@ -632,10 +631,10 @@ time_t DS1307::getEpoch()
 	epoch_tm.tm_sec = getSeconds();
 	epoch_tm.tm_min = getMinutes();
 	epoch_tm.tm_hour = getHours();
-	epoch_tm.tm_wday = getWeek() - 1;
+	epoch_tm.tm_wday = getWeek();
 	epoch_tm.tm_mday = getDay();
-	epoch_tm.tm_mon = getMonth() - 1;
-	epoch_tm.tm_year = getYear() - 1900;
+	epoch_tm.tm_mon = getMonth();
+	epoch_tm.tm_year = getYear();
 	epoch = mktime(&epoch_tm);
   datetime = String(epoch_tm.tm_year,DEC) + 
           String("-")+ 
@@ -643,8 +642,6 @@ time_t DS1307::getEpoch()
           String("-")+ 
           String(epoch_tm.tm_mday,DEC)+
           String(" ")+ 
-          String(epoch_tm.tm_mon,DEC)+
-          String(":")+ 
           String(epoch_tm.tm_hour,DEC)+
           String(":")+ 
           String(epoch_tm.tm_min,DEC)+
@@ -653,8 +650,11 @@ time_t DS1307::getEpoch()
 	return (epoch);
 }
 
-String DS1307::getDateTime()
+String DS1307::getDateTime(bool duplicate)
 {
+  if(duplicate){
+    getEpoch();
+  }
 	return DS1307::datetime;
 }
 /* NVRAM Functions */

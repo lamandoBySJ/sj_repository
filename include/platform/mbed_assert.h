@@ -19,7 +19,7 @@
 
 #include <assert.h>
 #include "mbed_toolchain.h"
-
+#include "mbed_toolchain.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -41,7 +41,6 @@ extern "C" {
  *  @param line Failing assertation line number.
  */
 MBED_NORETURN void mbed_assert_internal(const char *expr, const char *file, int line);
-
 #ifdef __cplusplus
 }
 #endif

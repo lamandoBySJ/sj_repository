@@ -38,7 +38,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-
+#include <RTCBase.h>
 /*
  * DateTime Class
  * */
@@ -47,13 +47,12 @@
 
 
  
-class DS1307 //: public RTCDateTime
+class DS1307 : public RTCBase
 {
     public:
         DS1307() = delete;
         DS1307(TwoWire& wire,uint8_t  sda,uint8_t scl,uint32_t frequency=100000):_wire(wire)
         {
-            
             this->_sda=sda;
             this->_scl=scl;
             this->_frequency =frequency;
@@ -65,7 +64,7 @@ class DS1307 //: public RTCDateTime
         //void setDateTime(time_t timestamp);
        // time_t datetime(String& nowtime);
        // virtual time_t timestamp(String& nowtime) override;
-        String getDateTime();
+        String getDateTime(bool duplicate=false);
         bool begin();
 
         bool isRunning(void);
@@ -89,7 +88,7 @@ class DS1307 //: public RTCDateTime
         void setDate(uint8_t day, uint8_t month, uint16_t year);
         void setTime(uint8_t hour, uint8_t minute, uint8_t second);
 
-        void setDateTime(char* date, char* time);
+        void setDateTime(const char* date,const  char* time) override;
 
         uint8_t getSeconds();
         uint8_t getMinutes();
@@ -106,10 +105,10 @@ class DS1307 //: public RTCDateTime
         bool isOutPinEnabled();
         bool isSqweEnabled();
 
-        TwoWire& _wire;
+        
         static String datetime;
     private:
-      
+        TwoWire& _wire;
         uint8_t bin2bcd (uint8_t val);
         uint8_t bcd2bin (uint8_t val);
         uint8_t             _sda;

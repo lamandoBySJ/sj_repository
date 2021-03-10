@@ -79,10 +79,12 @@ namespace impl {
 template <typename F>
 class not_fn_t {
     
-    //std::decay_t<F> fn;
+    
    
 public:
- #if __cplusplus > 201103L
+    #if __cplusplus >= 201103L
+    std::decay_t<F> fn;
+
     explicit not_fn_t(F&& f) : fn(std::forward<F>(f)) { }
     not_fn_t(const not_fn_t &other) = default;
     not_fn_t(not_fn_t &&other) = default;
@@ -130,10 +132,10 @@ template <typename T>
 using unwrap_reference_t = typename unwrap_reference<T>::type;
 
 /* C++20 unwrap_ref_decay */
-//template <typename T>
-//struct unwrap_ref_decay : unwrap_reference<std::decay_t<T>> { };
-//template <typename T>
-//using unwrap_ref_decay_t = typename unwrap_ref_decay<T>::type;
+template <typename T>
+struct unwrap_ref_decay : unwrap_reference<std::decay_t<T>> { };
+template <typename T>
+using unwrap_ref_decay_t = typename unwrap_ref_decay<T>::type;
 
 }
 
