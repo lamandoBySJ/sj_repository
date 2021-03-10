@@ -506,14 +506,16 @@ public:
     {
         MBED_ASSERT(bool(*this));
         auto op_call = reinterpret_cast<call_type *>(call_fn());
-        return op_call(this, args...);
+        //return op_call(this, args...);
+        return op_call(this, std::forward<ArgTs>(args)...);
     }
 
     /** Call the attached function
      */
     R operator()(ArgTs... args) const
     {
-        return call(args...);
+       // return call(args...);
+       return call(std::forward<ArgTs>(args)...);
     }
 
     /** Test if function has been assigned

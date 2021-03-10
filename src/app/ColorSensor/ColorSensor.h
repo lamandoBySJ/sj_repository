@@ -7,7 +7,7 @@
 #include <BH1749NUC.h>
 #include <ColorSensorBase.h>
 #include <cxxsupport/mstd_type_traits.h>
-#include "DelegateClass.hpp"
+#include "DelegateClass.h"
 using namespace rtos;
 
 template<typename T>

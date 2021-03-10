@@ -91,13 +91,6 @@ bool ColorSensor<T>::getRGB(std::array<uint16_t,4>& data)
     _mutex.unlock();
     return result;
   });
-  /*
-   _mutex.lock();
-  _colorSensor.red_data_get(red);
-  _colorSensor.green_data_get(green);
-  _colorSensor.blue_data_get(blue);
-  _colorSensor.ir_data_get(ir);
-  _mutex.unlock();*/
 }
 
 template<>

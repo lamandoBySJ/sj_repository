@@ -5,7 +5,7 @@
 #include "DS1307.h"
 #include "rtos/rtos.h"
 #include "RTCBase.h"
-#include "DelegateClass.hpp"
+#include "DelegateClass.h"
 using namespace rtos;
 
 template<typename RTC>

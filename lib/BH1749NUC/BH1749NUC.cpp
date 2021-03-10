@@ -47,34 +47,7 @@ bool BH1749NUC::init(GainIR gain_ir,GainRGB gain_rgb,MeasMode meas_mode)
     mode_control1.bitfield.measurement_mode=static_cast<uint8_t>(meas_mode);
 
     mode_control1_set(mode_control1.reg);
-   
-    ir_gain_get(&mode_control1.reg);
-    
-    rgb_gain_get(&mode_control1.reg);
-    
-    measurement_mode_get(&mode_control1.reg);
-   
-    mode_control1_get(&mode_control1.reg);
-    Serial.printf("mode_control1.reg:%s\n",String(mode_control1.reg,HEX).c_str());
-    Serial.printf("rgb_gain:%s\n",String(mode_control1.bitfield.rgb_gain,DEC).c_str());
-    Serial.printf("ir_gain:%s\n",String(mode_control1.bitfield.ir_gain,DEC).c_str());
-    Serial.printf("measurement_mode:%s\n",String(mode_control1.bitfield.measurement_mode,DEC).c_str());
-    /*
-    ir_gain_set(mode_control1.reg);
-    
-    Serial.printf("ir_gain_get:%s\n",String(mode_control1.reg,HEX).c_str());
-
-    
-    rgb_gain_set(mode_control1.reg);
-    
-    Serial.printf("rgb_gain_get:%s\n",String(mode_control1.reg,HEX).c_str());
-
-    
-    measurement_mode_set();
-    
-    Serial.printf("measurement_mode_get:%s\n",String(mode_control1.reg,HEX).c_str());
-    */
-
+    //mode_control1_get(&mode_control1.reg);
     return true;
 }
 

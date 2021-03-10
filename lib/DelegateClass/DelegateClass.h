@@ -209,12 +209,6 @@ DelegateClass<R(ArgTs...)> delegate(U *obj, R(T::*method)(ArgTs...) &) noexcept
     return DelegateClass<R(ArgTs...)>(obj, method);
 }
 
-struct A
-{
-    void Fun(){   Serial.println("################### Fun ################"); }
-    void Fun1(int i){ Serial.println("################### Fun1 ################" +String(i,DEC));  }
-    void Fun2(int i, double j){ Serial.println("################### Fun2 ################" +String(i,DEC)+String(j,DEC)); }
-};
 
 #define APP_VERSION_CAT(a,b) a##" "##b 
 //#define APP_VERSION APP_VERSION_CAT(__DATA__,__TIME__)

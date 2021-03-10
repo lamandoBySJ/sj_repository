@@ -8,7 +8,25 @@
 #include <MFRC522.h>
 #include <Test.h>
 #include <chrono>
-#include <DelegateClass.hpp>
+#include <DelegateClass.h>
+
+#include <esp_event_legacy.h>
+#include <WiFiType.h>
+#include <WiFi.h>
+extern "C" {
+	#include "freertos/FreeRTOS.h"
+	#include "freertos/timers.h"
+}
+
+#include <app/AsyncMqttClient/AsyncMqttClient.h>
+
+#define WIFI_SSID "360"
+#define WIFI_PASSWORD "Aa000000"
+
+#define MQTT_HOST IPAddress(192, 168, 1, 133)
+#define MQTT_PORT 1883
+
+
 
 using namespace mstd;
 using namespace rtos;
@@ -21,8 +39,6 @@ using namespace rtos;
 #define ARDUINO_RUNNING_CORE 1
 #endif
 #endif
-
-
 
 Test test;
 
@@ -39,13 +55,173 @@ ColorSensor<BH1749NUC> colorSensor(bh1749nuc,mutex,2);
 //ColorSensor<ColorSensorBase> colorSensor2(&bh1749nuc,mutex);
 
 Thread thread1("Thd1",1024*2,1);
-Thread thread2("Thd2",1024*2,2);
 
 ExceptionCatcher e;
 String ExceptionCatcher::exceptionType="";
 
-MFRC522_UART uartDevice =MFRC522_UART(21,Serial2);
-MFRC522 rfid = MFRC522(&uartDevice); 
+
+class NetworkEngine
+{
+public:
+    NetworkEngine()=default;
+    NetworkEngine(const NetworkEngine& other)=default;
+    NetworkEngine(NetworkEngine&& other)=default;
+    ~NetworkEngine()=default;
+
+    NetworkEngine& operator = (const NetworkEngine& that)=default;
+    NetworkEngine& operator = (NetworkEngine&& that)=default;
+
+    void onMqttConnect(bool sessionPresent) {
+      Serial.println("Connected to MQTT.");
+      Serial.print("Session present: ");
+      Serial.println(sessionPresent);
+      uint16_t packetIdSub = mqttClient.subscribe("test/lol", 2);
+      Serial.print("Subscribing at QoS 2, packetId: ");
+      Serial.println(packetIdSub);
+
+      mqttClient.publish("test/lol", 0, true, "test 1");
+      Serial.println("Publishing at QoS 0");
+      uint16_t packetIdPub1 = mqttClient.publish("test/lol", 1, true, "test 2");
+      Serial.print("Publishing at QoS 1, packetId: ");
+      Serial.println(packetIdPub1);
+      uint16_t packetIdPub2 = mqttClient.publish("test/lol", 2, true, "test 3");
+      Serial.print("Publishing at QoS 2, packetId: ");
+      Serial.println(packetIdPub2);
+    }
+
+    void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
+      Serial.println("Disconnected from MQTT.");
+
+      if (WiFi.isConnected()) {
+        xTimerStart(_mqttReconnectTimer, 0);
+      }
+    }
+
+    void onMqttSubscribe(uint16_t packetId, uint8_t qos) {
+      Serial.println("Subscribe acknowledged.");
+      Serial.print("  packetId: ");
+      Serial.println(packetId);
+      Serial.print("  qos: ");
+      Serial.println(qos);
+    }
+
+    void onMqttUnsubscribe(uint16_t packetId) {
+      Serial.println("Unsubscribe acknowledged.");
+      Serial.print("  packetId: ");
+      Serial.println(packetId);
+    }
+    /*
+    void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
+      Serial.println("Publish received.");
+      Serial.print("  topic: ");
+      Serial.println(topic);
+      Serial.print("  qos: ");
+      Serial.println(properties.qos);
+      Serial.print("  dup: ");
+      Serial.println(properties.dup);
+      Serial.print("  retain: ");
+      Serial.println(properties.retain);
+      Serial.print("  len: ");
+      Serial.println(len);
+      Serial.print("  index: ");
+      Serial.println(index);
+      Serial.print("  total: ");
+      Serial.println(total);
+    }*/
+    void onMqttMessage(String&& topic,String&& payload, AsyncMqttClientMessageProperties properties, size_t index, size_t total) {
+      Serial.println("Publish received.");
+      Serial.print("  topic: ");
+      Serial.println(topic);
+      Serial.println(payload);
+      Serial.print("  qos: ");
+      Serial.println(properties.qos);
+      Serial.print("  dup: ");
+      Serial.println(properties.dup);
+      Serial.print("  retain: ");
+      Serial.println(properties.retain);
+      Serial.print("  len: ");
+      Serial.println(payload.length());
+      Serial.print("  index: ");
+      Serial.println(index);
+      Serial.print("  total: ");
+      Serial.println(total);
+    }
+    void onMqttPublish(uint16_t packetId) {
+      Serial.println("Publish acknowledged.");
+      Serial.print("  packetId: ");
+      Serial.println(packetId);
+    }
+
+    void setMqttReconnectTimer(bool start){
+      if(start){
+          xTimerStart(_mqttReconnectTimer,0);
+      }else{
+          xTimerStop(_mqttReconnectTimer,0);
+      }
+      
+    }
+    void setWifiReconnectTimer(bool start){
+      if(start){
+          xTimerStart(_wifiReconnectTimer,0);
+      }else{
+          xTimerStop(_wifiReconnectTimer,0);
+      }
+    }
+
+    void startup(){
+      _mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)this, reinterpret_cast<TimerCallbackFunction_t>(&NetworkEngine::thunkConnectToMqtt));
+      _wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)this, reinterpret_cast<TimerCallbackFunction_t>(&NetworkEngine::thunkConnectToWifi));
+      mqttClient.onConnect(callback(this,&NetworkEngine::onMqttConnect));
+      mqttClient.onDisconnect(callback(this,&NetworkEngine::onMqttDisconnect));
+      mqttClient.onSubscribe(callback(this,&NetworkEngine::onMqttSubscribe));
+      mqttClient.onUnsubscribe(callback(this,&NetworkEngine::onMqttUnsubscribe));
+      mqttClient.onMessage(callback(this,&NetworkEngine::onMqttMessage));
+      mqttClient.onPublish(callback(this,&NetworkEngine::onMqttPublish));
+      mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+      connectToWifi();
+    }
+    static void thunkConnectToWifi(void* pvTimerID) {
+      static_cast<NetworkEngine*>(pvTimerID)->connectToWifi();
+    }
+     void connectToWifi() {
+      Serial.println("Connecting to Wi-Fi...");
+      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    }
+    static void thunkConnectToMqtt(void* pvTimerID) {
+      static_cast<NetworkEngine*>(pvTimerID)->connectToMqtt();
+    }
+    void connectToMqtt() {
+      Serial.println("Connecting to MQTT...");
+      mqttClient.connect();
+    }
+private:
+    TimerHandle_t _mqttReconnectTimer;
+    TimerHandle_t _wifiReconnectTimer;
+    AsyncMqttClient mqttClient;
+};
+
+NetworkEngine networkEngine;
+
+void WiFiEvent(system_event_id_t event) {
+    Serial.printf("[WiFi-event] event: %d\n", event);
+    switch(event) {
+    case SYSTEM_EVENT_STA_GOT_IP:
+        Serial.println("WiFi connected");
+        Serial.println("IP address: ");
+        Serial.println(WiFi.localIP());
+        networkEngine.connectToMqtt();
+        break;
+    case SYSTEM_EVENT_STA_DISCONNECTED:
+        Serial.println("WiFi lost connection"); 
+        // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
+        networkEngine.setMqttReconnectTimer(false);
+        networkEngine.setWifiReconnectTimer(true);
+        break;
+    default:break;
+    }
+}
+
+
 
 void setup() {
   
@@ -57,7 +233,7 @@ void setup() {
     //WIFI Kit series V1 not support Vext control
   Heltec.begin(true , false , true , true, BAND);
   //LoRa.dumpRegisters(Serial);
-  /*timeMachine.attach(delegate(&e,&ExceptionCatcher::PrintTrace));
+  timeMachine.attach(delegate(&e,&ExceptionCatcher::PrintTrace));
   timeMachine.startup();
   
 
@@ -65,96 +241,33 @@ void setup() {
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
   colorSensor.attach(delegate(&e,&ExceptionCatcher::PrintTrace));
   colorSensor.startup();
-*/
-  rfid.PCD_Init(); // Init MFRC522 
+
+
+  WiFi.onEvent(WiFiEvent);
+  networkEngine.startup();
+ //Callback<void(String,String,int)> call(&a,&A::Fun6);
+ //call.call(String("ABC"),String("ABC"),1);
+
+  //Callback<void(String&&,String&&,int&&)>  call();
+  //MyTest t;
+  //  A a;
+ // t.Fun(Callback<void(String&&,String&&,int&&)>(&a,&A::Fun6));
+
 }
 
-byte nuidPICC[4];
-void printHex(byte *buffer, byte bufferSize) {
-  for (byte i = 0; i < bufferSize; i++) {
-    Serial.print(buffer[i] < 0x10 ? " 0" : " ");
-    Serial.print(buffer[i], HEX);
-  }
-}
-void printDec(byte *buffer, byte bufferSize) {
-  for (byte i = 0; i < bufferSize; i++) {
-    Serial.print(buffer[i] < 0x10 ? " 0" : " ");
-    Serial.print(buffer[i], DEC);
-  }
-}
 
 std::array<uint16_t,4> dataRGB;
 void loop() {
-  
+  ThisThread::sleep_for(Kernel::Clock::duration_seconds(3));
   // put your main code here, to run repeatedly:
- // debug("%s,__cplusplus:%ld\n",data,__cplusplus);
- /* ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+   debug("__cplusplus:%ld\n",__cplusplus);
+  /*
   colorSensor.measurementModeActive();
   colorSensor.getRGB(dataRGB);
   colorSensor.measurementModeInactive();
   debug("%d,%d,%d,%d\n",dataRGB[0],dataRGB[1],dataRGB[2],dataRGB[3]);
   */
- Serial.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
- // Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
-  if ( ! rfid.PICC_IsNewCardPresent()){
-
-     Serial.println(F("No found RFID Card..."));
-     ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-     return;
-  }
-   
-
-  // Verify if the NUID has been readed
-  if ( ! rfid.PICC_ReadCardSerial()){
-    Serial.println(F("Not PICC_ReadCardSerial"));
-    ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-    return;
-  }
-   
-
-  Serial.print(F("PICC type: "));
-  MFRC522::PICC_Type piccType = rfid.PICC_GetType(rfid.uid.sak);
-  Serial.println(rfid.PICC_GetTypeName(piccType));
-
-  // Check is the PICC of Classic MIFARE type
-  if (piccType != MFRC522::PICC_TYPE_MIFARE_MINI &&  
-    piccType != MFRC522::PICC_TYPE_MIFARE_1K &&
-    piccType != MFRC522::PICC_TYPE_MIFARE_4K) {
-    Serial.println(F("Your tag is not of type MIFARE Classic."));
-  }
-
-  if (rfid.uid.uidByte[0] != nuidPICC[0] || 
-    rfid.uid.uidByte[1] != nuidPICC[1] || 
-    rfid.uid.uidByte[2] != nuidPICC[2] || 
-    rfid.uid.uidByte[3] != nuidPICC[3] ) {
-    Serial.println(F("A new card has been detected."));
-
-    // Store NUID into nuidPICC array
-    for (byte i = 0; i < 4; i++) {
-      nuidPICC[i] = rfid.uid.uidByte[i];
-    }
-   
-    Serial.println(F("The NUID tag is:"));
-    Serial.print(F("In hex: "));
-    printHex(rfid.uid.uidByte, rfid.uid.size);
-    Serial.println();
-    Serial.print(F("In dec: "));
-    printDec(rfid.uid.uidByte, rfid.uid.size);
-    Serial.println();
-    nuidPICC[0]=0;
-    nuidPICC[1]=0;
-    nuidPICC[2]=0;
-    nuidPICC[3]=0;
-  }
-  else Serial.println(F("Card read previously."));
-
-  // Halt PICC
-  rfid.PICC_HaltA();
-
-  // Stop encryption on PCD
-  rfid.PCD_StopCrypto1();
-  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-  //vTaskDelete(NULL);
+  vTaskDelete(NULL);
 }
 
   
