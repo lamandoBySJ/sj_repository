@@ -42,7 +42,7 @@ void ColorSensor<T>::startup(bool pwrEnable)
     _mutex.unlock();
 
     if(!cuccess){
-      _delegate.call(ExceptionType::RTCException,String(__FILE__)+String(":")+String(__LINE__));
+      _delegate.call(ExceptionType::ALSException,String(__FILE__)+String(":")+String(__LINE__));
     }else{
       digitalWrite(5,HIGH);
     }

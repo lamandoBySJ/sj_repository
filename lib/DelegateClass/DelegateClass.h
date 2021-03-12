@@ -218,6 +218,7 @@ struct GetAppVersion : public std::integral_constant< unsigned int,APP_VERSION> 
 enum class ExceptionType {
         SensorException = 0,
         RTCException,
+        ALSException,
         FileException,
         OtherException
  };
@@ -235,6 +236,10 @@ struct ExceptionCatcher
         case ExceptionType::RTCException:
             ExceptionCatcher::exceptionType="RTCException";
             digitalWrite(23,HIGH);
+            break;
+        case ExceptionType::ALSException:
+            ExceptionCatcher::exceptionType="ALSException";
+            digitalWrite(18,HIGH);
             break;
         case ExceptionType::FileException:
             ExceptionCatcher::exceptionType="FileException";
