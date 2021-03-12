@@ -20,7 +20,7 @@ extern "C" {
 
 #include <app/AsyncMqttClient/AsyncMqttClient.h>
 
-#define WIFI_SSID "360"
+#define WIFI_SSID "IPS"
 #define WIFI_PASSWORD "Aa000000"
 
 #define MQTT_HOST IPAddress(192, 168, 1, 133)
@@ -59,11 +59,23 @@ Thread thread1("Thd1",1024*2,1);
 ExceptionCatcher e;
 String ExceptionCatcher::exceptionType="";
 
+ TimerHandle_t _mqttReconnectTimer;
+   TimerHandle_t _wifiReconnectTimer;
 
+ AsyncMqttClient mqttClient;
+ void _connectToMqtt() {
+      Serial.println("Connecting to MQTT...");
+      mqttClient.connect();
+}
+void _connectToWifi() {
+      Serial.println("Connecting to Wi-Fi...");
+      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+}
 class NetworkEngine
 {
 public:
-    NetworkEngine()=default;
+    NetworkEngine()=delete;
+    NetworkEngine(AsyncMqttClient& asyncMqttClient):_mqttClient(asyncMqttClient){};
     NetworkEngine(const NetworkEngine& other)=default;
     NetworkEngine(NetworkEngine&& other)=default;
     ~NetworkEngine()=default;
@@ -93,7 +105,8 @@ public:
       Serial.println("Disconnected from MQTT.");
 
       if (WiFi.isConnected()) {
-        xTimerStart(_mqttReconnectTimer, 0);
+        //xTimerStart(_mqttReconnectTimer, 0);
+        setMqttReconnectTimer(true);
       }
     }
 
@@ -169,8 +182,8 @@ public:
     }
 
     void startup(){
-      _mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)this, reinterpret_cast<TimerCallbackFunction_t>(&NetworkEngine::thunkConnectToMqtt));
-      _wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)this, reinterpret_cast<TimerCallbackFunction_t>(&NetworkEngine::thunkConnectToWifi));
+      
+     
       mqttClient.onConnect(callback(this,&NetworkEngine::onMqttConnect));
       mqttClient.onDisconnect(callback(this,&NetworkEngine::onMqttDisconnect));
       mqttClient.onSubscribe(callback(this,&NetworkEngine::onMqttSubscribe));
@@ -178,29 +191,34 @@ public:
       mqttClient.onMessage(callback(this,&NetworkEngine::onMqttMessage));
       mqttClient.onPublish(callback(this,&NetworkEngine::onMqttPublish));
       mqttClient.setServer(MQTT_HOST, MQTT_PORT);
-      connectToWifi();
+
+      _connectToWifi();
+     // _coreThread.start(callback(this,run));
     }
-    static void thunkConnectToWifi(void* pvTimerID) {
-      static_cast<NetworkEngine*>(pvTimerID)->connectToWifi();
+    void run(){
+
     }
-     void connectToWifi() {
-      Serial.println("Connecting to Wi-Fi...");
-      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    }
-    static void thunkConnectToMqtt(void* pvTimerID) {
-      static_cast<NetworkEngine*>(pvTimerID)->connectToMqtt();
-    }
-    void connectToMqtt() {
-      Serial.println("Connecting to MQTT...");
-      mqttClient.connect();
-    }
+  
+ 
+     AsyncMqttClient& _mqttClient;
 private:
-    TimerHandle_t _mqttReconnectTimer;
-    TimerHandle_t _wifiReconnectTimer;
-    AsyncMqttClient mqttClient;
+   
+    
+    static void _thunkConnectToWifi(void* pvTimerID) {
+        Serial.println("_thunkConnectToWiFi...");
+      //static_cast<NetworkEngine*>(pvTimerID)->_connectToWifi();
+    }
+    
+    static void _thunkConnectToMqtt(void* pvTimerID) {
+      Serial.println("_thunkConnectToMQTT...");
+      //static_cast<AsyncMqttClient*>(pvTimerID)->connect();
+    }
+    
+    //Thread _coreThread;
+   
 };
 
-NetworkEngine networkEngine;
+NetworkEngine networkEngine(mqttClient);
 
 void WiFiEvent(system_event_id_t event) {
     Serial.printf("[WiFi-event] event: %d\n", event);
@@ -209,12 +227,12 @@ void WiFiEvent(system_event_id_t event) {
         Serial.println("WiFi connected");
         Serial.println("IP address: ");
         Serial.println(WiFi.localIP());
-        networkEngine.connectToMqtt();
+        networkEngine.setMqttReconnectTimer(true);
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
         Serial.println("WiFi lost connection"); 
         // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
-        networkEngine.setMqttReconnectTimer(false);
+        //networkEngine.setMqttReconnectTimer(false);
         networkEngine.setWifiReconnectTimer(true);
         break;
     default:break;
@@ -242,6 +260,8 @@ void setup() {
   colorSensor.attach(delegate(&e,&ExceptionCatcher::PrintTrace));
   colorSensor.startup();
 
+  _wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(_connectToWifi));
+  _mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(_connectToMqtt));
 
   WiFi.onEvent(WiFiEvent);
   networkEngine.startup();
