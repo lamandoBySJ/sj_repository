@@ -13,20 +13,14 @@
 #include <esp_event_legacy.h>
 #include <WiFiType.h>
 #include <WiFi.h>
+#include "app/NetworkEngine/NetworkEngine.h"
+
 extern "C" {
 	#include "freertos/FreeRTOS.h"
 	#include "freertos/timers.h"
 }
 
 #include <app/AsyncMqttClient/AsyncMqttClient.h>
-
-#define WIFI_SSID "IPS"
-#define WIFI_PASSWORD "Aa000000"
-
-#define MQTT_HOST IPAddress(192, 168, 1, 133)
-#define MQTT_PORT 1883
-
-
 
 using namespace mstd;
 using namespace rtos;
@@ -59,170 +53,14 @@ Thread thread1("Thd1",1024*2,1);
 ExceptionCatcher e;
 String ExceptionCatcher::exceptionType="";
 
- TimerHandle_t _mqttReconnectTimer;
-   TimerHandle_t _wifiReconnectTimer;
+NetworkEngine networkEngine;
 
- AsyncMqttClient mqttClient;
- void _connectToMqtt() {
-      Serial.println("Connecting to MQTT...");
-      mqttClient.connect();
-}
-void _connectToWifi() {
-      Serial.println("Connecting to Wi-Fi...");
-      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-}
-class NetworkEngine
-{
-public:
-    NetworkEngine()=delete;
-    NetworkEngine(AsyncMqttClient& asyncMqttClient):_mqttClient(asyncMqttClient){};
-    NetworkEngine(const NetworkEngine& other)=default;
-    NetworkEngine(NetworkEngine&& other)=default;
-    ~NetworkEngine()=default;
-
-    NetworkEngine& operator = (const NetworkEngine& that)=default;
-    NetworkEngine& operator = (NetworkEngine&& that)=default;
-
-    void onMqttConnect(bool sessionPresent) {
-      Serial.println("Connected to MQTT.");
-      Serial.print("Session present: ");
-      Serial.println(sessionPresent);
-      uint16_t packetIdSub = mqttClient.subscribe("test/lol", 2);
-      Serial.print("Subscribing at QoS 2, packetId: ");
-      Serial.println(packetIdSub);
-
-      mqttClient.publish("test/lol", 0, true, "test 1");
-      Serial.println("Publishing at QoS 0");
-      uint16_t packetIdPub1 = mqttClient.publish("test/lol", 1, true, "test 2");
-      Serial.print("Publishing at QoS 1, packetId: ");
-      Serial.println(packetIdPub1);
-      uint16_t packetIdPub2 = mqttClient.publish("test/lol", 2, true, "test 3");
-      Serial.print("Publishing at QoS 2, packetId: ");
-      Serial.println(packetIdPub2);
-    }
-
-    void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
-      Serial.println("Disconnected from MQTT.");
-
-      if (WiFi.isConnected()) {
-        //xTimerStart(_mqttReconnectTimer, 0);
-        setMqttReconnectTimer(true);
-      }
-    }
-
-    void onMqttSubscribe(uint16_t packetId, uint8_t qos) {
-      Serial.println("Subscribe acknowledged.");
-      Serial.print("  packetId: ");
-      Serial.println(packetId);
-      Serial.print("  qos: ");
-      Serial.println(qos);
-    }
-
-    void onMqttUnsubscribe(uint16_t packetId) {
-      Serial.println("Unsubscribe acknowledged.");
-      Serial.print("  packetId: ");
-      Serial.println(packetId);
-    }
-    /*
-    void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
-      Serial.println("Publish received.");
-      Serial.print("  topic: ");
-      Serial.println(topic);
-      Serial.print("  qos: ");
-      Serial.println(properties.qos);
-      Serial.print("  dup: ");
-      Serial.println(properties.dup);
-      Serial.print("  retain: ");
-      Serial.println(properties.retain);
-      Serial.print("  len: ");
-      Serial.println(len);
-      Serial.print("  index: ");
-      Serial.println(index);
-      Serial.print("  total: ");
-      Serial.println(total);
-    }*/
-    void onMqttMessage(String&& topic,String&& payload, AsyncMqttClientMessageProperties properties, size_t index, size_t total) {
-      Serial.println("Publish received.");
-      Serial.print("  topic: ");
-      Serial.println(topic);
-      Serial.println(payload);
-      Serial.print("  qos: ");
-      Serial.println(properties.qos);
-      Serial.print("  dup: ");
-      Serial.println(properties.dup);
-      Serial.print("  retain: ");
-      Serial.println(properties.retain);
-      Serial.print("  len: ");
-      Serial.println(payload.length());
-      Serial.print("  index: ");
-      Serial.println(index);
-      Serial.print("  total: ");
-      Serial.println(total);
-    }
-    void onMqttPublish(uint16_t packetId) {
-      Serial.println("Publish acknowledged.");
-      Serial.print("  packetId: ");
-      Serial.println(packetId);
-    }
-
-    void setMqttReconnectTimer(bool start){
-      if(start){
-          xTimerStart(_mqttReconnectTimer,0);
-      }else{
-          xTimerStop(_mqttReconnectTimer,0);
-      }
-      
-    }
-    void setWifiReconnectTimer(bool start){
-      if(start){
-          xTimerStart(_wifiReconnectTimer,0);
-      }else{
-          xTimerStop(_wifiReconnectTimer,0);
-      }
-    }
-
-    void startup(){
-      
-     
-      mqttClient.onConnect(callback(this,&NetworkEngine::onMqttConnect));
-      mqttClient.onDisconnect(callback(this,&NetworkEngine::onMqttDisconnect));
-      mqttClient.onSubscribe(callback(this,&NetworkEngine::onMqttSubscribe));
-      mqttClient.onUnsubscribe(callback(this,&NetworkEngine::onMqttUnsubscribe));
-      mqttClient.onMessage(callback(this,&NetworkEngine::onMqttMessage));
-      mqttClient.onPublish(callback(this,&NetworkEngine::onMqttPublish));
-      mqttClient.setServer(MQTT_HOST, MQTT_PORT);
-
-      _connectToWifi();
-     // _coreThread.start(callback(this,run));
-    }
-    void run(){
-
-    }
-  
- 
-     AsyncMqttClient& _mqttClient;
-private:
-   
-    
-    static void _thunkConnectToWifi(void* pvTimerID) {
-        Serial.println("_thunkConnectToWiFi...");
-      //static_cast<NetworkEngine*>(pvTimerID)->_connectToWifi();
-    }
-    
-    static void _thunkConnectToMqtt(void* pvTimerID) {
-      Serial.println("_thunkConnectToMQTT...");
-      //static_cast<AsyncMqttClient*>(pvTimerID)->connect();
-    }
-    
-    //Thread _coreThread;
-   
-};
-
-NetworkEngine networkEngine(mqttClient);
 
 void WiFiEvent(system_event_id_t event) {
+    /*
     Serial.printf("[WiFi-event] event: %d\n", event);
     switch(event) {
+    
     case SYSTEM_EVENT_STA_GOT_IP:
         Serial.println("WiFi connected");
         Serial.println("IP address: ");
@@ -232,15 +70,15 @@ void WiFiEvent(system_event_id_t event) {
     case SYSTEM_EVENT_STA_DISCONNECTED:
         Serial.println("WiFi lost connection"); 
         // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
-        //networkEngine.setMqttReconnectTimer(false);
-        networkEngine.setWifiReconnectTimer(true);
+        if(thunk_event != SYSTEM_EVENT_STA_DISCONNECTED){
+            networkEngine.setMqttReconnectTimer(false);
+            networkEngine.setWifiReconnectTimer(true);
+        }
         break;
     default:break;
     }
+    thunk_event = event;*/
 }
-
-
-
 void setup() {
   
   pinMode(18,OUTPUT);
@@ -254,16 +92,12 @@ void setup() {
   timeMachine.attach(delegate(&e,&ExceptionCatcher::PrintTrace));
   timeMachine.startup();
   
-
   //timeMachine.setEpoch(1614764209+8*60*60);
-  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
   colorSensor.attach(delegate(&e,&ExceptionCatcher::PrintTrace));
   colorSensor.startup();
 
-  _wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(_connectToWifi));
-  _mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(_connectToMqtt));
+  //ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
 
-  WiFi.onEvent(WiFiEvent);
   networkEngine.startup();
  //Callback<void(String,String,int)> call(&a,&A::Fun6);
  //call.call(String("ABC"),String("ABC"),1);
@@ -275,19 +109,21 @@ void setup() {
 
 }
 
-
+bool n=false;
 std::array<uint16_t,4> dataRGB;
 void loop() {
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(3));
   // put your main code here, to run repeatedly:
-   debug("__cplusplus:%ld\n",__cplusplus);
+    n=networkEngine.publish("test/lol","xxx");
+   debug("__cplusplus:%ld,%d\n",__cplusplus,n);
+   
   /*
   colorSensor.measurementModeActive();
   colorSensor.getRGB(dataRGB);
   colorSensor.measurementModeInactive();
   debug("%d,%d,%d,%d\n",dataRGB[0],dataRGB[1],dataRGB[2],dataRGB[3]);
   */
-  vTaskDelete(NULL);
+  //vTaskDelete(NULL);
 }
 
   
