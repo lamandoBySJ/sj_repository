@@ -99,13 +99,6 @@ void setup() {
   //ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
 
   networkEngine.startup();
- //Callback<void(String,String,int)> call(&a,&A::Fun6);
- //call.call(String("ABC"),String("ABC"),1);
-
-  //Callback<void(String&&,String&&,int&&)>  call();
-  //MyTest t;
-  //  A a;
- // t.Fun(Callback<void(String&&,String&&,int&&)>(&a,&A::Fun6));
 
 }
 
