@@ -6,13 +6,13 @@ void NetworkEngine::WiFiEvent(system_event_id_t event, system_event_info_t info)
     Serial.printf("[WiFi-event] event: %d\n", event,info);
     switch(event) {
     case SYSTEM_EVENT_STA_GOT_IP:
-        Serial.println("WiFi connected");
-        Serial.println("IP address: ");
-        Serial.println(WiFi.localIP());
+        debug("WiFi connected \n");
+        debug("IP address: ");
+        debug(WiFi.localIP().toString().c_str());
         setMqttReconnectTimer(true);
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
-        Serial.println("WiFi lost connection"); 
+        debug("WiFi lost connection \n"); 
         // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
         if(_event != SYSTEM_EVENT_STA_DISCONNECTED){
             setMqttReconnectTimer(false);
@@ -33,25 +33,25 @@ const char* NetworkEngine::WIFI_PASSWORD="Aa000000";
 
 void NetworkEngine::_thunkConnectToWifi(void* pvTimerID)
 {
-    Serial.println("_thunkConnectToWiFi...");
+    debug("_thunkConnectToWiFi... \n");
     //WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
      static_cast<NetworkEngine*>(pvTimerID)->_connectToWifi();
 }
 void NetworkEngine::_thunkConnectToMqtt(void* pvTimerID) 
 {
-      Serial.println("_thunkConnectToMQTT...");
+      debug("_thunkConnectToMQTT... \n");
       static_cast<NetworkEngine*>(pvTimerID)-> _connectToMqtt();
 }
 void NetworkEngine::_connectToMqtt()
 {
-        Serial.println("Connecting to MQTT...");
+        debug("Connecting to MQTT... \n");
          _mutex.lock();
         mqttClient.connect();
         _mutex.unlock();
 }
 void NetworkEngine::_connectToWifi() 
 {
-        Serial.println("Connecting to Wi-Fi...");
+        debug("Connecting to Wi-Fi... \n");
         _mutex.lock();
         WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
         _mutex.unlock();
@@ -135,29 +135,29 @@ bool  NetworkEngine::subscribe(const String&& topic, uint8_t qos)
 
 void NetworkEngine::onMqttConnect(bool sessionPresent)
 {
-      Serial.println("Connected to MQTT.");
+      debug("Connected to MQTT. \n");
       _mutex.lock();
       _connected=true;
       _mutex.unlock();
       /*Serial.print("Session present: ");
-      Serial.println(sessionPresent);
+      debug(sessionPresent);
       uint16_t packetIdSub = mqttClient.subscribe("test/lol", 2);
       Serial.print("Subscribing at QoS 2, packetId: ");
-      Serial.println(packetIdSub);
+      debug(packetIdSub);
 
       mqttClient.publish("test/lol", 0, true, "test 1");
-      Serial.println("Publishing at QoS 0");
+      debug("Publishing at QoS 0");
       uint16_t packetIdPub1 = mqttClient.publish("test/lol", 1, true, "test 2");
       Serial.print("Publishing at QoS 1, packetId: ");
-      Serial.println(packetIdPub1);
+      debug(packetIdPub1);
       uint16_t packetIdPub2 = mqttClient.publish("test/lol", 2, true, "test 3");
       Serial.print("Publishing at QoS 2, packetId: ");
-      Serial.println(packetIdPub2);*/
+      debug(packetIdPub2);*/
 }
 
 void NetworkEngine::onMqttDisconnect(AsyncMqttClientDisconnectReason reason) 
 {
-      Serial.println("Disconnected from MQTT.");
+      debug("Disconnected from MQTT. \n");
         _mutex.lock();
       _connected=false;
      
@@ -170,61 +170,62 @@ void NetworkEngine::onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
     
 void NetworkEngine::onMqttSubscribe(uint16_t packetId, uint8_t qos)
  {
-      Serial.println("Subscribe acknowledged.");
+      debug("Subscribe acknowledged. \n");
       Serial.print("  packetId: ");
-      Serial.println(packetId);
+      debug("%d",packetId);
       Serial.print("  qos: ");
-      Serial.println(qos);
+      debug("%d",qos);
 }
 
 void NetworkEngine::onMqttUnsubscribe(uint16_t packetId)
 {
-      Serial.println("Unsubscribe acknowledged.");
+      debug("Unsubscribe acknowledged. \n");
       Serial.print("  packetId: ");
-      Serial.println(packetId);
+      debug("%d",packetId);
 }
     /*
     void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
-      Serial.println("Publish received.");
+      debug("Publish received.");
       Serial.print("  topic: ");
-      Serial.println(topic);
+      debug(topic);
       Serial.print("  qos: ");
-      Serial.println(properties.qos);
+      debug(properties.qos);
       Serial.print("  dup: ");
-      Serial.println(properties.dup);
+      debug(properties.dup);
       Serial.print("  retain: ");
-      Serial.println(properties.retain);
+      debug(properties.retain);
       Serial.print("  len: ");
-      Serial.println(len);
+      debug(len);
       Serial.print("  index: ");
-      Serial.println(index);
+      debug(index);
       Serial.print("  total: ");
-      Serial.println(total);
+      debug(total);
     }*/
 void NetworkEngine::onMqttMessage(String&& topic,String&& payload, AsyncMqttClientMessageProperties properties, size_t index, size_t total) 
 {
-      Serial.println("Publish received.");
+      debug("Publish received.\n");
       Serial.print("  topic: ");
-      Serial.println(topic);
-      Serial.println(payload);
+      debug("%s\n",topic.c_str());
+      Serial.print("  payload: ");
+      debug("%s\n",payload.c_str());
       Serial.print("  qos: ");
-      Serial.println(properties.qos);
+      debug("%d\n",properties.qos);
       Serial.print("  dup: ");
-      Serial.println(properties.dup);
+      debug("%d\n",properties.dup);
       Serial.print("  retain: ");
-      Serial.println(properties.retain);
+      debug("%d\n",properties.retain);
       Serial.print("  len: ");
-      Serial.println(payload.length());
+      debug("%d\n",payload.length());
       Serial.print("  index: ");
-      Serial.println(index);
+      debug("%d\n",index);
       Serial.print("  total: ");
-      Serial.println(total);
+      debug("%d\n",total);
 }
 void NetworkEngine::onMqttPublish(uint16_t packetId) 
 {
-      Serial.println("Publish acknowledged.");
+      debug("Publish acknowledged. \n");
       Serial.print("  packetId: ");
-      Serial.println(packetId);
+      debug("%d\n",packetId);
 }
 
 void NetworkEngine::setMqttReconnectTimer(bool start)

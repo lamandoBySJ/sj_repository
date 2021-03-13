@@ -107,8 +107,7 @@ std::array<uint16_t,4> dataRGB;
 void loop() {
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(3));
   // put your main code here, to run repeatedly:
-    n=networkEngine.publish("test/lol","xxx");
-   debug("__cplusplus:%ld,%d\n",__cplusplus,n);
+   debug("__cplusplus:%ld,%d\n",__cplusplus,networkEngine.publish("test/lol","xxx"));
    
   /*
   colorSensor.measurementModeActive();
