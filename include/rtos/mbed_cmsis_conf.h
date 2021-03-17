@@ -1,5 +1,5 @@
-/* mbed Microcontroller Library
- * Copyright (c) 2006-2019 ARM Limited
+/*
+ * Copyright (c) 2018-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,18 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef MBED_RTOS_RTX1_TYPES_H
-#define MBED_RTOS_RTX1_TYPES_H
+#ifndef MBED_CMSIS_CONF_H
+#define MBED_CMSIS_CONF_H
 
-#if MBED_CONF_RTOS_PRESENT || defined(UNITTEST)
-
-#include "cmsis_os.h"
-typedef int32_t osStatus;
-typedef int32_t osPriority;
-#else
-#include "rtos/cmsis_os2.h"
-typedef int32_t osStatus;
-typedef int32_t osPriority;
+#ifndef MBED_CONF_TZ_PROCESS_STACK_SIZE
+#define MBED_CONF_TZ_PROCESS_STACK_SIZE  512
+#endif
+#ifndef MBED_CONF_TZ_PROCESS_STACK_SLOTS
+#define MBED_CONF_TZ_PROCESS_STACK_SLOTS  8
 #endif
 
-#endif
+#define TZ_PROCESS_STACK_SLOTS  MBED_CONF_TZ_PROCESS_STACK_SLOTS
+#define TZ_PROCESS_STACK_SIZE  MBED_CONF_TZ_PROCESS_STACK_SIZE
+
+#endif /* MBED_CMSIS_CONF_H */

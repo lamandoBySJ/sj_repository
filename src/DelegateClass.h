@@ -5,6 +5,7 @@
 #include <ColorSensorBase.h>
 #include <cxxsupport/mstd_type_traits.h>
 #include <platform_debug.h>
+
 template <typename Signature>
 class DelegateClass;
 
@@ -215,44 +216,50 @@ DelegateClass<R(ArgTs...)> delegate(U *obj, R(T::*method)(ArgTs...) &) noexcept
 #define APP_VERSION 20210330L
 struct GetAppVersion : public std::integral_constant< unsigned int,APP_VERSION> {};
 
+struct GetAppVersionRelease : public std::integral_constant<bool,true> {};
+
 enum class ExceptionType {
         SensorException = 0,
         RTCException,
         ALSException,
         FileException,
-        OtherException
+        OtherException,
+        NoException
  };
 struct ExceptionCatcher
 {
     ExceptionCatcher()=default;
     void PrintTrace(ExceptionType type,String e){ 
+        String exceptionType;
         switch (type)
         {
         case ExceptionType::SensorException:
-            ExceptionCatcher::exceptionType="SensorException:";
+            exceptionType="SensorException:";
             digitalWrite(18,HIGH);
             break;
         case ExceptionType::RTCException:
-            ExceptionCatcher::exceptionType="RTCException:";
+            exceptionType="RTCException:";
             digitalWrite(23,HIGH);
             break;
         case ExceptionType::ALSException:
-            ExceptionCatcher::exceptionType="ALSException:";
+            exceptionType="ALSException:";
             digitalWrite(18,HIGH);
             break;
         case ExceptionType::FileException:
-            ExceptionCatcher::exceptionType="FileException:";
+            exceptionType="FileException:";
             break;
         case ExceptionType::OtherException:
-            ExceptionCatcher::exceptionType="OtherException:";
+            exceptionType="OtherException:";
+            break;
+        case ExceptionType::NoException:
+            exceptionType="NoException:";
             break;
         default:
-            ExceptionCatcher::exceptionType="DefaultException:";
+            exceptionType="DefaultException:";
             break;
         }
-        platform_debug::PlatformDebug::print(ExceptionCatcher::exceptionType + e);
+        platform_debug::PlatformDebug::println(exceptionType + e);
     }
-    static String exceptionType;
 };
 
 #endif

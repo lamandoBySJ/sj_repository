@@ -1,5 +1,4 @@
-/* mbed Microcontroller Library
- * Copyright (c) 2006-2019 ARM Limited
+/* Copyright (c) 2016-2019 ARM Limited
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,18 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef MBED_RTOS_RTX1_TYPES_H
-#define MBED_RTOS_RTX1_TYPES_H
+#ifndef MBED_EVENTS_H
+#define MBED_EVENTS_H
 
-#if MBED_CONF_RTOS_PRESENT || defined(UNITTEST)
+#ifdef __cplusplus
 
-#include "cmsis_os.h"
-typedef int32_t osStatus;
-typedef int32_t osPriority;
-#else
-#include "rtos/cmsis_os2.h"
-typedef int32_t osStatus;
-typedef int32_t osPriority;
+#include "../events/EventQueue.h"
+#include "../events/Event.h"
+#include "../events/UserAllocatedEvent.h"
+
+#include "../events/mbed_shared_queues.h"
+
+/** \addtogroup events-public-api */
+/** @{*/
+#ifndef MBED_NO_GLOBAL_USING_DIRECTIVE
+using namespace events;
+#endif
+/** @}*/
+
 #endif
 
 #endif

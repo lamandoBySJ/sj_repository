@@ -42,16 +42,18 @@ void ColorSensor<T>::startup(bool pwrEnable)
     _mutex.unlock();
 
     if(!cuccess){
-      _delegate.call(ExceptionType::ALSException,String(__FILE__)+String(":")+String(__LINE__));
+      for(auto& v : _delegateCallbacks){
+          v.call(ExceptionType::ALSException,String(__FILE__)+String(":")+String(__LINE__));
+      }
     }else{
       digitalWrite(5,HIGH);
     }
 }
 
 template<typename T>
-void ColorSensor<T>::attach(DelegateClass<void(ExceptionType,String)> func)
+void ColorSensor<T>::attach(Callback<void(ExceptionType,String)> func)
 {
-    _delegate=func;
+    _delegateCallbacks.push_back(func);
 }
 
 template<typename T>
@@ -92,7 +94,7 @@ bool ColorSensor<T>::getRGB(std::array<uint16_t,4>& data)
     return result;
   });
 }
-
+/*
 template<>
 class ColorSensor<ColorSensorBase>
 {
@@ -118,6 +120,6 @@ private:
     rtos::Mutex& _mutex;
     uint8_t _rst;
 };
-
+*/
 template class ColorSensor<BH1749NUC>;
 

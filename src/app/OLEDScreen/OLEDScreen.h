@@ -12,7 +12,7 @@ template<int N=12>
 class OLEDScreen
 {
 public:
-    OLEDScreen()=default;
+    OLEDScreen()=delete;
     OLEDScreen(SSD1306Wire* ssd1306);
     ~OLEDScreen();
     OLEDScreen(const OLEDScreen& other)

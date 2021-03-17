@@ -5,6 +5,8 @@
 #include <WiFiType.h>
 #include <WiFi.h>
 #include <rtos/rtos.h>
+#include "DelegateClass.h"
+#include "platform_debug.h"
 
 
 class NetworkEngine
@@ -65,6 +67,7 @@ public:
     bool subscribe(const String&& topic, uint8_t qos=0);
 
     void WiFiEvent(system_event_id_t event, system_event_info_t info);
+    void attach(Callback<void(ExceptionType,String)> func);
 private:
     static void _thunkConnectToWifi(void* pvTimerID);
     static void _thunkConnectToMqtt(void* pvTimerID);
@@ -76,9 +79,12 @@ private:
     static IPAddress MQTT_HOST ;
     static uint16_t MQTT_PORT ;
     static AsyncMqttClient mqttClient;
-    static rtos::Mutex _mutex;
+    static rtos::Mutex _mutex,std_mutex;
     bool _connected=false;
     system_event_id_t _event=SYSTEM_EVENT_WIFI_READY;
     //system_event_info_t _info;
+    std::vector<Callback<void(ExceptionType,String)>>  _delegateCallbacks;
+    inline void printTrace(const String& e);
+    inline void printTrace(const char* e);
 };
 

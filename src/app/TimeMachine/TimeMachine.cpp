@@ -15,6 +15,7 @@ TimeMachine<RTC>::TimeMachine(RTC& rtc,rtos::Mutex& mutex,uint8_t rst):_rtc(rtc)
 template<typename RTC>
 void TimeMachine<RTC>::startup(bool pwrEnable)
  {
+     
     if(pwrEnable){
       pinMode(_rst,OUTPUT);
       digitalWrite(_rst,HIGH);
@@ -36,9 +37,9 @@ void TimeMachine<RTC>::startup(bool pwrEnable)
     }
  }
 template<typename RTC>
-void TimeMachine<RTC>::attach(DelegateClass<void(ExceptionType,String)> func)
+void TimeMachine<RTC>::attach(Callback<void(ExceptionType,const String)> func)
 {
-    _delegate=func;
+    _delegateCallbacks.push_back(func) ;
 }
 template<typename RTC>
 bool TimeMachine<RTC>::selftest()
@@ -55,8 +56,11 @@ bool TimeMachine<RTC>::selftest()
             return true;
         }
     }while(--timeout > 0);
+    
+    for(auto& v : _delegateCallbacks){
+        v.call(ExceptionType::RTCException,String(__FILE__)+String(":")+String(__LINE__));
+    }
    
-    _delegate.call(ExceptionType::RTCException,String(__FILE__)+String(":")+String(__LINE__));
     return false;
 }
 
@@ -87,14 +91,11 @@ String TimeMachine<RTC>::getDateTime()
      String datetime="";
      if(_rtc.isRunning()){
         datetime = _rtc.getDateTime(true);
-        debug("RTC is running\n");
-     }else{
-       debug("RTC is not running\n");
      }
     _mutex.unlock();
     return datetime;
 }
-
+/*
 template<>
 class TimeMachine<RTCBase>
 {
@@ -161,5 +162,6 @@ private:
 };
 
 template class TimeMachine<RTCBase>;
+*/
 template class TimeMachine<DS1307>;
 

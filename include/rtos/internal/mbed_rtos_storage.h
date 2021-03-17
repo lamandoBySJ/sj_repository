@@ -14,18 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef MBED_RTOS_RTX1_TYPES_H
-#define MBED_RTOS_RTX1_TYPES_H
+#ifndef MBED_RTOS_STORAGE_H
+#define MBED_RTOS_STORAGE_H
 
 #if MBED_CONF_RTOS_PRESENT || defined(UNITTEST)
 
-#include "cmsis_os.h"
-typedef int32_t osStatus;
-typedef int32_t osPriority;
-#else
-#include "rtos/cmsis_os2.h"
-typedef int32_t osStatus;
-typedef int32_t osPriority;
+#include "mbed_rtx_storage.h"
+
 #endif
 
 #endif

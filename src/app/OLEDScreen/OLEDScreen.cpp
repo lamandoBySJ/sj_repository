@@ -269,7 +269,7 @@ void OLEDScreen<N>::screenPrint(const char* data)
     #if !defined(NDEBUG)
 
     char py_pos=50;
-    int text_pos=_head;
+    int px_pos=_head;
     this->display -> clear();
  
     if((_head-_tail)>=0){
@@ -285,7 +285,7 @@ void OLEDScreen<N>::screenPrint(const char* data)
         }else{
           
             for(unsigned char i=0;i<6;++i){
-             display -> drawString(0, py_pos, _pool[text_pos-i]);
+             display -> drawString(0, py_pos, _pool[px_pos-i]);
               delay(1);
                py_pos-=10;
             }
@@ -300,21 +300,21 @@ void OLEDScreen<N>::screenPrint(const char* data)
         int n=_head;
 
         for(int i=0;i<=n;++i){
-          display -> drawString(0, py_pos, _pool[text_pos].c_str());
+          display -> drawString(0, py_pos, _pool[px_pos].c_str());
           delay(1);
           py_pos-=10;
-          --text_pos;
+          --px_pos;
         }
         
-        text_pos= _tail;
+        px_pos= _tail;
         n=6-_head-1;
         py_pos=0;
         
         for(int i=0;i<n;++i){
-           display -> drawString(0, py_pos, _pool[text_pos].c_str());
+           display -> drawString(0, py_pos, _pool[px_pos].c_str());
             delay(1);
             py_pos+=10;
-            ++text_pos;
+            ++px_pos;
         }
         ++_tail;
         ++_head;

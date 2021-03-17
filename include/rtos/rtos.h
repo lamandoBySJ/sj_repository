@@ -9,6 +9,10 @@
 #include <platform/Callback.h>
 #include <platform/mbed_debug.h>
 #include "platform/mbed.h"
+#include "rtos/Mail.h"
+#include "rtos/MemoryPool.h"
+#include "rtos/EventFlags.h"
+#include "rtos/internal/mbed_rtos1_types.h"
 //#include "rtos/Semaphore.h"
 //#include "rtos/Mail.h"
 //#include "rtos/MemoryPool.h"
