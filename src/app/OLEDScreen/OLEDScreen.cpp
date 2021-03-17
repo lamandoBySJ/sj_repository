@@ -83,7 +83,7 @@ template<int N>
 void OLEDScreen<N>::printf(const char* data)
 {
 #if !defined(NDEBUG)
-    print(String(data)+String("\n"));
+    print(String(data));
 #endif
 }
 template<int N> 
@@ -204,21 +204,21 @@ void OLEDScreen<N>::printScreen(const char* data)
 
     char py_pos=50;
     int text_pos=_head;
-    display -> clear();
+    this->display -> clear();
  
     if((_head-_tail)>=0){
       
         _pool[_head]=data;
         
         if((_head-_tail)<5){
-            for(char i=0;i<6;++i){
+            for(unsigned char i=0;i<6;++i){
                display -> drawString(0, i*10, _pool[i]);
                delay(1);
             }
             
         }else{
           
-            for(char i=0;i<6;++i){
+            for(unsigned char i=0;i<6;++i){
              display -> drawString(0, py_pos, _pool[text_pos-i]);
               delay(1);
                py_pos-=10;
@@ -258,11 +258,76 @@ void OLEDScreen<N>::printScreen(const char* data)
      _tail %= N;
     _head %= N;
  
-   display -> display();
+    display -> display();
 
     #endif
 }
 
+template<int N>
+void OLEDScreen<N>::screenPrint(const char* data)
+{
+    #if !defined(NDEBUG)
+
+    char py_pos=50;
+    int text_pos=_head;
+    this->display -> clear();
+ 
+    if((_head-_tail)>=0){
+      
+        _pool[_head]=data;
+        
+        if((_head-_tail)<5){
+            for(unsigned char i=0;i<6;++i){
+               display -> drawString(0, i*10, _pool[i]);
+               delay(1);
+            }
+            
+        }else{
+          
+            for(unsigned char i=0;i<6;++i){
+             display -> drawString(0, py_pos, _pool[text_pos-i]);
+              delay(1);
+               py_pos-=10;
+            }
+            ++_tail;
+        }
+        ++_head;
+        
+    }else if((_head-_tail)<0){
+      
+        _pool[_head]=data;
+       
+        int n=_head;
+
+        for(int i=0;i<=n;++i){
+          display -> drawString(0, py_pos, _pool[text_pos].c_str());
+          delay(1);
+          py_pos-=10;
+          --text_pos;
+        }
+        
+        text_pos= _tail;
+        n=6-_head-1;
+        py_pos=0;
+        
+        for(int i=0;i<n;++i){
+           display -> drawString(0, py_pos, _pool[text_pos].c_str());
+            delay(1);
+            py_pos+=10;
+            ++text_pos;
+        }
+        ++_tail;
+        ++_head;
+    }
+ 
+  
+     _tail %= N;
+    _head %= N;
+ 
+    display -> display();
+
+    #endif
+}
 template class OLEDScreen<12>;
 
 /*

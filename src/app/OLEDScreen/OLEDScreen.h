@@ -54,8 +54,8 @@ public:
       return *this;
     }
 
-    OLEDScreen& operator=(OLEDScreen&& other)
-    {
+  OLEDScreen& operator=(OLEDScreen&& other)
+  {
       Serial.println("move ==============construct");
         if (this != &other){
             delete this->display;
@@ -65,27 +65,23 @@ public:
               _tail=other._tail;
         }
        return *this;
-    }
-   //static OLEDScreen* getTerminal();
-  
+   }
    void logo();
    bool init();
 
   void println(const String &s);
-  
   void printf(const char* data);
+
 private:
   SSD1306Wire* display=nullptr;
-  //uint16_t getStringWidth(String& text);
-  //uint16_t getWidth();
-  //void print(String&& s);
+
   void print(const String& data);
   void printScreen(const char* data);
-
+  void screenPrint(const char* data);
   String _pool[N];
   int _head;
   int _tail;
-  char _buf[1024];
+
   static rtos::Mutex _mutex;
   std::vector<String> textVector;
 };
