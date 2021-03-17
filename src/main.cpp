@@ -14,7 +14,8 @@
 #include <WiFiType.h>
 #include <WiFi.h>
 #include "app/NetworkEngine/NetworkEngine.h"
-
+#include "platform_debug.h"
+#include "app/OLEDScreen/OLEDScreen.h"
 extern "C" {
 	#include "freertos/FreeRTOS.h"
 	#include "freertos/timers.h"
@@ -24,6 +25,7 @@ extern "C" {
 
 using namespace mstd;
 using namespace rtos;
+using namespace platform_debug;
 
 #define BAND    433E6 
 #if CONFIG_AUTOSTART_ARDUINO
@@ -55,32 +57,10 @@ String ExceptionCatcher::exceptionType="";
 
 NetworkEngine networkEngine;
 
+OLEDScreen<12> oled(Heltec.display);
 
-void WiFiEvent(system_event_id_t event) {
-    /*
-    Serial.printf("[WiFi-event] event: %d\n", event);
-    switch(event) {
-    
-    case SYSTEM_EVENT_STA_GOT_IP:
-        Serial.println("WiFi connected");
-        Serial.println("IP address: ");
-        Serial.println(WiFi.localIP());
-        networkEngine.setMqttReconnectTimer(true);
-        break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
-        Serial.println("WiFi lost connection"); 
-        // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
-        if(thunk_event != SYSTEM_EVENT_STA_DISCONNECTED){
-            networkEngine.setMqttReconnectTimer(false);
-            networkEngine.setWifiReconnectTimer(true);
-        }
-        break;
-    default:break;
-    }
-    thunk_event = event;*/
-}
 void setup() {
-  
+ 
   pinMode(18,OUTPUT);
   pinMode(23,OUTPUT);
   pinMode(5,OUTPUT);
@@ -88,6 +68,14 @@ void setup() {
   // put your setup code here, to run once:
     //WIFI Kit series V1 not support Vext control
   Heltec.begin(true , false , true , true, BAND);
+  //Callback<void(const char*)>(&oled,&OLEDScreen<12>::println);
+  PlatformDebug::init(std::move(oled));
+  while(1){
+    PlatformDebug::print("abcdefgzgdfklgfdklgklf12345678901abcdefgzg0000000000000000");
+    ThisThread::sleep_for(Kernel::Clock::duration_seconds(3));
+     //platformDebug.print("xx");
+  }
+  
   //LoRa.dumpRegisters(Serial);
   timeMachine.attach(delegate(&e,&ExceptionCatcher::PrintTrace));
   timeMachine.startup();
@@ -95,9 +83,7 @@ void setup() {
   //timeMachine.setEpoch(1614764209+8*60*60);
   colorSensor.attach(delegate(&e,&ExceptionCatcher::PrintTrace));
   colorSensor.startup();
-
-  //ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-
+  
   networkEngine.startup();
 
 }
@@ -107,8 +93,7 @@ std::array<uint16_t,4> dataRGB;
 void loop() {
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(3));
   // put your main code here, to run repeatedly:
-   debug("__cplusplus:%ld,%d\n",__cplusplus,networkEngine.publish("test/lol","xxx"));
-   
+
   /*
   colorSensor.measurementModeActive();
   colorSensor.getRGB(dataRGB);
