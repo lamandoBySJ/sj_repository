@@ -70,11 +70,12 @@ void setup() {
   Heltec.begin(true , false , true , true, BAND);
   //Callback<void(const char*)>(&oled,&OLEDScreen<12>::println);
   PlatformDebug::init(std::move(oled));
+  PlatformDebug::printLogo();
+  /*
   while(1){
-    PlatformDebug::print("abcdefgzgdfklgfdklgklf12345678901abcdefgzg0000000000000000");
-    ThisThread::sleep_for(Kernel::Clock::duration_seconds(3));
-     //platformDebug.print("xx");
-  }
+    ThisThread::sleep_for(Kernel::Clock::duration_seconds(2));
+    PlatformDebug::print("abcdefgzgdfklgfdklgkl");
+  }*/
   
   //LoRa.dumpRegisters(Serial);
   timeMachine.attach(delegate(&e,&ExceptionCatcher::PrintTrace));

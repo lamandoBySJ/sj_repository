@@ -129,19 +129,20 @@ public:
             PlatformDebug::_platformDebug = new PlatformDebug(); 
         }
 
-            if(std::is_same<HardwareSerial, U>::value){
-                    Serial.println("::is_same<HardwareSerial");
-            }else if(std::is_same<TwoWire, U>::value){
-                    Serial.println("::is_same<TwoWire");
-            }else if(std::is_same<OLEDScreen<12>, U>::value){
-                    Serial.println("::is_same<OLEDScreen<12>");
-            }else if(std::is_same< Print , U>::value){
-                    Serial.println("::is_same<Print>"); 
-            }else{
-                    Serial.println("::is_same<XXXXXXXXXXXXXXXXXXXXXXX>");
-            }
+        if(std::is_same<HardwareSerial, U>::value){
+            Serial.println("::is_same<HardwareSerial");
+        }else if(std::is_same<TwoWire, U>::value){
+            Serial.println("::is_same<TwoWire");
+        }else if(std::is_same<OLEDScreen<12>, U>::value){
+            Serial.println("::is_same<OLEDScreen<12>");
+            PlatformDebug::_platformDebug->_onLogoDisplayCallbacks.push_back(Callback<void()>(&u,&U::logo));
+        }else if(std::is_same< Print , U>::value){
+            Serial.println("::is_same<Print>"); 
+        }else{
+            Serial.println("::is_same<XXXXXXXXXXXXXXXXXXXXXXX>");
+        }
             //Callback<void(const char*)>(&u,&U::println);
-            PlatformDebug::_platformDebug->_call.push_back(Callback<void(const char*)>(&u,&U::printf));
+            PlatformDebug::_platformDebug->_onPlatformDebugCallbacks.push_back(Callback<void(const char*)>(&u,&U::printf));
             init(std::forward<Args>(args)...);
         #endif
     }
@@ -151,50 +152,27 @@ public:
       Serial.println("#################### INIT DONE ####################");
       #endif
     }
-   /* 
-    template <class U,class...Args>
-    PlatformDebug(U&& u,Args&&...args)//:_objs(std::forward<ArgTs>(args)...)
-    {
+ 
 
-        static int cnt2 = sizeof...(args);
-        Serial.println(cnt2);
-        if(std::is_same<HardwareSerial, U>::value){
-             Serial.println("::is_same<HardwareSerial");
-        }else if(std::is_same<TwoWire, U>::value){
-                Serial.println("::is_same<TwoWire");
-        }else if(std::is_same<OLEDScreen<12>, U>::value){
-                Serial.println("::is_same<OLEDScreen<12>");
-                callback(u,&U::println);
-        }else{
-                Serial.println("::is_same<XXXXXXXXXXXXXXXXXXXXXXX>");
+    
+    static inline void printLogo() 
+    {
+        #if !defined(NDEBUG)
+        PlatformDebug::_platformDebug->std_mutex.lock();
+        //Serial.println(data);
+        for(auto v:PlatformDebug::_platformDebug->_onLogoDisplayCallbacks){
+            v.call();
         }
-        
-        //_call.push_back();
-        Serial.println(":::::::::::::::::::::::::::::::::::::::"+String(_call.size(),DEC));
-        if(--cnt2>=0){
-            PlatformDebug(std::forward<Args>(args)...);
-        }
+        PlatformDebug::_platformDebug->std_mutex.unlock();
+        #endif
     }
-    PlatformDebug(T&& t)
-    {
-        if(std::is_same<HardwareSerial,T>::value){
-             Serial.println("T::is_same<HardwareSerial");
-        }else if(std::is_same<TwoWire,T>::value){
-                Serial.println("T::is_same<TwoWire");
-        }else if(std::is_same<OLEDScreen<12>,T>::value){
-                Serial.println("T::is_same<OLEDScreen<12>");
-        }else{
-                Serial.println("T::is_same<XXXXXXXXXXXXXXXXXXXXXXX>");
-        }
-    }*/
-
 
     static inline void print(const char* data) 
     {
         #if !defined(NDEBUG)
         PlatformDebug::_platformDebug->std_mutex.lock();
         Serial.println(data);
-        for(auto v:PlatformDebug::_platformDebug->_call){
+        for(auto v:PlatformDebug::_platformDebug->_onPlatformDebugCallbacks){
             v.call(data);
         }
         PlatformDebug::_platformDebug->std_mutex.unlock();
@@ -206,7 +184,7 @@ public:
         #if !defined(NDEBUG)
         PlatformDebug::_platformDebug->std_mutex.lock();
         Serial.println(data);
-        for(auto v:PlatformDebug::_platformDebug->_call){
+        for(auto v:PlatformDebug::_platformDebug->_onPlatformDebugCallbacks){
             v.call(data.c_str());
         }
         PlatformDebug::_platformDebug->std_mutex.unlock();
@@ -248,15 +226,14 @@ public:
 
 private:
     static PlatformDebug* _platformDebug;
-    std::vector<Callback<void(const char*)>> _call;
+    std::vector<Callback<void(const char*)>> _onPlatformDebugCallbacks;
+    std::vector<Callback<void()>> _onLogoDisplayCallbacks;
     static rtos::Mutex std_mutex;
     static bool _finished;
 };
 
-PlatformDebug* PlatformDebug::_platformDebug=nullptr;
-rtos::Mutex  PlatformDebug::std_mutex;
-bool PlatformDebug::_finished=false;
-//std::vector<Callback<void(const char*)>>  PlatformDebug::_call;
+
+//std::vector<Callback<void(const char*)>>  PlatformDebug::_debug;
 
 } // namespace platform_debug
 

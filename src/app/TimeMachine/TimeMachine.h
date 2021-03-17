@@ -6,6 +6,7 @@
 #include "rtos/rtos.h"
 #include "RTCBase.h"
 #include "DelegateClass.h"
+#include "platform_debug.h"
 using namespace rtos;
 
 template<typename RTC>

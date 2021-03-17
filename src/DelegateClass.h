@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <ColorSensorBase.h>
 #include <cxxsupport/mstd_type_traits.h>
-
+#include <platform_debug.h>
 template <typename Signature>
 class DelegateClass;
 
@@ -226,36 +226,32 @@ struct ExceptionCatcher
 {
     ExceptionCatcher()=default;
     void PrintTrace(ExceptionType type,String e){ 
-        mutex.lock();
         switch (type)
         {
         case ExceptionType::SensorException:
-            ExceptionCatcher::exceptionType="SensorException";
+            ExceptionCatcher::exceptionType="SensorException:";
             digitalWrite(18,HIGH);
             break;
         case ExceptionType::RTCException:
-            ExceptionCatcher::exceptionType="RTCException";
+            ExceptionCatcher::exceptionType="RTCException:";
             digitalWrite(23,HIGH);
             break;
         case ExceptionType::ALSException:
-            ExceptionCatcher::exceptionType="ALSException";
+            ExceptionCatcher::exceptionType="ALSException:";
             digitalWrite(18,HIGH);
             break;
         case ExceptionType::FileException:
-            ExceptionCatcher::exceptionType="FileException";
+            ExceptionCatcher::exceptionType="FileException:";
             break;
         case ExceptionType::OtherException:
-            ExceptionCatcher::exceptionType="OtherException";
+            ExceptionCatcher::exceptionType="OtherException:";
             break;
         default:
-            ExceptionCatcher::exceptionType="DefaultException";
+            ExceptionCatcher::exceptionType="DefaultException:";
             break;
         }
-        debug("%s:%s\n",ExceptionCatcher::exceptionType.c_str(),e.c_str());
-        mutex.unlock();
+        platform_debug::PlatformDebug::print(ExceptionCatcher::exceptionType + e);
     }
-    
-    rtos::Mutex mutex;
     static String exceptionType;
 };
 
