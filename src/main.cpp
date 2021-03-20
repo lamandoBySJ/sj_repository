@@ -118,6 +118,7 @@ void setup() {
   pinMode(23,OUTPUT);
   pinMode(5,OUTPUT);
   pinMode(19,OUTPUT);
+  pinMode(22,PULLUP);
   // put your setup code here, to run once:
     //WIFI Kit series V1 not support Vext control
   Heltec.begin(true , false , true , true, BAND);
@@ -140,7 +141,8 @@ void setup() {
  
   //thread.start(callback(send_thread_mail));
   platform_debug::PlatformDebug::println("thread.start(callback(send_thread))");
-  attachInterrupt(0, []  {
+  attachInterrupt(22, []  {
+        detachInterrupt(22);
         uint32_t i = 0;
         i++; 
         mail_t *mail = mail_box.alloc();
@@ -148,8 +150,9 @@ void setup() {
         mail->current = (i * 0.1) * 11;
         mail->counter = i;
         mail_box.put_from_isr(mail);
-    }, FALLING);   
-    
+    }, RISING);   
+  
+
 }
 
 
@@ -172,6 +175,17 @@ void loop() {
             platform_debug::PlatformDebug::printf("Number of cycles:%lu",mail->counter);
 
             mail_box.free(mail);
+
+            attachInterrupt(22, []  {
+              detachInterrupt(22);
+              uint32_t i = 0;
+              i++; 
+              mail_t *mail = mail_box.alloc();
+              mail->voltage = (i * 0.1) * 33;
+              mail->current = (i * 0.1) * 11;
+              mail->counter = i;
+              mail_box.put_from_isr(mail);
+          }, RISING); 
         } 
         /*
         osEvent evt = queue.get();
