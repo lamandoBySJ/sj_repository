@@ -312,7 +312,12 @@ public:
         MBED_ASSERT(ok);
         return ok ? osOK : osErrorResource;
     }
-
+    osStatus put_from_isr(T *mptr)
+    {
+        bool ok = _queue.try_put_from_isr(mptr);
+        MBED_ASSERT(ok);
+        return ok ? osOK : osErrorResource;
+    }
     /** Get a mail from the queue.
      *
      * @param rel_time Timeout value (default: Kernel::wait_for_u32_forever).

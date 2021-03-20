@@ -167,7 +167,11 @@ public:
     {
         return try_put_for(Kernel::Clock::duration_u32::zero(), data, prio);
     }
-
+    bool try_put_from_isr(T *data)
+    {
+        osStatus status = osMessageQueuePutFromISR(_id, &data, 0, 0);
+        return status == osOK;
+    }
     /** Inserts the given element to the end of the queue.
      *
      * This function puts the message pointed to by `data` into the queue. The
@@ -202,6 +206,7 @@ public:
         return status == osOK;
     }
 
+    
     /** Inserts the given element to the end of the queue.
      *
      * This function puts the message pointed to by `data` into the queue. The

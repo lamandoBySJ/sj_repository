@@ -1805,7 +1805,31 @@ osStatus_t osMessageQueuePut (osMessageQueueId_t mq_id, const void *msg_ptr, uin
 
   return (stat);
 }
+osStatus_t osMessageQueuePutFromISR (osMessageQueueId_t mq_id, const void *msg_ptr, uint8_t msg_prio, uint32_t timeout) {
+  QueueHandle_t hQueue = (QueueHandle_t)mq_id;
+  osStatus_t stat;
+  BaseType_t yield;
 
+  (void)msg_prio; /* Message priority is ignored */
+
+  stat = osOK;
+
+
+    if ((hQueue == NULL) || (msg_ptr == NULL) || (timeout != 0U)) {
+      stat = osErrorParameter;
+    }
+    else {
+      yield = pdFALSE;
+
+      if (xQueueSendToBackFromISR (hQueue, msg_ptr, &yield) != pdTRUE) {
+        stat = osErrorResource;
+      } else {
+        //portYIELD_FROM_ISR (yield);
+         portYIELD_FROM_ISR();
+      }
+    }
+  return (stat);
+}
 osStatus_t osMessageQueueGet (osMessageQueueId_t mq_id, void *msg_ptr, uint8_t *msg_prio, uint32_t timeout) {
   QueueHandle_t hQueue = (QueueHandle_t)mq_id;
   osStatus_t stat;

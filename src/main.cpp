@@ -138,9 +138,18 @@ void setup() {
   //networkEngine.attach(callback(&e,&ExceptionCatcher::PrintTrace));
  // networkEngine.startup();
  
-  thread.start(callback(send_thread_mail));
+  //thread.start(callback(send_thread_mail));
   platform_debug::PlatformDebug::println("thread.start(callback(send_thread))");
-
+  attachInterrupt(0, []  {
+        uint32_t i = 0;
+        i++; 
+        mail_t *mail = mail_box.alloc();
+        mail->voltage = (i * 0.1) * 33;
+        mail->current = (i * 0.1) * 11;
+        mail->counter = i;
+        mail_box.put_from_isr(mail);
+    }, FALLING);   
+    
 }
 
 
