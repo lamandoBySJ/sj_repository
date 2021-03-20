@@ -72,21 +72,7 @@ typedef struct {
 } mail_t;
 
 
-/*
-void send_thread(void)
-{
-    uint32_t i = 0;
-    while (true) {
-        i++; // fake data update
-        mail_t *mail = mail_box.alloc();
-        mail->voltage = (i * 0.1) * 33;
-        mail->current = (i * 0.1) * 11;
-        mail->counter = i;
-        mail_box.put(mail);
-        ThisThread::sleep_for(1000);
-    }
-  vTaskDelete(NULL);
-}  */
+
 typedef struct {
     float    voltage;   /* AD result of measured voltage */
     float    current;   /* AD result of measured current */
@@ -94,8 +80,8 @@ typedef struct {
 } message_t;
 
 MemoryPool<message_t, 6> mpool;
-rtos::Queue<message_t,1> queue;
-  //rtos::Mail<mail_t, 16> mail_box;
+rtos::Queue<message_t,6> queue;
+rtos::Mail<mail_t, 16> mail_box;
 
 void send_thread(void)
 {
@@ -112,6 +98,20 @@ void send_thread(void)
   vTaskDelete(NULL);
 }
 
+void send_thread_mail(void)
+{
+    uint32_t i = 0;
+    while (true) {
+        i++; // fake data update
+        mail_t *mail = mail_box.alloc();
+        mail->voltage = (i * 0.1) * 33;
+        mail->current = (i * 0.1) * 11;
+        mail->counter = i;
+        mail_box.put(mail);
+        ThisThread::sleep_for(1000);
+    }
+  vTaskDelete(NULL);
+} 
 void setup() {
  
   pinMode(18,OUTPUT);
@@ -138,10 +138,9 @@ void setup() {
   //networkEngine.attach(callback(&e,&ExceptionCatcher::PrintTrace));
  // networkEngine.startup();
  
-  thread.start(callback(send_thread));
+  thread.start(callback(send_thread_mail));
   platform_debug::PlatformDebug::println("thread.start(callback(send_thread))");
-
- 
+  
 }
 
 
@@ -153,17 +152,19 @@ void loop() {
   static uint32_t i = 0;
 
   while (true) {
-        //osEvent evt = mail_box.get();
-        // Serial.println(String(">>>>>>>>")+evt.status);
-        /*if (evt.status == osEventMail) {
+        osEvent evt = mail_box.get();
+        if (evt.status == osEventMail) {
             mail_t *mail = (mail_t *)evt.value.p;
             Serial.printf("\nVoltage: %.2f V\n\r", mail->voltage);
+            platform_debug::PlatformDebug::printf("Voltage: %.2f V",mail->voltage);
             Serial.printf("Current: %.2f A\n\r", mail->current);
+            platform_debug::PlatformDebug::printf("Current: %.2f A",mail->current);
             Serial.printf("Number of cycles: %lu\n\r", mail->counter);
+            platform_debug::PlatformDebug::printf("Number of cycles:",mail->counter);
 
             mail_box.free(mail);
-        } */
-  
+        } 
+        /*
         osEvent evt = queue.get();
         if (evt.status == osEventMessage) {
             message_t *message = (message_t *)evt.value.p;
@@ -173,8 +174,9 @@ void loop() {
             mpool.free(message);
         }
          Serial.println(String(++cnt,DEC)+"___________________________________"+String(evt.status,DEC));
-         
-        platform_debug::PlatformDebug::println(version);
+        */
+        
+        
         ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(100));
     }
 
