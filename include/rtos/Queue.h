@@ -20,21 +20,42 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#ifndef __QUEUE_H
-#define __QUEUE_H
+#ifndef MBED_QUEUE_H
+#define MBED_QUEUE_H
 
 #include "rtos/mbed_rtos_types.h"
 #include "rtos/internal/mbed_rtos1_types.h"
 #include "rtos/internal/mbed_rtos_storage.h"
+#include "rtos/internal/mbed_rtx_storage.h"
 #include "rtos/Kernel.h"
 #include "platform/mbed_error.h"
 #include "platform/NonCopyable.h"
 #include "platform/mbed_assert.h"
-#include "rtos/cmsis_os2.h"
 #include "rtos/cmsis_os.h"
-#define MBED_CONF_RTOS_PRESENT 1
-#if MBED_CONF_RTOS_PRESENT || defined(DOXYGEN_ONLY)
 
+#if MBED_CONF_RTOS_PRESENT || defined(DOXYGEN_ONLY)
+using mbed_rtos_storage_mutex_t = osRtxMutex_t ;
+
+/** RTX Semaphore storage */
+using mbed_rtos_storage_semaphore_t = osRtxSemaphore_t ;
+
+/** RTX Thread storage */
+using mbed_rtos_storage_thread_t = osRtxThread_t ;
+
+/** RTX Memory Pool storage */
+using mbed_rtos_storage_mem_pool_t = osRtxMemoryPool_t ;
+
+/** RTX Message Queue storage */
+using mbed_rtos_storage_msg_queue_t = osRtxMessageQueue_t ;
+
+/** RTX Event Flags storage */
+using mbed_rtos_storage_event_flags_t = osRtxEventFlags_t ;
+
+/** RTX Message storage */
+using mbed_rtos_storage_message_t = osRtxMessage_t ;
+
+/** RTX Timer storage */
+using mbed_rtos_storage_timer_t = osRtxTimer_t;
 namespace rtos {
 /** \addtogroup rtos-public-api */
 /** @{*/
@@ -81,6 +102,7 @@ public:
         attr.cb_size = sizeof(_obj_mem);
         _id = osMessageQueueNew(queue_sz, sizeof(T *), &attr);
         MBED_ASSERT(_id);
+     
     }
 
     /** Queue destructor
@@ -219,7 +241,8 @@ public:
      */
     MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Replaced with try_put and try_put_for. In future put will be an untimed blocking call.")
     osStatus put(T *data, uint32_t millisec = 0, uint8_t prio = 0)
-    {
+    {   
+        Serial.println("[ _id==NUL ]"+String(_id==NULL,DEC));
         return osMessageQueuePut(_id, &data, prio, millisec);
     }
 

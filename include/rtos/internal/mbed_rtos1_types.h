@@ -24,8 +24,10 @@ typedef int32_t osStatus;
 typedef int32_t osPriority;
 #else
 #include "rtos/cmsis_os2.h"
-typedef int32_t osStatus;
-typedef int32_t osPriority;
+//typedef int32_t osStatus;
+//typedef int32_t osPriority;
+#include "rtos/cmsis_os.h"
+#include "mbed_rtos_storage.h"
 #endif
 
 #endif

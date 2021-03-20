@@ -155,7 +155,7 @@
 #endif
  
 #if (osCMSIS >= 0x20000U)
-#include "cmsis_os2.h"
+#include "rtos/cmsis_os2.h"
 #else
 #include <stdint.h>
 #include <stddef.h>
@@ -171,7 +171,7 @@ extern "C"
 // ==== Enumerations, structures, defines ====
  
 /// Priority values.
-#if (osCMSIS < 0x20000U)
+#if (osCMSIS <= 0x20000U)
 typedef enum {
   osPriorityIdle          = -3,         ///< Priority: idle (lowest)
   osPriorityLow           = -2,         ///< Priority: low

@@ -256,6 +256,7 @@ typedef struct {
   uint32_t                  msg_count;  ///< Number of queued Messages
   osRtxMessage_t           *msg_first;  ///< Pointer to first Message
   osRtxMessage_t            *msg_last;  ///< Pointer to last Message
+  //osRtxMemoryPool_t muxDummy;
 } osRtxMessageQueue_t;
  
  

@@ -33,6 +33,8 @@
 #include "platform/mbed_assert.h"
 #include "rtos/Kernel.h"
 #include "rtos/cmsis_os2.h"
+//#include "rtos/ThisThread.h"
+
 #define MBED_CONF_RTOS_PRESENT 1
 #if MBED_CONF_RTOS_PRESENT || defined(DOXYGEN_ONLY)
 namespace rtos {
@@ -69,6 +71,7 @@ public:
         attr.mp_size = sizeof(_pool_mem);
         attr.cb_mem = &_obj_mem;
         attr.cb_size = sizeof(_obj_mem);
+
         _id = osMemoryPoolNew(pool_sz, sizeof(T), &attr);
         MBED_ASSERT(_id);
     }
@@ -90,7 +93,15 @@ public:
     MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Replaced with try_alloc. In future alloc() will be an untimed blocking call.")
     T *alloc()
     {
-        return try_alloc();
+      
+        T* t = try_alloc();
+      
+        //return try_alloc();
+        while(t==NULL){
+          delay(100);
+          t = try_alloc();
+        }
+        return t;
     }
 
     /** Allocate a memory block from a memory pool, without blocking.
@@ -265,6 +276,7 @@ private:
     osMemoryPoolId_t             _id;
     char                         _pool_mem[MBED_RTOS_STORAGE_MEM_POOL_MEM_SIZE(pool_sz, sizeof(T))];
     mbed_rtos_storage_mem_pool_t _obj_mem;
+    
 };
 /** @}*/
 /** @}*/
