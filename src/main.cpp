@@ -20,8 +20,14 @@
 extern "C" {
 	#include "freertos/FreeRTOS.h"
 	#include "freertos/timers.h"
+  #include "freertos/task.h"
+  #include "freertos/queue.h"
+
 }
 
+#include "rtos/Queue.h"
+#include "rtos/Mail.h"
+#include "rtos/MemoryPool.h"
 #include <app/AsyncMqttClient/AsyncMqttClient.h>
 
 using namespace mstd;
@@ -65,8 +71,8 @@ typedef struct {
     uint32_t counter; /* A counter value               */
 } mail_t;
 
-rtos::Mail<mail_t, 16> mail_box;
 
+/*
 void send_thread(void)
 {
     uint32_t i = 0;
@@ -79,7 +85,33 @@ void send_thread(void)
         mail_box.put(mail);
         ThisThread::sleep_for(1000);
     }
+  vTaskDelete(NULL);
+}  */
+typedef struct {
+    float    voltage;   /* AD result of measured voltage */
+    float    current;   /* AD result of measured current */
+    uint32_t counter;   /* A counter value               */
+} message_t;
+
+MemoryPool<message_t, 6> mpool;
+rtos::Queue<message_t,1> queue;
+  //rtos::Mail<mail_t, 16> mail_box;
+
+void send_thread(void)
+{
+    uint32_t i = 0;
+    while (true) {
+        i++; // fake data update
+        message_t *message = mpool.alloc();
+        message->voltage = (i * 0.1) * 33;
+        message->current = (i * 0.1) * 11;
+        message->counter = i;
+        osStatus  status = queue.put(message);
+        ThisThread::sleep_for(100);
+    }
+  vTaskDelete(NULL);
 }
+
 void setup() {
  
   pinMode(18,OUTPUT);
@@ -92,12 +124,10 @@ void setup() {
   //Callback<void(const char*)>(&oled,&OLEDScreen<12>::println);
   //PlatformDebug::init(oled);
   PlatformDebug::init(std::move(oled));
-  
-  
-  //PlatformDebug::printLogo();
+  PlatformDebug::printLogo();
   //ThisThread::sleep_for(Kernel::Clock::duration_seconds(2));
   
-  
+
   //LoRa.dumpRegisters(Serial);
   //timeMachine.attach(callback(&e,&ExceptionCatcher::PrintTrace));
  // timeMachine.startup();
@@ -107,32 +137,48 @@ void setup() {
   //colorSensor.startup();
   //networkEngine.attach(callback(&e,&ExceptionCatcher::PrintTrace));
  // networkEngine.startup();
-  
- thread.start(callback(send_thread));
-  //while(1){
-   // dot+=".";
-    ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));
- // }
+ 
+  thread.start(callback(send_thread));
+  platform_debug::PlatformDebug::println("thread.start(callback(send_thread))");
+
+ 
 }
+
 
 bool n=false;
 std::array<uint16_t,4> dataRGB;
 void loop() {
+ 
+  static uint32_t cnt = 0;
+  static uint32_t i = 0;
 
-  //platform_debug::PlatformDebug::println(version);
   while (true) {
-        osEvent evt = mail_box.get();
-        if (evt.status == osEventMail) {
+        //osEvent evt = mail_box.get();
+        // Serial.println(String(">>>>>>>>")+evt.status);
+        /*if (evt.status == osEventMail) {
             mail_t *mail = (mail_t *)evt.value.p;
-            printf("\nVoltage: %.2f V\n\r", mail->voltage);
-            printf("Current: %.2f A\n\r", mail->current);
-            printf("Number of cycles: %lu\n\r", mail->counter);
+            Serial.printf("\nVoltage: %.2f V\n\r", mail->voltage);
+            Serial.printf("Current: %.2f A\n\r", mail->current);
+            Serial.printf("Number of cycles: %lu\n\r", mail->counter);
 
             mail_box.free(mail);
+        } */
+  
+        osEvent evt = queue.get();
+        if (evt.status == osEventMessage) {
+            message_t *message = (message_t *)evt.value.p;
+            Serial.printf("\nVoltage: %.2f V\n\r", message->voltage);
+            Serial.printf("Current: %.2f A\n\r", message->current);
+            Serial.printf("Number of cycles: %u\n\r", message->counter);
+            mpool.free(message);
         }
+         Serial.println(String(++cnt,DEC)+"___________________________________"+String(evt.status,DEC));
+         
+        platform_debug::PlatformDebug::println(version);
+        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(100));
     }
 
-  ThisThread::sleep_for(Kernel::Clock::duration_seconds(3));
+  
   // put your main code here, to run repeatedly:
 
   /*
