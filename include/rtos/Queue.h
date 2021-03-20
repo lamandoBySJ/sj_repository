@@ -242,7 +242,6 @@ public:
     MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Replaced with try_put and try_put_for. In future put will be an untimed blocking call.")
     osStatus put(T *data, uint32_t millisec = 0, uint8_t prio = 0)
     {   
-        Serial.println("[ _id==NUL ]"+String(_id==NULL,DEC));
         return osMessageQueuePut(_id, &data, prio, millisec);
     }
 

@@ -114,7 +114,13 @@ public:
     MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Replaced with try_alloc. In future alloc() will be an untimed blocking call.")
     T *alloc(MBED_UNUSED uint32_t millisec = 0)
     {
-        return try_alloc();
+       // return try_alloc();
+      T* t = try_alloc();
+      while(t == NULL){
+          delay(100);
+          t = try_alloc();
+      }
+      return t;
     }
 
     /** Allocate a memory block of type T, without blocking.

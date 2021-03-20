@@ -81,7 +81,7 @@ typedef struct {
 
 MemoryPool<message_t, 6> mpool;
 rtos::Queue<message_t,6> queue;
-rtos::Mail<mail_t, 16> mail_box;
+rtos::Mail<mail_t, 1> mail_box;
 
 void send_thread(void)
 {
@@ -140,7 +140,7 @@ void setup() {
  
   thread.start(callback(send_thread_mail));
   platform_debug::PlatformDebug::println("thread.start(callback(send_thread))");
-  
+
 }
 
 
@@ -160,7 +160,7 @@ void loop() {
             Serial.printf("Current: %.2f A\n\r", mail->current);
             platform_debug::PlatformDebug::printf("Current: %.2f A",mail->current);
             Serial.printf("Number of cycles: %lu\n\r", mail->counter);
-            platform_debug::PlatformDebug::printf("Number of cycles:",mail->counter);
+            platform_debug::PlatformDebug::printf("Number of cycles:%lu",mail->counter);
 
             mail_box.free(mail);
         } 
