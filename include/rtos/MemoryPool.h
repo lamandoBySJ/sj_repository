@@ -90,7 +90,7 @@ public:
       @note You may call this function from ISR context.
       @deprecated Replaced with try_alloc. In future alloc() will be an untimed blocking call.
     */
-    MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Replaced with try_alloc. In future alloc() will be an untimed blocking call.")
+    //MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Replaced with try_alloc. In future alloc() will be an untimed blocking call.")
     T *alloc()
     {
       
