@@ -273,34 +273,45 @@ void NetworkEngine::startup(){
       mqttClient.setServer(MQTT_HOST, MQTT_PORT);
 
       _connectToWifi();
-     // _coreThread.start(callback(this,run));
+
+     #if !defined(NDEBUG)
+     _threadMail.start(callback(this,&NetworkEngine::run_mail_box));
+     #endif
 }
 
-void NetworkEngine::run(){
- 
+void NetworkEngine::run_mail_box(){
+  while(true){
+    osEvent evt = _mail_box.get();
+    if (evt.status == osEventMail) {
+        email_t *mail = (email_t *)evt.value.p;
+        for(auto& v: _delegateCallbacks){
+            v.call(String("[NET]"),mail->message);
+        }
+        _mail_box.free(mail); 
+    }
+  }
+  vTaskDelete(NULL);
 }
+
 void NetworkEngine::printTrace(const char* e)
 {
   #if !defined(NDEBUG)
-  std_mutex.lock();
-    for(auto& v: _delegateCallbacks){
-      v.call(ExceptionType::NoException,String(e));
-    }
-    std_mutex.unlock();
+  printTrace(String(e));
   #endif
- 
 }
+
 void NetworkEngine::printTrace(const String& e)
 {
  #if !defined(NDEBUG)
   std_mutex.lock();
-    for(auto& v: _delegateCallbacks){
-      v.call(ExceptionType::NoException,e);
-    }
+  email_t *mail = _mail_box.alloc();
+  mail->message = String(e);
+  _mail_box.put(mail) ;
   std_mutex.unlock();
 #endif
 }
-void NetworkEngine::attach(Callback<void(ExceptionType,String)> func)
+
+void NetworkEngine::attach(Callback<void(const String&,const String&)> func)
 {
     _delegateCallbacks.push_back(func);
 }

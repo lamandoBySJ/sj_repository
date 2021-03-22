@@ -53,7 +53,7 @@ ColorSensor<BH1749NUC> colorSensor(bh1749nuc,std_mutex,2);
 //ColorSensor<ColorSensorBase> colorSensor2(&bh1749nuc,mutex);
 
 Thread thread("Thd1",1024*2,1);
-
+Thread thread1("Thd1",1024*2,1);
 ExceptionCatcher e;
 
 NetworkEngine networkEngine;
@@ -65,6 +65,8 @@ typedef struct {
     float    voltage; /* AD result of measured voltage */
     float    current; /* AD result of measured current */
     uint32_t counter; /* A counter value               */
+    String message;
+    //char data[128];
 } mail_t;
 
 
@@ -77,7 +79,7 @@ typedef struct {
 
 MemoryPool<message_t, 6> mpool;
 rtos::Queue<message_t,6> queue;
-rtos::Mail<mail_t, 1> mail_box;
+rtos::Mail<mail_t, 2> mail_box;
 
 void send_thread(void)
 {
@@ -104,7 +106,8 @@ void send_thread_mail(void)
         mail->current = (i * 0.1) * 11;
         mail->counter = i;
         mail_box.put(mail);
-        ThisThread::sleep_for(1000);
+        mail->message=String("mail message: "+String(i,DEC));
+        ThisThread::sleep_for(100);
     }
   vTaskDelete(NULL);
 } 
@@ -122,22 +125,23 @@ void setup() {
   //PlatformDebug::init(oled);
   PlatformDebug::init(std::move(oled));
   PlatformDebug::printLogo();
-  //ThisThread::sleep_for(Kernel::Clock::duration_seconds(2));
-  
+  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+  platform_debug::PlatformDebug::println(" ************ IPS ************ ");
+
 
   //LoRa.dumpRegisters(Serial);
   //timeMachine.attach(callback(&e,&ExceptionCatcher::PrintTrace));
- // timeMachine.startup();
+  //timeMachine.startup();
   
   //timeMachine.setEpoch(1614764209+8*60*60);
   //colorSensor.attach(callback(&e,&ExceptionCatcher::PrintTrace));
   //colorSensor.startup();
-  //networkEngine.attach(callback(&e,&ExceptionCatcher::PrintTrace));
- // networkEngine.startup();
- 
-  //thread.start(callback(send_thread_mail));
-  platform_debug::PlatformDebug::println("thread.start(callback(send_thread))");
-  attachInterrupt(22, []  {
+  networkEngine.attach(callback(&e,&ExceptionCatcher::PrintTrace));
+  networkEngine.startup();
+
+ // thread.start(callback(send_thread_mail));
+  //thread1.start(callback(send_thread_mail));
+  /*attachInterrupt(22, []  {
         detachInterrupt(22);
         uint32_t i = 0;
         i++; 
@@ -145,10 +149,24 @@ void setup() {
         mail->voltage = (i * 0.1) * 33;
         mail->current = (i * 0.1) * 11;
         mail->counter = i;
+        mail->message=String("mail message: "+String(i,DEC));
         mail_box.put_from_isr(mail);
     }, RISING);   
   
-
+   attachInterrupt(22, []  {
+              detachInterrupt(22);
+              uint32_t i = ++cnt;
+              i++; 
+              mail_t *mail = mail_box.alloc();
+              mail->voltage = (i * 0.1) * 33;
+              mail->current = (i * 0.1) * 11;
+              mail->counter = i;
+              mail_box.put_from_isr(mail);
+          }, RISING); 
+  */
+  while(true){
+    ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));
+  }
 }
 
 
@@ -169,19 +187,9 @@ void loop() {
             platform_debug::PlatformDebug::printf("Current: %.2f A",mail->current);
             Serial.printf("Number of cycles: %lu\n\r", mail->counter);
             platform_debug::PlatformDebug::printf("Number of cycles:%lu",mail->counter);
+            platform_debug::PlatformDebug::println(mail->message);
 
             mail_box.free(mail);
-
-            attachInterrupt(22, []  {
-              detachInterrupt(22);
-              uint32_t i = 0;
-              i++; 
-              mail_t *mail = mail_box.alloc();
-              mail->voltage = (i * 0.1) * 33;
-              mail->current = (i * 0.1) * 11;
-              mail->counter = i;
-              mail_box.put_from_isr(mail);
-          }, RISING); 
         } 
         ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(100));
         /*

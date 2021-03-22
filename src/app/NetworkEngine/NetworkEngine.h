@@ -7,12 +7,54 @@
 #include <rtos/rtos.h>
 #include "DelegateClass.h"
 #include "platform_debug.h"
+#include <map>
+#include <new>
+namespace mail
+{
+enum class MqttEvent : char 
+{
+  onMqttConnect=1,
+  onMqttDisconnect,
+  onMqttSubscribe,
+  onMqttUnsubscribe,
+  onMqttMessage,
+  onMqttPublish
+};
+enum class EventType : char 
+{
+  WiFi=0,
+  MQTT
+};
+typedef union {
+    system_event_id_t wifi_event;
+    MqttEvent mqtt_event; 
+} event_t;
 
+typedef struct {
+    uint32_t counter;   
+    String message;
+} email_t;
+}
 
+/*
+      _mapWiFiEvent[SYSTEM_EVENT_STA_GOT_IP]="SYSTEM_EVENT_STA_GOT_IP";
+      _mapWiFiEvent[SYSTEM_EVENT_STA_DISCONNECTED]="SYSTEM_EVENT_STA_DISCONNECTED";
+      _mapMqttEvent[MqttEvent::onMqttConnect]="onMqttConnect";
+      _mapMqttEvent[MqttEvent::onMqttDisconnect]="onMqttDisconnect";
+      _mapMqttEvent[MqttEvent::onMqttDisconnect]="onMqttDisconnect";
+      _mapMqttEvent[MqttEvent::onMqttSubscribe]="onMqttSubscribe";
+      _mapMqttEvent[MqttEvent::onMqttUnsubscribe]="onMqttUnsubscribe";
+      _mapMqttEvent[MqttEvent::onMqttMessage]=" onMqttMessage";
+      _mapMqttEvent[MqttEvent::onMqttPublish]=" onMqttPublish";
+      */
+using namespace mail;
 class NetworkEngine
 {
 public:
-    NetworkEngine()=default;
+    NetworkEngine()
+    {
+
+    }
     NetworkEngine(const NetworkEngine& other)=default;
     NetworkEngine(NetworkEngine&& other)=default;
     ~NetworkEngine()=default;
@@ -52,7 +94,7 @@ public:
     void setWifiReconnectTimer(bool start);
 
     void startup();
-    void run();
+    void run_mail_box();
   
     void _connectToMqtt();
     void _connectToWifi();
@@ -67,11 +109,13 @@ public:
     bool subscribe(const String&& topic, uint8_t qos=0);
 
     void WiFiEvent(system_event_id_t event, system_event_info_t info);
-    void attach(Callback<void(ExceptionType,String)> func);
+    void attach(Callback<void(const String&,const String&)> func);
 private:
     static void _thunkConnectToWifi(void* pvTimerID);
     static void _thunkConnectToMqtt(void* pvTimerID);
-    
+    std::map<system_event_id_t,String> _mapWiFiEvent;
+    std::map<MqttEvent,String> _mapMqttEvent;
+    rtos::Mail<email_t, 16> _mail_box;
     TimerHandle_t _mqttReconnectTimer;
     TimerHandle_t _wifiReconnectTimer;
     static const char* WIFI_SSID;
@@ -83,8 +127,9 @@ private:
     bool _connected=false;
     system_event_id_t _event=SYSTEM_EVENT_WIFI_READY;
     //system_event_info_t _info;
-    std::vector<Callback<void(ExceptionType,String)>>  _delegateCallbacks;
+    std::vector<Callback<void(const String&,const String&)>>  _delegateCallbacks;
     inline void printTrace(const String& e);
     inline void printTrace(const char* e);
+    Thread _threadMail;
 };
 

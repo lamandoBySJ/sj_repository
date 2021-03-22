@@ -229,36 +229,8 @@ enum class ExceptionType {
 struct ExceptionCatcher
 {
     ExceptionCatcher()=default;
-    void PrintTrace(ExceptionType type,String e){ 
-        String exceptionType;
-        switch (type)
-        {
-        case ExceptionType::SensorException:
-            exceptionType="SensorException:";
-            digitalWrite(18,HIGH);
-            break;
-        case ExceptionType::RTCException:
-            exceptionType="RTCException:";
-            digitalWrite(23,HIGH);
-            break;
-        case ExceptionType::ALSException:
-            exceptionType="ALSException:";
-            digitalWrite(18,HIGH);
-            break;
-        case ExceptionType::FileException:
-            exceptionType="FileException:";
-            break;
-        case ExceptionType::OtherException:
-            exceptionType="OtherException:";
-            break;
-        case ExceptionType::NoException:
-            exceptionType="NoException:";
-            break;
-        default:
-            exceptionType="DefaultException:";
-            break;
-        }
-        platform_debug::PlatformDebug::println(exceptionType + e);
+    void PrintTrace(const String& tag,const String& e){ 
+        platform_debug::PlatformDebug::println(tag+String(":") + e);
     }
 };
 
