@@ -183,6 +183,7 @@ void loop() {
               mail_box.put_from_isr(mail);
           }, RISING); 
         } 
+        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(100));
         /*
         osEvent evt = queue.get();
         if (evt.status == osEventMessage) {
@@ -194,8 +195,8 @@ void loop() {
         }
          Serial.println(String(++cnt,DEC)+"___________________________________"+String(evt.status,DEC));
         */
-              
-        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(100));
+  }
+  
 }
 
 
