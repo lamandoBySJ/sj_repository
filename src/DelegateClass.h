@@ -226,12 +226,55 @@ enum class ExceptionType {
         OtherException,
         NoException
  };
-struct ExceptionCatcher
+
+namespace exception_catcher{
+   typedef struct {
+    uint32_t counter=0;   
+    String tag;
+    String log;
+} mail_t;
+}
+
+class ExceptionCatcher
 {
+public:
+    
     ExceptionCatcher()=default;
-    void PrintTrace(const String& tag,const String& e){ 
-        platform_debug::PlatformDebug::println(tag+String(":") + e);
+
+    void startup(){
+        #if !defined(NDEBUG)
+        _thread.start(callback(this,&ExceptionCatcher::run));
+        #endif
     }
+    void run(){
+        #if !defined(NDEBUG)
+        while(true){
+            osEvent evt= _mail_box.get();
+            if (evt.status == osEventMail) {
+                exception_catcher::mail_t *mail = (exception_catcher::mail_t *)evt.value.p;
+                platform_debug::PlatformDebug::println(mail->tag+String(":") +mail->log);
+                _mail_box.free(mail); 
+            }
+        }
+        #endif
+    }
+    void PrintTrace(const String& TAG,const String& e){ 
+        #if !defined(NDEBUG)
+         exception_catcher::mail_t *mail = _mail_box.alloc();
+        if(mail!=NULL){
+            mail->tag = TAG;
+            mail->log = String(e);
+            _mail_box.put(mail) ;
+        }
+        #endif
+    }
+    
+private:
+    #if !defined(NDEBUG)
+    rtos::Mail<exception_catcher::mail_t, 64> _mail_box;
+    Thread _thread;
+    #endif
 };
+
 
 #endif

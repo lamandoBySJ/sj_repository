@@ -124,7 +124,7 @@ class AsyncMqttClient {
   AsyncMqttClient& onUnsubscribe(mbed::Callback<void(uint16_t)> callback);
   AsyncMqttClient& onMessage(mbed::Callback<void(char*, char*, AsyncMqttClientMessageProperties, size_t, size_t, size_t)> callback);
   AsyncMqttClient& onPublish(mbed::Callback<void(uint16_t)> callback);
-  AsyncMqttClient& onMessage(mbed::Callback<void(String&&,String&&, AsyncMqttClientMessageProperties,size_t, size_t)> callback);
+  AsyncMqttClient& onMessage(mbed::Callback<void(const String&,const String&, AsyncMqttClientMessageProperties,size_t, size_t)> callback);
   bool connected() const;
   void connect();
   void disconnect(bool force = false);
@@ -185,7 +185,7 @@ class AsyncMqttClient {
   std::vector<mbed::Callback<void(uint16_t)>> _onUnsubscribeUserCallbacks;
   std::vector<mbed::Callback<void(char*, char*, AsyncMqttClientMessageProperties, size_t, size_t, size_t)>> _onMessageUserCallbacks;
   std::vector<mbed::Callback<void(uint16_t)>> _onPublishUserCallbacks;
-  std::vector<mbed::Callback<void(String&&, String&&, AsyncMqttClientMessageProperties, size_t, size_t)>> _onRefMessageUserCallbacks;
+  std::vector<mbed::Callback<void(const String&, const String&, AsyncMqttClientMessageProperties, size_t, size_t)>> _onRefMessageUserCallbacks;
   AsyncMqttClientInternals::ParsingInformation _parsingInformation;
   AsyncMqttClientInternals::Packet* _currentParsedPacket;
   uint8_t _remainingLengthBufferPosition;

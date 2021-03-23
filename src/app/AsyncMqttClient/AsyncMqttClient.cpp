@@ -175,7 +175,7 @@ AsyncMqttClient& AsyncMqttClient::onMessage(mbed::Callback<void(char*, char*, As
   _onMessageUserCallbacks.push_back(callback);
   return *this;
 }
-AsyncMqttClient& AsyncMqttClient::onMessage(mbed::Callback<void(String&&,String&&, AsyncMqttClientMessageProperties, size_t, size_t)> callback) {
+AsyncMqttClient& AsyncMqttClient::onMessage(mbed::Callback<void(const String&,const String&, AsyncMqttClientMessageProperties, size_t, size_t)> callback) {
   _onRefMessageUserCallbacks.push_back(callback);
   return *this;
 }

@@ -10,37 +10,23 @@
 
 //thread1.start(callback(TaskTest0));
 //thread2.start(callback(TaskTest,&a));
-void TaskTest0()
+void Test::run_test()
 {
- String datetime="";
-  for(;;){
-     // stdmutex.lock();
-      //String&& datetime = timeMachine.getDateTime();
-     // debug("Test0: __cplusplus:%s , %s\n", String(__cplusplus,DEC).c_str(),datetime.c_str() );
-     // ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-      //stdmutex.unlock();
-  }
+  String topic;
+  String payload;
+      while(true){
+        osEvent evt= _mail_box.get();
+        if (evt.status == osEventMail) {
+            test::mail_t *mail = (test::mail_t *)evt.value.p;
+            topic = mail->topic;
+            payload = mail->payload;
+            _mail_box.free(mail); 
+            for(auto& v : _debugCallbacks){
+                v.call(mail->topic,mail->payload);
+            }
+            
+        }
+      }
 }
-void TaskTest(int *pvParameters  )
-{
- 
-  for(;;){
-     // stdmutex.lock();
-     
-      //stdmutex.unlock();
-  }
-}
-void TaskDebug( void *pvParameters )
-{
-  //int cnt=0;
-  for(;;){
-     // vTaskResume(handleTaskDebug);
-      //Serial.println("hello");
-    //debug_if(true,"debug_if:%d\n",data);
-    //delay(10000);
-   // ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
-      //debug("task debug ...%d\n",++x);
-      //ThisThread::sleep_for(Kernel::Clock::duration_u32(1000));
-  }
-  
-}
+
+//void TaskDebug( void *pvParameters );
