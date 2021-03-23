@@ -159,22 +159,23 @@ bool  NetworkEngine::subscribe(const String&& topic, uint8_t qos)
 void NetworkEngine::onMqttConnect(bool sessionPresent)
 {
      printTrace("OK: Connected to MQTT.");
+      uint16_t packetIdSub = mqttClient.subscribe("test", 0);
      // _mutex.lock();
       _connected=true;
      // _mutex.unlock();
       /*Serial.print("Session present: ");
-      debug(sessionPresent);
+      Serial.println(sessionPresent);
       uint16_t packetIdSub = mqttClient.subscribe("test/lol", 2);
       Serial.print("Subscribing at QoS 2, packetId: ");
-      debug(packetIdSub);
+      Serial.println(packetIdSub);
       mqttClient.publish("test/lol", 0, true, "test 1");
-      debug("Publishing at QoS 0");
+      Serial.println("Publishing at QoS 0");
       uint16_t packetIdPub1 = mqttClient.publish("test/lol", 1, true, "test 2");
       Serial.print("Publishing at QoS 1, packetId: ");
-      debug(packetIdPub1);
+      Serial.println(packetIdPub1);
       uint16_t packetIdPub2 = mqttClient.publish("test/lol", 2, true, "test 3");
       Serial.print("Publishing at QoS 2, packetId: ");
-      debug(packetIdPub2);*/
+      Serial.println(packetIdPub2);*/
 }
 
 void NetworkEngine::onMqttDisconnect(AsyncMqttClientDisconnectReason reason) 
@@ -201,38 +202,43 @@ void NetworkEngine::onMqttUnsubscribe(uint16_t packetId)
     printTrace("Unsubscribe acknowledged.");
     printTrace("packetId: "+String(packetId));
 }
-    /*
-    void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
-      debug("Publish received.");
+  
+    void NetworkEngine::onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) 
+    {
+      
+       mail_box_t *mail = _mail_box.alloc();
+      if(mail!=NULL){
+        mail->topic = topic;
+        mail->payload = String(payload,len-1);
+        mail->properties.qos = properties.qos;
+        mail->properties.dup = properties.dup;
+        mail->properties.retain = properties.retain;
+        mail->index = index;
+        mail->total = total;
+        _mail_box.put(mail) ;
+      }
+     
+      /*
+      Serial.println("Publish received.");
       Serial.print("  topic: ");
-      debug(topic);
+      Serial.print(topic);
+      Serial.print("  payload: ");
+       Serial.print(payload);
       Serial.print("  qos: ");
-      debug(properties.qos);
+       Serial.print(properties.qos);
       Serial.print("  dup: ");
-      debug(properties.dup);
+       Serial.print(properties.dup);
       Serial.print("  retain: ");
-      debug(properties.retain);
+       Serial.print(properties.retain);
       Serial.print("  len: ");
-      debug(len);
+       Serial.print(len);
       Serial.print("  index: ");
-      debug(index);
+       Serial.print(index);
       Serial.print("  total: ");
-      debug(total);
-    }*/
-void NetworkEngine::onMqttMessage(String&& topic,String&& payload, AsyncMqttClientMessageProperties properties, size_t index, size_t total) 
-{
-    printTrace("Publish received.");
-    printTrace("  topic: ");
-    printTrace(topic);
-    printTrace("  payload: ");
-    printTrace(payload);
-    printTrace("  qos: "+String(properties.qos,DEC));
-    printTrace("  dup: "+String(properties.dup,DEC));
-    printTrace("  retain: "+String(properties.retain,DEC));
-    printTrace("  len: "+String(payload.length(),DEC));
-    printTrace("  index: "+String(index,DEC));
-    printTrace("  total: "+String(total,DEC));
-}
+       Serial.print(total);
+      */
+    }
+  
 void NetworkEngine::onMqttPublish(uint16_t packetId) 
 {
     printTrace("Publish acknowledged. \n");
@@ -275,22 +281,42 @@ void NetworkEngine::startup(){
       _connectToWifi();
 
      #if !defined(NDEBUG)
-     _threadMail.start(callback(this,&NetworkEngine::run_mail_box));
+     _threadDebug.start(callback(this,&NetworkEngine::run_debug_trace));
      #endif
+     _threadMail.start(callback(this,&NetworkEngine::run_mail_box));
 }
 
-void NetworkEngine::run_mail_box(){
+void NetworkEngine::run_debug_trace(){
+ 
   while(true){
-    osEvent evt = _mail_box.get();
+    osEvent evt= _mail_box_debug_trace.get();
     if (evt.status == osEventMail) {
-        email_t *mail = (email_t *)evt.value.p;
-        for(auto& v: _delegateCallbacks){
+        mail_trace_t *mail = (mail_trace_t *)evt.value.p;
+   
+        for(auto& v: _debugTraceCallbacks){
             v.call(String("[NET]"),mail->message);
         }
-        _mail_box.free(mail); 
+        _mail_box_debug_trace.free(mail); 
     }
   }
   vTaskDelete(NULL);
+}
+
+void NetworkEngine::run_mail_box(){
+ 
+  while(true){
+   
+    osEvent evt= _mail_box.get();
+    if (evt.status == osEventMail) {
+        mail_box_t *mail = (mail_box_t *)evt.value.p;
+        for(auto& v:  _onMessageCallbacks){
+              v.call(mail->topic,mail->payload);
+        }
+        _mail_box.free(mail); 
+    }
+  
+  }
+ // vTaskDelete(NULL);
 }
 
 void NetworkEngine::printTrace(const char* e)
@@ -304,15 +330,22 @@ void NetworkEngine::printTrace(const String& e)
 {
  #if !defined(NDEBUG)
   std_mutex.lock();
-  email_t *mail = _mail_box.alloc();
+  mail_trace_t *mail = _mail_box_debug_trace.alloc();
   mail->message = String(e);
-  _mail_box.put(mail) ;
+  _mail_box_debug_trace.put(mail) ;
   std_mutex.unlock();
 #endif
 }
 
+
 void NetworkEngine::attach(Callback<void(const String&,const String&)> func)
 {
-    _delegateCallbacks.push_back(func);
+    _debugTraceCallbacks.push_back(func);
 }
+
+void NetworkEngine::addOnMessageCallback(Callback<void(const String&,const String&)> func)
+{
+    _onMessageCallbacks.push_back(func);
+}
+
   

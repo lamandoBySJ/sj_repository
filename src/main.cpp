@@ -54,7 +54,7 @@ ColorSensor<BH1749NUC> colorSensor(bh1749nuc,std_mutex,2);
 
 Thread thread("Thd1",1024*2,1);
 Thread thread1("Thd1",1024*2,1);
-ExceptionCatcher e;
+
 
 NetworkEngine networkEngine;
 
@@ -69,8 +69,6 @@ typedef struct {
     //char data[128];
 } mail_t;
 
-
-
 typedef struct {
     float    voltage;   /* AD result of measured voltage */
     float    current;   /* AD result of measured current */
@@ -80,6 +78,7 @@ typedef struct {
 MemoryPool<message_t, 6> mpool;
 rtos::Queue<message_t,6> queue;
 rtos::Mail<mail_t, 2> mail_box;
+
 
 void send_thread(void)
 {
@@ -111,6 +110,10 @@ void send_thread_mail(void)
     }
   vTaskDelete(NULL);
 } 
+
+
+Test t;
+ExceptionCatcher e;
 void setup() {
  
   pinMode(18,OUTPUT);
@@ -119,15 +122,16 @@ void setup() {
   pinMode(19,OUTPUT);
   pinMode(22,PULLUP);
   // put your setup code here, to run once:
-    //WIFI Kit series V1 not support Vext control
+  //WIFI Kit series V1 not support Vext control
   Heltec.begin(true , false , true , true, BAND);
-  //Callback<void(const char*)>(&oled,&OLEDScreen<12>::println);
-  //PlatformDebug::init(oled);
+  
   PlatformDebug::init(std::move(oled));
   PlatformDebug::printLogo();
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
   platform_debug::PlatformDebug::println(" ************ IPS ************ ");
 
+  
+  e.startup();
 
   //LoRa.dumpRegisters(Serial);
   //timeMachine.attach(callback(&e,&ExceptionCatcher::PrintTrace));
@@ -136,6 +140,9 @@ void setup() {
   //timeMachine.setEpoch(1614764209+8*60*60);
   //colorSensor.attach(callback(&e,&ExceptionCatcher::PrintTrace));
   //colorSensor.startup();
+  t.attach(callback(&e,&ExceptionCatcher::PrintTrace));
+  t.startup();
+  networkEngine.addOnMessageCallback(callback(&t,&Test::onMessageCallback));
   networkEngine.attach(callback(&e,&ExceptionCatcher::PrintTrace));
   networkEngine.startup();
 
