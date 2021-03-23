@@ -156,10 +156,23 @@ bool  NetworkEngine::subscribe(const String&& topic, uint8_t qos)
   return  mqttClient.subscribe(topic.c_str(), qos)!=0;;
 }
 
+bool NetworkEngine::unsubscribe(const String& topic,uint8_t qos)
+{ 
+   return unsubscribe(topic.c_str(),qos);
+}
+
+bool NetworkEngine::unsubscribe(const char* topic,uint8_t qos)
+{
+  _mutex.lock();
+  uint16_t id = mqttClient.subscribe(topic, qos);
+  _mutex.unlock();
+  return id!=0;
+}
+
 void NetworkEngine::onMqttConnect(bool sessionPresent)
 {
      printTrace("OK: Connected to MQTT.");
-      uint16_t packetIdSub = mqttClient.subscribe("test", 0);
+     // uint16_t packetIdSub = mqttClient.subscribe("test", 0);
      // _mutex.lock();
       _connected=true;
      // _mutex.unlock();
@@ -206,7 +219,7 @@ void NetworkEngine::onMqttUnsubscribe(uint16_t packetId)
     void NetworkEngine::onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) 
     {
       
-       mail_box_t *mail = _mail_box.alloc();
+      mail_t *mail = _mail_box.alloc();
       if(mail!=NULL){
         mail->topic = topic;
         mail->payload = String(payload,len-1);
@@ -299,7 +312,7 @@ void NetworkEngine::run_debug_trace(){
         _mail_box_debug_trace.free(mail); 
     }
   }
-  vTaskDelete(NULL);
+  //vTaskDelete(NULL);
 }
 
 void NetworkEngine::run_mail_box(){
@@ -308,7 +321,7 @@ void NetworkEngine::run_mail_box(){
    
     osEvent evt= _mail_box.get();
     if (evt.status == osEventMail) {
-        mail_box_t *mail = (mail_box_t *)evt.value.p;
+        mail_t *mail = (mail_t *)evt.value.p;
         for(auto& v:  _onMessageCallbacks){
               v.call(mail->topic,mail->payload);
         }
@@ -340,7 +353,9 @@ void NetworkEngine::printTrace(const String& e)
 
 void NetworkEngine::attach(Callback<void(const String&,const String&)> func)
 {
+    #if !defined(NDEBUG)
     _debugTraceCallbacks.push_back(func);
+    #endif
 }
 
 void NetworkEngine::addOnMessageCallback(Callback<void(const String&,const String&)> func)

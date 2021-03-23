@@ -9,27 +9,8 @@
 #include "platform_debug.h"
 #include <map>
 #include <new>
-namespace mail
+namespace network
 {
-enum class MqttEvent : char 
-{
-  onMqttConnect=1,
-  onMqttDisconnect,
-  onMqttSubscribe,
-  onMqttUnsubscribe,
-  onMqttMessage,
-  onMqttPublish
-};
-enum class EventType : char 
-{
-  WiFi=0,
-  MQTT
-};
-typedef union {
-    system_event_id_t wifi_event;
-    MqttEvent mqtt_event; 
-} event_t;
-
 typedef struct {
     uint32_t counter=0;   
     String message;
@@ -41,10 +22,10 @@ typedef struct {
     size_t total;
     String topic;
     String payload;
-} mail_box_t;
+} mail_t;
 }
 
-using namespace mail;
+using namespace network;
 class NetworkEngine
 {
 public:
@@ -88,7 +69,9 @@ public:
     bool subscribe(const char* topic, uint8_t qos=0);
     bool subscribe(String& topic, uint8_t qos=0);
     bool subscribe(const String&& topic, uint8_t qos=0);
-
+    bool unsubscribe(const String& topic,uint8_t qos=0);
+    bool unsubscribe(const char* topic,uint8_t qos=0);
+   
     void WiFiEvent(system_event_id_t event, system_event_info_t info);
     void attach(Callback<void(const String&,const String&)> func);
     void addOnMessageCallback(Callback<void(const String&,const String&)> func);
@@ -117,7 +100,7 @@ private:
     std::vector<Callback<void(const String&,const String&)>>  _debugTraceCallbacks;
     Thread _threadDebug;
     #endif
-    rtos::Mail<mail_box_t, 16> _mail_box;
+    rtos::Mail<mail_t, 16> _mail_box;
     std::vector<Callback<void(const String&,const String&)>>  _onMessageCallbacks;
     
     Thread _threadMail;

@@ -38,17 +38,12 @@ public:
 
     void onMessageCallback(const String& topic,const String& payload)
     {
-      test::mail_t *mail =  _mail_box.alloc();
-      if(mail==NULL){
-        Serial.println("XXXXXXXXXXXXXXX 2222222222222222 XXXXXXXXXXXXXXX");
-        return;
-      }
-      mail->topic = String(topic);
-      mail->payload = String(payload);
-      for(auto& v : _debugCallbacks){
-        v.call(mail->topic,mail->payload);
-      }
-      _mail_box.put(mail) ;
+        test::mail_t *mail =  _mail_box.alloc();
+        if(mail!=NULL){
+            mail->topic = String(topic);
+            mail->payload = String(payload);
+            _mail_box.put(mail) ;
+        }
     }
     
      void attach(Callback<void(const String&,const String&)> func)
