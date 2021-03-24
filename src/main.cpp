@@ -29,6 +29,8 @@ extern "C" {
 #include "rtos/Mail.h"
 #include "rtos/MemoryPool.h"
 #include <app/AsyncMqttClient/AsyncMqttClient.h>
+#include "LoRaGatewayMaster.h"
+#include "LoRaNetwork.h"
 
 using namespace mstd;
 using namespace rtos;
@@ -57,11 +59,14 @@ Thread thread1("Thd1",1024*2,1);
 
 
 NetworkEngine networkEngine;
-
+LoRaGatewayMaster master;
 OLEDScreen<12> oled(Heltec.display);
 
-Test t;
-ExceptionCatcher e;
+//Test t;
+//ExceptionCatcher e;
+String DeviceInfo::BoardID="";
+TracePrinter tracePrinter;
+LoRaNetwork loRaNetwork;
 void setup() {
  
   pinMode(18,OUTPUT);
@@ -69,6 +74,7 @@ void setup() {
   pinMode(5,OUTPUT);
   pinMode(19,OUTPUT);
   pinMode(22,PULLUP);
+
   // put your setup code here, to run once:
   //WIFI Kit series V1 not support Vext control
   Heltec.begin(true , false , true , true, BAND);
@@ -77,10 +83,22 @@ void setup() {
   PlatformDebug::printLogo();
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
   platform_debug::PlatformDebug::println(" ************ IPS ************ ");
+  tracePrinter.startup();
 
-  
-  e.startup();
+  std::string mac_address=WiFi.macAddress().c_str();
+  std::string mark=":";
+  unsigned int nSize = mark.size();
+  unsigned int position = mac_address.find(mark);
+  if(position != string::npos){
+     for(unsigned int pos=position;pos != string::npos;){
+        mac_address.erase(pos, nSize);
+        platform_debug::PlatformDebug::println(mac_address);
+        pos= mac_address.find(mark);
+    }
+  }
 
+  DeviceInfo::BoardID = String(mac_address.substr(mac_address.length()-4,4).c_str());
+  platform_debug::PlatformDebug::println("DeviceInfo::BoardID:"+DeviceInfo::BoardID);
   //LoRa.dumpRegisters(Serial);
   //timeMachine.attach(callback(&e,&ExceptionCatcher::PrintTrace));
   //timeMachine.startup();
@@ -88,10 +106,17 @@ void setup() {
   //timeMachine.setEpoch(1614764209+8*60*60);
   //colorSensor.attach(callback(&e,&ExceptionCatcher::PrintTrace));
   //colorSensor.startup();
-  t.attach(callback(&e,&ExceptionCatcher::PrintTrace));
-  t.startup();
-  networkEngine.addOnMessageCallback(callback(&t,&Test::onMessageCallback));
-  networkEngine.attach(callback(&e,&ExceptionCatcher::PrintTrace));
+  //t.startup();
+  
+  master.startup();
+
+  loRaNetwork.addOnMessageCallback(callback(&master,&LoRaGatewayMaster::onMessageLoraCallback));
+  loRaNetwork.startup();
+
+  networkEngine.addTopic("Server/Request/"+DeviceInfo::BoardID);
+  networkEngine.addOnMessageCallback(callback(&master,&LoRaGatewayMaster::onMessageMqttCallback));
+  networkEngine.addOnMqttConnectCallback(callback(&master,&LoRaGatewayMaster::onMqttConnectCallback));
+  networkEngine.addOnMqttDisonnectCallback(callback(&master,&LoRaGatewayMaster::onMqttDisconnectCallback));
   networkEngine.startup();
 
  // thread.start(callback(send_thread_mail));

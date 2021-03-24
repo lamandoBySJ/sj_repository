@@ -1,1 +1,79 @@
 #include "LoRaNetwork.h"
+#include <iostream>
+#include <sstream>
+
+using namespace platform_debug;
+
+LoRaNetwork* LoRaNetwork::_loraNetwork;
+void LoRaNetwork::_thunkOnReceice(int packetSize)
+{
+  std::stringstream recipient;
+  for(char i=0;i<4;i++){
+     recipient<< (byte) LoRa.read();          
+  }
+ 
+  std::stringstream  sender;
+  for(char i=0;i<4;i++){
+     sender<<  (byte)  LoRa.read();          
+  }
+                           
+    //int payloadSize= LoRa.read();   
+   
+  String  packet ="";
+  while (LoRa.available()){
+         packet += (char) LoRa.read();
+  }
+ //String rssi= String(LoRa.packetRssi(),DEC);
+  if(String(recipient.str().c_str()) == DeviceInfo::BoardID){
+        lora::mail_t *mail =   _loraNetwork->_mail_box.alloc();
+        if(mail!=NULL){
+            mail->rssi = LoRa.packetRssi();
+            mail->sender = String(sender.str().c_str());
+            mail->packet = packet;
+            _loraNetwork->_mail_box.put_from_isr(mail) ;
+        }
+  }
+}
+
+void LoRaNetwork::startup()
+{
+    _loraNetwork=this;
+    LoRa.onReceive(&LoRaNetwork::_thunkOnReceice);
+    _thread.start(callback(this,&LoRaNetwork::run));
+}
+void LoRaNetwork::run()
+{
+    DynamicJsonDocument  doc(1024);
+    while(true){
+        osEvent evt= _mail_box.get();
+        if (evt.status == osEventMail) {
+            lora::mail_t *mail = (lora::mail_t *)evt.value.p;
+            for(auto& v :_onMessageCallbacks){
+                v.call(mail->sender,mail->rssi,mail->packet);
+            }
+            platform_debug::TracePrinter::printTrace(mail->packet);
+            _mail_box.free(mail); 
+        }
+    }
+}
+
+void LoRaNetwork::addOnMessageCallback(Callback<void(const String&,const int&,const String&)> func)
+{
+    _onMessageCallbacks.push_back(func);
+}
+ /* DeserializationError error = deserializeJson(doc,mail->packet);
+            if (!error)
+            { 
+                if (doc.containsKey("beacon")) {
+                    JsonObject obj=doc["beacon"].as<JsonObject>();
+                    if (doc.containsKey("id")) {
+                        String beaconId=obj["id"].as<String>();
+                        platform_debug::TracePrinter::printTrace(beaconId);
+                        int rssi = obj["rssi"].as<int>();
+                        
+                    }
+                } 
+            }else{
+                platform_debug::TracePrinter::printTrace("JsonParse Packet ERROR...");
+            }
+            */

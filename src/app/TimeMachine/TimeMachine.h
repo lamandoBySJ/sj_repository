@@ -21,13 +21,11 @@ public:
     time_t getEpoch();
     String getDateTime();
     void setEpoch(time_t epoch);
-    void attach(Callback<void(const String&,const String&)> func);
 private:
     RTC& _rtc;
     rtos::Mutex& _mutex;
     uint8_t _rst;
     bool selftest();
-    std::vector<Callback<void(const String&,const String&)>>  _delegateCallbacks;
 };
 
 

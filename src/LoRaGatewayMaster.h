@@ -6,25 +6,34 @@
 #include "platform_debug.h"
 #include "app/NetworkEngine/NetworkEngine.h"
 #include <ArduinoJson.h>
-
+#include <LoRaNetwork.h>
 class LoRaGatewayMaster
 {
 public:
-    LoRaGatewayMaster():_thread("gateway",1024*6,1)
+    LoRaGatewayMaster():_threadMqttService("mqttService",1024*6,1),
+                        _threadLoraService("loraService",1024*4,1)
     {
         
     }
     void startup();
-    void run();
+    void run_mqtt_service();
+    void run_lora_service();
 
-    void onMessageCallback(const String& topic,const String& payload);
-    void attach(Callback<void(const String&,const String&)> func);
+    void onMessageMqttCallback(const String& topic,const String& payload);
+    void onMessageLoraCallback(const String& sender,const int& rssi,const String& packet);
+    void onMqttConnectCallback(bool sessionPresent);
+    void onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reason);
 private:
+    Thread _threadMqttService;
+    Thread _threadLoraService;
     String _topicSubServerRequest;
     String _topicPubgatewayResponse;
-    Thread _thread;
-    Mail<network::mail_t,16> _mail_box;
-    std::vector<mbed::Callback<void(const String&,const String&)>>  _debugTraceCallbacks;
+    Mail<mqtt::mail_t,16> _mail_box_mqtt;
+    Mail<lora::mail_t,16> _mail_box_lora;
+    Mail<bool,16> _mail_box_connect;
+
+    inline void printTrace(const String& e);
+    inline void printTrace(const char* e);
 };
 
 

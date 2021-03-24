@@ -60,24 +60,7 @@ void send_thread_mail(void)
   vTaskDelete(NULL);
 } 
 
-void Test::run_test()
-{
-  String topic;
-  String payload;
-      while(true){
-        osEvent evt= _mail_box.get();
-        if (evt.status == osEventMail) {
-            test::mail_t *mail = (test::mail_t *)evt.value.p;
-            topic = mail->topic;
-            payload = mail->payload;
-            _mail_box.free(mail); 
-            for(auto& v : _debugCallbacks){
-                v.call(mail->topic,mail->payload);
-            }
-            
-        }
-      }
-}
+
 /*attachInterrupt(22, []  {
         detachInterrupt(22);
         uint32_t i = 0;

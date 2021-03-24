@@ -9,12 +9,9 @@
 #include "platform_debug.h"
 #include <map>
 #include <new>
-namespace network
+namespace mqtt
 {
-typedef struct {
-    uint32_t counter=0;   
-    String message;
-} mail_trace_t;
+
 typedef struct {
     uint32_t counter=0;   
     AsyncMqttClientMessageProperties properties;
@@ -25,7 +22,7 @@ typedef struct {
 } mail_t;
 }
 
-using namespace network;
+using namespace mqtt;
 class NetworkEngine
 {
 public:
@@ -69,14 +66,14 @@ public:
     bool subscribe(const char* topic, uint8_t qos=0);
     bool subscribe(String& topic, uint8_t qos=0);
     bool subscribe(const String&& topic, uint8_t qos=0);
-    bool unsubscribe(const String& topic,uint8_t qos=0);
-    bool unsubscribe(const char* topic,uint8_t qos=0);
+    bool unsubscribe(const String& topic);
+    bool unsubscribe(const char* topic);
    
     void WiFiEvent(system_event_id_t event, system_event_info_t info);
-    void attach(Callback<void(const String&,const String&)> func);
     void addOnMessageCallback(Callback<void(const String&,const String&)> func);
-    
-    
+    void addTopic(const String& topic,int qos=0);
+    void addOnMqttConnectCallback(Callback<void(bool)> func);
+    void addOnMqttDisonnectCallback(Callback<void(AsyncMqttClientDisconnectReason)> func);
 private:
    // void onMessageCallback(const String& topic,const String& payload);
     static void _thunkConnectToWifi(void* pvTimerID);
@@ -95,14 +92,11 @@ private:
     bool _connected=false;
     system_event_id_t _event=SYSTEM_EVENT_WIFI_READY;
     //system_event_info_t _info;
-    #if !defined(NDEBUG)
-    rtos::Mail<mail_trace_t, 16> _mail_box_debug_trace;
-    std::vector<Callback<void(const String&,const String&)>>  _debugTraceCallbacks;
-    Thread _threadDebug;
-    #endif
     rtos::Mail<mail_t, 16> _mail_box;
     std::vector<Callback<void(const String&,const String&)>>  _onMessageCallbacks;
-    
+    std::vector<Callback<void(bool)>>  _onMqttConnectCallbacks;
+    std::vector<Callback<void(AsyncMqttClientDisconnectReason)>>  _onMqttDisconnectCallbacks;
+    std::vector<String>  _topics;
     Thread _threadMail;
     
 };

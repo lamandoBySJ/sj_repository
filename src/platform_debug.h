@@ -129,9 +129,7 @@ public:
         #endif
     }
 
-    static inline void print(const String& data) 
-    {
-        /*
+    /*
         #if !defined(NDEBUG)
         PlatformDebug::_platformDebug->std_mutex.lock();
         Serial.println(data);
@@ -140,6 +138,8 @@ public:
         }
         PlatformDebug::_platformDebug->std_mutex.unlock();
         #endif*/
+    static inline void print(const String& data) 
+    {
         PlatformDebug::print(data.c_str());
         Serial.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>"+String(PlatformDebug::_platformDebug->_onPrintCallbacks.size(),DEC));
 
@@ -187,7 +187,17 @@ public:
         PlatformDebug::_platformDebug->std_mutex.unlock();
         #endif
     }
-
+    static inline void println(const std::string& data) 
+    {
+        #if !defined(NDEBUG)
+        PlatformDebug::_platformDebug->std_mutex.lock();
+        Serial.println(data.c_str());
+        for(auto& v:PlatformDebug::_platformDebug->_onPrintlnCallbacks){
+            v.call(data.c_str());
+        }
+        PlatformDebug::_platformDebug->std_mutex.unlock();
+        #endif
+    }
     static inline void println(const String& data) 
     {
         /*
@@ -244,7 +254,73 @@ private:
     static bool _finished;
 };
 
+struct DeviceInfo
+{
+   static String BoardID;
+};
 
+typedef struct {
+    uint32_t counter=0;   
+    String log;
+} mail_trace_t;
+
+class TracePrinter
+{
+public:
+    TracePrinter(){
+       
+    }
+
+    void startup(){
+        
+        #if !defined(NDEBUG)
+        if(_tracePrinter==NULL){
+            _tracePrinter=new TracePrinter();
+            _thread.start(callback( _tracePrinter,&TracePrinter::run_debug_trace));
+        } 
+         #endif
+    }
+    void run_debug_trace(){
+
+        #if !defined(NDEBUG)
+        while(true){
+            osEvent evt= _mail_box.get();
+            if (evt.status == osEventMail) {
+                mail_trace_t *mail = (mail_trace_t *)evt.value.p;
+                 platform_debug::PlatformDebug::println(mail->log);
+                _tracePrinter->_mail_box.free(mail); 
+            }
+        }
+        //vTaskDelete(NULL);
+        #endif
+    }
+    static inline  void printTrace(const char* e)
+    {
+        #if !defined(NDEBUG)
+        TracePrinter::printTrace(String(e));
+        #endif
+    }
+
+    static inline void printTrace(const String& e)
+    {
+        #if !defined(NDEBUG)
+        _tracePrinter->std_trace_mutex.lock();
+        mail_trace_t *mail = _tracePrinter->_mail_box.alloc();
+        mail->log =DeviceInfo::BoardID+String(":")+ String(e);
+        _tracePrinter->_mail_box.put(mail) ;
+        _tracePrinter->std_trace_mutex.unlock();
+        #endif
+    }
+
+private:
+    
+    #if !defined(NDEBUG)
+    static TracePrinter* _tracePrinter;
+    rtos::Mail<mail_trace_t, 64> _mail_box;
+    Thread _thread;
+    static rtos::Mutex std_trace_mutex;
+    #endif
+};
 //std::vector<Callback<void(const char*)>>  PlatformDebug::_debug;
 
 } // namespace platform_debug

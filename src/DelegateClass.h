@@ -218,23 +218,7 @@ struct GetAppVersion : public std::integral_constant< unsigned int,APP_VERSION> 
 
 struct GetAppVersionRelease : public std::integral_constant<bool,true> {};
 
-enum class ExceptionType {
-        SensorException = 0,
-        RTCException,
-        ALSException,
-        FileException,
-        OtherException,
-        NoException
- };
-
-namespace exception_catcher{
-   typedef struct {
-    uint32_t counter=0;   
-    String tag;
-    String log;
-} mail_t;
-}
-
+/*
 class ExceptionCatcher
 {
 public:
@@ -275,6 +259,6 @@ private:
     Thread _thread;
     #endif
 };
-
+*/
 
 #endif

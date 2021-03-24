@@ -26,15 +26,16 @@ void WiFiEvent(system_event_id_t event) {
 
 void NetworkEngine::WiFiEvent(system_event_id_t event, system_event_info_t info) {
  
-    printTrace("[WiFi-event] event: "+String(event,DEC));
+    platform_debug::TracePrinter::printTrace("[WiFi-event] event: "+String(event,DEC));
+
     switch(event) {
     case SYSTEM_EVENT_STA_GOT_IP:
-        printTrace("WiFi connected");
-        printTrace("IP address: "+WiFi.localIP().toString());
+        platform_debug::TracePrinter::printTrace("WiFi connected");
+        platform_debug::TracePrinter::printTrace("IP address: "+WiFi.localIP().toString());
         setMqttReconnectTimer(true);
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
-        printTrace("WiFi lost connection"); 
+        platform_debug::TracePrinter::printTrace("WiFi lost connection"); 
         // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
         if(_event != SYSTEM_EVENT_STA_DISCONNECTED){
             setMqttReconnectTimer(false);
@@ -156,25 +157,36 @@ bool  NetworkEngine::subscribe(const String&& topic, uint8_t qos)
   return  mqttClient.subscribe(topic.c_str(), qos)!=0;;
 }
 
-bool NetworkEngine::unsubscribe(const String& topic,uint8_t qos)
+bool NetworkEngine::unsubscribe(const String& topic)
 { 
-   return unsubscribe(topic.c_str(),qos);
+   return unsubscribe(topic.c_str());
 }
 
-bool NetworkEngine::unsubscribe(const char* topic,uint8_t qos)
+bool NetworkEngine::unsubscribe(const char* topic)
 {
   _mutex.lock();
-  uint16_t id = mqttClient.subscribe(topic, qos);
+  uint16_t id = mqttClient.unsubscribe(topic);
   _mutex.unlock();
   return id!=0;
 }
 
 void NetworkEngine::onMqttConnect(bool sessionPresent)
 {
-     printTrace("OK: Connected to MQTT.");
+     platform_debug::TracePrinter::printTrace("OK: Connected to MQTT.");
+     _connected=true;
+     
+
+     for(auto& v : _topics){
+        platform_debug::TracePrinter::printTrace("Topic subscribe: "+v);
+        subscribe(v, 0);
+     }
+
+    for(auto& v : _onMqttConnectCallbacks){
+        v.call(sessionPresent);
+     }
      // uint16_t packetIdSub = mqttClient.subscribe("test", 0);
      // _mutex.lock();
-      _connected=true;
+      
      // _mutex.unlock();
       /*Serial.print("Session present: ");
       Serial.println(sessionPresent);
@@ -193,10 +205,13 @@ void NetworkEngine::onMqttConnect(bool sessionPresent)
 
 void NetworkEngine::onMqttDisconnect(AsyncMqttClientDisconnectReason reason) 
 {
-      printTrace("Disconnected from MQTT.");
-        _mutex.lock();
       _connected=false;
-       _mutex.unlock();
+      platform_debug::TracePrinter::printTrace("Disconnected from MQTT.");
+      
+      for(auto& v : _onMqttDisconnectCallbacks){
+        v.call(reason);
+      }
+
       if (WiFi.isConnected()) {
         setMqttReconnectTimer(true);
       }
@@ -205,15 +220,15 @@ void NetworkEngine::onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
     
 void NetworkEngine::onMqttSubscribe(uint16_t packetId, uint8_t qos)
  {
-    printTrace("Subscribe acknowledged.");
-    printTrace("packetId: "+String(packetId,DEC));
-    printTrace("qos: "+String(qos,DEC));
+    platform_debug::TracePrinter::printTrace("[OK]:Subscribe acknowledged.");
+    platform_debug::TracePrinter::printTrace("packetId: "+String(packetId,DEC));
+    platform_debug::TracePrinter::printTrace("qos: "+String(qos,DEC));
 }
 
 void NetworkEngine::onMqttUnsubscribe(uint16_t packetId)
 {
-    printTrace("Unsubscribe acknowledged.");
-    printTrace("packetId: "+String(packetId));
+    platform_debug::TracePrinter::printTrace("[OK]:Unsubscribe acknowledged.");
+    platform_debug::TracePrinter::printTrace("packetId: "+String(packetId));
 }
   
     void NetworkEngine::onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) 
@@ -222,7 +237,7 @@ void NetworkEngine::onMqttUnsubscribe(uint16_t packetId)
       mail_t *mail = _mail_box.alloc();
       if(mail!=NULL){
         mail->topic = topic;
-        mail->payload = String(payload,len-1);
+        mail->payload = String(payload,len);
         mail->properties.qos = properties.qos;
         mail->properties.dup = properties.dup;
         mail->properties.retain = properties.retain;
@@ -254,8 +269,8 @@ void NetworkEngine::onMqttUnsubscribe(uint16_t packetId)
   
 void NetworkEngine::onMqttPublish(uint16_t packetId) 
 {
-    printTrace("Publish acknowledged. \n");
-    printTrace("  packetId: "+String(packetId,DEC));
+    platform_debug::TracePrinter::printTrace("Publish acknowledged. \n");
+    platform_debug::TracePrinter::printTrace("  packetId: "+String(packetId,DEC));
 }
 
 void NetworkEngine::setMqttReconnectTimer(bool start)
@@ -293,27 +308,10 @@ void NetworkEngine::startup(){
 
       _connectToWifi();
 
-     #if !defined(NDEBUG)
-     _threadDebug.start(callback(this,&NetworkEngine::run_debug_trace));
-     #endif
      _threadMail.start(callback(this,&NetworkEngine::run_mail_box));
 }
 
-void NetworkEngine::run_debug_trace(){
- 
-  while(true){
-    osEvent evt= _mail_box_debug_trace.get();
-    if (evt.status == osEventMail) {
-        mail_trace_t *mail = (mail_trace_t *)evt.value.p;
-   
-        for(auto& v: _debugTraceCallbacks){
-            v.call(String("[NET]"),mail->message);
-        }
-        _mail_box_debug_trace.free(mail); 
-    }
-  }
-  //vTaskDelete(NULL);
-}
+
 
 void NetworkEngine::run_mail_box(){
  
@@ -324,7 +322,10 @@ void NetworkEngine::run_mail_box(){
         mail_t *mail = (mail_t *)evt.value.p;
         for(auto& v:  _onMessageCallbacks){
               v.call(mail->topic,mail->payload);
+              Serial.println(mail->topic);
+              Serial.println(mail->payload);
         }
+        
         _mail_box.free(mail); 
     }
   
@@ -332,35 +333,22 @@ void NetworkEngine::run_mail_box(){
  // vTaskDelete(NULL);
 }
 
-void NetworkEngine::printTrace(const char* e)
-{
-  #if !defined(NDEBUG)
-  printTrace(String(e));
-  #endif
-}
-
-void NetworkEngine::printTrace(const String& e)
-{
- #if !defined(NDEBUG)
-  std_mutex.lock();
-  mail_trace_t *mail = _mail_box_debug_trace.alloc();
-  mail->message = String(e);
-  _mail_box_debug_trace.put(mail) ;
-  std_mutex.unlock();
-#endif
-}
-
-
-void NetworkEngine::attach(Callback<void(const String&,const String&)> func)
-{
-    #if !defined(NDEBUG)
-    _debugTraceCallbacks.push_back(func);
-    #endif
-}
-
 void NetworkEngine::addOnMessageCallback(Callback<void(const String&,const String&)> func)
 {
     _onMessageCallbacks.push_back(func);
 }
+void NetworkEngine::addTopic(const String& topic,int qos)
+{
+    _topics.push_back(topic);
+}
+void NetworkEngine::addOnMqttConnectCallback(Callback<void(bool)> func)
+{
+   _onMqttConnectCallbacks.push_back(func);
+}
+void NetworkEngine::addOnMqttDisonnectCallback(Callback<void(AsyncMqttClientDisconnectReason)> func)
+{
+   _onMqttDisconnectCallbacks.push_back(func);
+}
+
 
   

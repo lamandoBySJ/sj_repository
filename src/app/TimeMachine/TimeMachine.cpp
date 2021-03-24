@@ -36,13 +36,7 @@ void TimeMachine<RTC>::startup(bool pwrEnable)
         digitalWrite(19,HIGH);
     }
  }
-template<typename RTC>
-void TimeMachine<RTC>::attach(Callback<void(const String&,const String&)> func)
-{
-    #if !defined(NDEBUG)
-    _delegateCallbacks.push_back(func) ;
-    #endif
-}
+
 template<typename RTC>
 bool TimeMachine<RTC>::selftest()
 {
@@ -59,11 +53,9 @@ bool TimeMachine<RTC>::selftest()
         }
     }while(--timeout > 0);
     
-    #if !defined(NDEBUG)
-    for(auto& v : _delegateCallbacks){
-        v.call("[RTC]",String(__FILE__)+String(":")+String(__LINE__));
-    }
-    #endif
+
+    platform_debug::PlatformDebug::println(String("RTC")+String(__FILE__)+String(":")+String(__LINE__));
+
     return false;
 }
 

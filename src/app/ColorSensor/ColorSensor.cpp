@@ -38,22 +38,14 @@ void ColorSensor<T>::startup(bool pwrEnable)
     ptrFuns[2]= &T::blue_data_get;
     ptrFuns[3]= &T::ir_data_get;
      _mutex.lock();
-   bool cuccess =  _colorSensor.begin();
+    bool cuccess =  _colorSensor.begin();
     _mutex.unlock();
 
-    if(!cuccess){
-      for(auto& v : _delegateCallbacks){
-          v.call(ExceptionType::ALSException,String(__FILE__)+String(":")+String(__LINE__));
-      }
-    }else{
-      digitalWrite(5,HIGH);
+    if(cuccess){
+       digitalWrite(5,HIGH);
+       return;
     }
-}
-
-template<typename T>
-void ColorSensor<T>::attach(Callback<void(ExceptionType,String)> func)
-{
-    _delegateCallbacks.push_back(func);
+    platform_debug::TracePrinter::printTrace(String("ALS:ERROR")+String(__FILE__)+String(":")+String(__LINE__));
 }
 
 template<typename T>
