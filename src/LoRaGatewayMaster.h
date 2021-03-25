@@ -20,7 +20,7 @@ public:
     void run_lora_service();
 
     void onMessageMqttCallback(const String& topic,const String& payload);
-    void onMessageLoraCallback(const String& sender,const int& rssi,const String& packet);
+    void onMessageLoRaCallback(const String& sender,const int& rssi,const String& packet);
     void onMqttConnectCallback(bool sessionPresent);
     void onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reason);
 private:
@@ -31,9 +31,6 @@ private:
     Mail<mqtt::mail_t,16> _mail_box_mqtt;
     Mail<lora::mail_t,16> _mail_box_lora;
     Mail<bool,16> _mail_box_connect;
-
-    inline void printTrace(const String& e);
-    inline void printTrace(const char* e);
 };
 
 

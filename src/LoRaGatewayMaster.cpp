@@ -56,8 +56,8 @@ void LoRaGatewayMaster::run_lora_service()
             DeserializationError error = deserializeJson(doc,mail->packet);
             if (!error)
             { 
+                platform_debug::TracePrinter::printTrace(mail->sender+String(":")+String(mail->rssi,DEC));
                 if (doc.containsKey("beacon")) {
-                    //Serial.println(doc["beacon"].as<String>());
                     platform_debug::TracePrinter::printTrace(doc["beacon"].as<String>());
                 } 
             }else{
@@ -68,7 +68,7 @@ void LoRaGatewayMaster::run_lora_service()
         }
     }
 }
-void LoRaGatewayMaster::onMessageLoraCallback(const String& sender,const int& rssi,const String& packet)
+void LoRaGatewayMaster::onMessageLoRaCallback(const String& sender,const int& rssi,const String& packet)
 {
       lora::mail_t *mail =  _mail_box_lora.alloc();
       if(mail!=NULL){

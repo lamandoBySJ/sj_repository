@@ -1,5 +1,4 @@
 #include <heltec.h>
-//#include <ArduinoJson.h>
 #include <rtos/rtos.h>
 #include <app/TimeMachine/TimeMachine.h>
 #include <app/ColorSensor/ColorSensor.h>
@@ -22,7 +21,6 @@ extern "C" {
 	#include "freertos/timers.h"
   #include "freertos/task.h"
   #include "freertos/queue.h"
-
 }
 
 #include "rtos/Queue.h"
@@ -36,7 +34,7 @@ using namespace mstd;
 using namespace rtos;
 using namespace platform_debug;
 
-#define BAND    433E6 
+#define BAND    470E6 
 #if CONFIG_AUTOSTART_ARDUINO
 #if CONFIG_FREERTOS_UNICORE
 #define ARDUINO_RUNNING_CORE 0
@@ -77,7 +75,7 @@ void setup() {
 
   // put your setup code here, to run once:
   //WIFI Kit series V1 not support Vext control
-  Heltec.begin(true , false , true , true, BAND);
+  Heltec.begin(true , true , true , true, BAND);
   
   PlatformDebug::init(std::move(oled));
   PlatformDebug::printLogo();
@@ -110,7 +108,7 @@ void setup() {
   
   master.startup();
 
-  loRaNetwork.addOnMessageCallback(callback(&master,&LoRaGatewayMaster::onMessageLoraCallback));
+  loRaNetwork.addOnMessageCallback(callback(&master,&LoRaGatewayMaster::onMessageLoRaCallback));
   loRaNetwork.startup();
 
   networkEngine.addTopic("Server/Request/"+DeviceInfo::BoardID);
@@ -122,9 +120,6 @@ void setup() {
  // thread.start(callback(send_thread_mail));
   //thread1.start(callback(send_thread_mail));
   
-  while(true){
-    ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));
-  }
 }
 
 
@@ -132,11 +127,9 @@ bool n=false;
 std::array<uint16_t,4> dataRGB;
 void loop() {
  
-  static uint32_t cnt = 0;
-  static uint32_t i = 0;
   while (true) {
       
-        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(100));
+        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));
   }
   
 }

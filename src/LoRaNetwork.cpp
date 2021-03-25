@@ -23,8 +23,9 @@ void LoRaNetwork::_thunkOnReceice(int packetSize)
   while (LoRa.available()){
          packet += (char) LoRa.read();
   }
+ 
  //String rssi= String(LoRa.packetRssi(),DEC);
-  if(String(recipient.str().c_str()) == DeviceInfo::BoardID){
+  //if(String(recipient.str().c_str()) == DeviceInfo::BoardID){
         lora::mail_t *mail =   _loraNetwork->_mail_box.alloc();
         if(mail!=NULL){
             mail->rssi = LoRa.packetRssi();
@@ -32,14 +33,17 @@ void LoRaNetwork::_thunkOnReceice(int packetSize)
             mail->packet = packet;
             _loraNetwork->_mail_box.put_from_isr(mail) ;
         }
-  }
+//  }
+ 
 }
 
 void LoRaNetwork::startup()
 {
     _loraNetwork=this;
     LoRa.onReceive(&LoRaNetwork::_thunkOnReceice);
+    LoRa.receive();
     _thread.start(callback(this,&LoRaNetwork::run));
+    
 }
 void LoRaNetwork::run()
 {
@@ -51,7 +55,7 @@ void LoRaNetwork::run()
             for(auto& v :_onMessageCallbacks){
                 v.call(mail->sender,mail->rssi,mail->packet);
             }
-            platform_debug::TracePrinter::printTrace(mail->packet);
+            //platform_debug::TracePrinter::printTrace(mail->packet);
             _mail_box.free(mail); 
         }
     }
@@ -61,19 +65,3 @@ void LoRaNetwork::addOnMessageCallback(Callback<void(const String&,const int&,co
 {
     _onMessageCallbacks.push_back(func);
 }
- /* DeserializationError error = deserializeJson(doc,mail->packet);
-            if (!error)
-            { 
-                if (doc.containsKey("beacon")) {
-                    JsonObject obj=doc["beacon"].as<JsonObject>();
-                    if (doc.containsKey("id")) {
-                        String beaconId=obj["id"].as<String>();
-                        platform_debug::TracePrinter::printTrace(beaconId);
-                        int rssi = obj["rssi"].as<int>();
-                        
-                    }
-                } 
-            }else{
-                platform_debug::TracePrinter::printTrace("JsonParse Packet ERROR...");
-            }
-            */
