@@ -19,7 +19,7 @@ public:
     LoRaGateway(MQTTNetwork& mqttNetwork,LoRaNetwork& loRaNetwork):
         _mqttNetwork(mqttNetwork),
         _loRaNetwork(loRaNetwork),
-        _threadMqttService("mqttService",1024*6,1),
+        _threadMqttService("mqttService",1024*4,1),
          _threadLoraService("loraService",1024*4,1)
     {
         _topics.push_back(String("Command/Request/LoRaGateway"));

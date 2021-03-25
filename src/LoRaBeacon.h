@@ -3,19 +3,21 @@
 
 #include <Arduino.h>
 #include <rtos/rtos.h>
+#include <ArduinoJson.h>
 #include "platform_debug.h"
 #include "MQTTnetwork.h"
-#include <ArduinoJson.h>
 #include <LoRaNetwork.h>
 #include <map>
 #include <set>
 #include <vector>
 #include <algorithm>
 
+using namespace lora;
+
 class LoRaBeacon
 {
 public:
-
+    LoRaBeacon()=delete;
     LoRaBeacon(LoRaNetwork& loRaNetwork):
         _loRaNetwork(loRaNetwork),
         _threadMqttService("mqttService",1024*6,1),

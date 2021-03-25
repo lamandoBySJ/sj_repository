@@ -114,7 +114,7 @@ void setup() {
   loRaNetwork.addOnMessageCallback(callback(&dataCollector,&DataCollector::onMessageLoRaCallback));
   dataCollector.startup();
   
-  loRaNetwork.addOnMessageCallback(callback(&loRaBeacon,&DataCollector::onMessageLoRaCallback));
+  loRaNetwork.addOnMessageCallback(callback(&loRaBeacon,&LoRaBeacon::onMessageLoRaCallback));
   loRaBeacon.startup();
 
   mqttNetwork.addTopics(loRaGateway.getTopics());
