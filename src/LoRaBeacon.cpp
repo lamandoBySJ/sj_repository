@@ -57,7 +57,7 @@ void LoRaBeacon::run_lora_service()
         if (evt.status == osEventMail) {
             lora::mail_t *mail = (lora::mail_t *)evt.value.p;
             if(mail->receiver != platform_debug::DeviceInfo::BoardID){
-                platform_debug::TracePrinter::printTrace("[NA]lora GW: this msg not for me:receiver:"+mail->receiver+String(",sender:")+mail->sender);
+                platform_debug::TracePrinter::printTrace("[NA]lora BCN: this msg not for me:receiver:"+mail->receiver+String(",sender:")+mail->sender);
             }else{
                 DynamicJsonDocument  doc(mail->packet.length()+128);
                 DeserializationError error = deserializeJson(doc,mail->packet);
@@ -68,7 +68,7 @@ void LoRaBeacon::run_lora_service()
                         platform_debug::TracePrinter::printTrace(doc["beacon"].as<String>());
                     } 
                 }else{
-                    platform_debug::TracePrinter::printTrace("lora GW: JsonParse ERROR...");
+                    platform_debug::TracePrinter::printTrace("lora BCN: JsonParse ERROR...");
                 }
             }
             

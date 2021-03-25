@@ -9,6 +9,8 @@
 #include <heltec.h>
 #include <DelegateClass.h>
 #include <set>
+#include <iostream>
+#include <sstream>
 namespace lora
 {
     typedef struct {

@@ -79,7 +79,7 @@ void setup() {
   pinMode(22,PULLUP);
   //WIFI Kit series V1 not support Vext control
   Heltec.begin(true , true , true , true, BAND);
-  
+  //LoRa.dumpRegisters(Serial);
   PlatformDebug::init(std::move(oled));
   PlatformDebug::printLogo();
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
@@ -100,7 +100,7 @@ void setup() {
 
   DeviceInfo::BoardID = String(mac_address.substr(mac_address.length()-4,4).c_str());
   platform_debug::PlatformDebug::println("DeviceInfo::BoardID:"+DeviceInfo::BoardID);
-  //LoRa.dumpRegisters(Serial);
+  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
   //timeMachine.attach(callback(&e,&ExceptionCatcher::PrintTrace));
   //timeMachine.startup();
   
@@ -140,8 +140,6 @@ void setup() {
   
 }
 
-
-bool n=false;
 std::array<uint16_t,4> dataRGB;
 void loop() {
  
