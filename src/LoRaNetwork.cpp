@@ -30,6 +30,7 @@ void LoRaNetwork::_thunkOnReceice(int packetSize)
         if(mail!=NULL){
             mail->rssi = LoRa.packetRssi();
             mail->sender = String(sender.str().c_str());
+            mail->receiver = String(recipient.str().c_str());
             mail->packet = packet;
             _loraNetwork->_mail_box.put_from_isr(mail) ;
         }
@@ -53,7 +54,7 @@ void LoRaNetwork::run()
         if (evt.status == osEventMail) {
             lora::mail_t *mail = (lora::mail_t *)evt.value.p;
             for(auto& v :_onMessageCallbacks){
-                v.call(mail->sender,mail->rssi,mail->packet);
+                v.call(*mail);
             }
             //platform_debug::TracePrinter::printTrace(mail->packet);
             _mail_box.free(mail); 
@@ -61,7 +62,7 @@ void LoRaNetwork::run()
     }
 }
 
-void LoRaNetwork::addOnMessageCallback(Callback<void(const String&,const int&,const String&)> func)
+void LoRaNetwork::addOnMessageCallback(Callback<void(const lora::mail_t&)> func)
 {
     _onMessageCallbacks.push_back(func);
 }

@@ -1,30 +1,6 @@
-#include "../NetworkEngine/NetworkEngine.h"
-    /*
-void WiFiEvent(system_event_id_t event) {
+#include "MQTTNetwork.h"
 
-    Serial.printf("[WiFi-event] event: %d\n", event);
-    switch(event) {
-    
-    case SYSTEM_EVENT_STA_GOT_IP:
-        Serial.println("WiFi connected");
-        Serial.println("IP address: ");
-        Serial.println(WiFi.localIP());
-        networkEngine.setMqttReconnectTimer(true);
-        break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
-        Serial.println("WiFi lost connection"); 
-        // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
-        if(thunk_event != SYSTEM_EVENT_STA_DISCONNECTED){
-            networkEngine.setMqttReconnectTimer(false);
-            networkEngine.setWifiReconnectTimer(true);
-        }
-        break;
-    default:break;
-    }
-    thunk_event = event;
-}*/
-
-void NetworkEngine::WiFiEvent(system_event_id_t event, system_event_info_t info) {
+void MQTTNetwork::WiFiEvent(system_event_id_t event, system_event_info_t info) {
  
     platform_debug::TracePrinter::printTrace("[WiFi-event] event: "+String(event,DEC));
 
@@ -47,33 +23,33 @@ void NetworkEngine::WiFiEvent(system_event_id_t event, system_event_info_t info)
     _event = event;
 }
 
-AsyncMqttClient NetworkEngine::mqttClient;
-rtos::Mutex NetworkEngine::_mutex;
-rtos::Mutex NetworkEngine::std_mutex;
-IPAddress NetworkEngine::MQTT_HOST(192, 168, 1, 133);
-uint16_t NetworkEngine::MQTT_PORT =1883;
-const char* NetworkEngine::WIFI_SSID="IPS";
-const char* NetworkEngine::WIFI_PASSWORD="Aa000000";
+AsyncMqttClient MQTTNetwork::mqttClient;
+rtos::Mutex MQTTNetwork::_mutex;
+rtos::Mutex MQTTNetwork::std_mutex;
+IPAddress MQTTNetwork::MQTT_HOST(192, 168, 1, 133);
+uint16_t MQTTNetwork::MQTT_PORT =1883;
+const char* MQTTNetwork::WIFI_SSID="IPS";
+const char* MQTTNetwork::WIFI_PASSWORD="Aa000000";
 
-void NetworkEngine::_thunkConnectToWifi(void* pvTimerID)
+void MQTTNetwork::_thunkConnectToWifi(void* pvTimerID)
 {
     // printTrace("_thunkConnectToWiFi...");
     //WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-     static_cast<NetworkEngine*>(pvTimerID)->_connectToWifi();
+     static_cast<MQTTNetwork*>(pvTimerID)->_connectToWifi();
 }
-void NetworkEngine::_thunkConnectToMqtt(void* pvTimerID) 
+void MQTTNetwork::_thunkConnectToMqtt(void* pvTimerID) 
 {
      //printTrace("_thunkConnectToMQTT... \n");
-      static_cast<NetworkEngine*>(pvTimerID)-> _connectToMqtt();
+      static_cast<MQTTNetwork*>(pvTimerID)-> _connectToMqtt();
 }
-void NetworkEngine::_connectToMqtt()
+void MQTTNetwork::_connectToMqtt()
 {
        // printTrace("Connecting to MQTT...");
         // _mutex.lock();
         mqttClient.connect();
        // _mutex.unlock();
 }
-void NetworkEngine::_connectToWifi() 
+void MQTTNetwork::_connectToWifi() 
 {
        //printTrace("Connecting to Wi-Fi...");
        // _mutex.lock();
@@ -81,7 +57,7 @@ void NetworkEngine::_connectToWifi()
        // _mutex.unlock();
 }
 
-bool NetworkEngine::publish(String& topic,String& payload, uint8_t qos, bool retain,bool dup, uint16_t message_id)
+bool MQTTNetwork::publish(String& topic,String& payload, uint8_t qos, bool retain,bool dup, uint16_t message_id)
 {
      _mutex.lock();
      if(!_connected){
@@ -91,7 +67,7 @@ bool NetworkEngine::publish(String& topic,String& payload, uint8_t qos, bool ret
    _mutex.unlock();
    return  mqttClient.publish(topic.c_str(),qos, retain, payload.c_str(),payload.length(),dup,message_id) == 1;
 }
-bool NetworkEngine::publish(String& topic,const String&& payload, uint8_t qos, bool retain,bool dup, uint16_t message_id)
+bool MQTTNetwork::publish(String& topic,const String&& payload, uint8_t qos, bool retain,bool dup, uint16_t message_id)
 {
     _mutex.lock();
      if(!_connected){
@@ -101,7 +77,7 @@ bool NetworkEngine::publish(String& topic,const String&& payload, uint8_t qos, b
    _mutex.unlock();
    return  mqttClient.publish(topic.c_str(),qos, retain, payload.c_str(),payload.length(),dup,message_id) == 1;
 }
-bool NetworkEngine::publish(const String&& topic,String& payload, uint8_t qos, bool retain,bool dup, uint16_t message_id)
+bool MQTTNetwork::publish(const String&& topic,String& payload, uint8_t qos, bool retain,bool dup, uint16_t message_id)
 {
     _mutex.lock();
      if(!_connected){
@@ -111,7 +87,7 @@ bool NetworkEngine::publish(const String&& topic,String& payload, uint8_t qos, b
    _mutex.unlock();
    return  mqttClient.publish(topic.c_str(),qos, retain, payload.c_str(),payload.length(),dup,message_id) == 1;
 }
-bool NetworkEngine::publish(const String&& topic,const String&& payload, uint8_t qos, bool retain,bool dup, uint16_t message_id)
+bool MQTTNetwork::publish(const String&& topic,const String&& payload, uint8_t qos, bool retain,bool dup, uint16_t message_id)
 {
      _mutex.lock();
      if(!_connected){
@@ -122,7 +98,7 @@ bool NetworkEngine::publish(const String&& topic,const String&& payload, uint8_t
    return  mqttClient.publish(topic.c_str(),qos, retain, payload.c_str(),payload.length(),dup,message_id) == 1 ;
 }
 
-bool  NetworkEngine::subscribe(const char* topic, uint8_t qos)
+bool  MQTTNetwork::subscribe(const char* topic, uint8_t qos)
 {
     _mutex.lock();
      if(!_connected){
@@ -134,7 +110,7 @@ bool  NetworkEngine::subscribe(const char* topic, uint8_t qos)
   return  mqttClient.subscribe(topic, qos)!=0;;
 }
 
-bool  NetworkEngine::subscribe(String& topic, uint8_t qos)
+bool  MQTTNetwork::subscribe(String& topic, uint8_t qos)
 {
     _mutex.lock();
      if(!_connected){
@@ -145,7 +121,7 @@ bool  NetworkEngine::subscribe(String& topic, uint8_t qos)
    
   return  mqttClient.subscribe(topic.c_str(), qos)!=0;;
 }
-bool  NetworkEngine::subscribe(const String&& topic, uint8_t qos)
+bool  MQTTNetwork::subscribe(const String&& topic, uint8_t qos)
 {
     _mutex.lock();
      if(!_connected){
@@ -157,12 +133,12 @@ bool  NetworkEngine::subscribe(const String&& topic, uint8_t qos)
   return  mqttClient.subscribe(topic.c_str(), qos)!=0;;
 }
 
-bool NetworkEngine::unsubscribe(const String& topic)
+bool MQTTNetwork::unsubscribe(const String& topic)
 { 
    return unsubscribe(topic.c_str());
 }
 
-bool NetworkEngine::unsubscribe(const char* topic)
+bool MQTTNetwork::unsubscribe(const char* topic)
 {
   _mutex.lock();
   uint16_t id = mqttClient.unsubscribe(topic);
@@ -170,7 +146,7 @@ bool NetworkEngine::unsubscribe(const char* topic)
   return id!=0;
 }
 
-void NetworkEngine::onMqttConnect(bool sessionPresent)
+void MQTTNetwork::onMqttConnect(bool sessionPresent)
 {
      platform_debug::TracePrinter::printTrace("OK: Connected to MQTT.");
      _connected=true;
@@ -203,7 +179,7 @@ void NetworkEngine::onMqttConnect(bool sessionPresent)
       Serial.println(packetIdPub2);*/
 }
 
-void NetworkEngine::onMqttDisconnect(AsyncMqttClientDisconnectReason reason) 
+void MQTTNetwork::onMqttDisconnect(AsyncMqttClientDisconnectReason reason) 
 {
       _connected=false;
       platform_debug::TracePrinter::printTrace("Disconnected from MQTT.");
@@ -218,20 +194,20 @@ void NetworkEngine::onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
       
     }
     
-void NetworkEngine::onMqttSubscribe(uint16_t packetId, uint8_t qos)
+void MQTTNetwork::onMqttSubscribe(uint16_t packetId, uint8_t qos)
  {
     platform_debug::TracePrinter::printTrace("[OK]:Subscribe acknowledged.");
     platform_debug::TracePrinter::printTrace("packetId: "+String(packetId,DEC));
     platform_debug::TracePrinter::printTrace("qos: "+String(qos,DEC));
 }
 
-void NetworkEngine::onMqttUnsubscribe(uint16_t packetId)
+void MQTTNetwork::onMqttUnsubscribe(uint16_t packetId)
 {
     platform_debug::TracePrinter::printTrace("[OK]:Unsubscribe acknowledged.");
     platform_debug::TracePrinter::printTrace("packetId: "+String(packetId));
 }
   
-    void NetworkEngine::onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) 
+    void MQTTNetwork::onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) 
     {
       
       mail_t *mail = _mail_box.alloc();
@@ -267,13 +243,13 @@ void NetworkEngine::onMqttUnsubscribe(uint16_t packetId)
       */
     }
   
-void NetworkEngine::onMqttPublish(uint16_t packetId) 
+void MQTTNetwork::onMqttPublish(uint16_t packetId) 
 {
     platform_debug::TracePrinter::printTrace("Publish acknowledged. \n");
     platform_debug::TracePrinter::printTrace("  packetId: "+String(packetId,DEC));
 }
 
-void NetworkEngine::setMqttReconnectTimer(bool start)
+void MQTTNetwork::setMqttReconnectTimer(bool start)
 {
       if(start){
           xTimerStart(_mqttReconnectTimer,0);
@@ -281,7 +257,7 @@ void NetworkEngine::setMqttReconnectTimer(bool start)
           xTimerStop(_mqttReconnectTimer,0);
       }
 }
-void NetworkEngine::setWifiReconnectTimer(bool start)
+void MQTTNetwork::setWifiReconnectTimer(bool start)
 {
       if(start){
           if(!WiFi.isConnected()){
@@ -293,27 +269,27 @@ void NetworkEngine::setWifiReconnectTimer(bool start)
       }
 }
 
-void NetworkEngine::startup(){
-        WiFi.onEvent(std::bind(&NetworkEngine::WiFiEvent,this,std::placeholders::_1,std::placeholders::_2));
-      _wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)this, reinterpret_cast<TimerCallbackFunction_t>(&NetworkEngine::_thunkConnectToWifi));
-      _mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)this, reinterpret_cast<TimerCallbackFunction_t>(&NetworkEngine::_thunkConnectToMqtt));
+void MQTTNetwork::startup(){
+        WiFi.onEvent(std::bind(&MQTTNetwork::WiFiEvent,this,std::placeholders::_1,std::placeholders::_2));
+      _wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)this, reinterpret_cast<TimerCallbackFunction_t>(&MQTTNetwork::_thunkConnectToWifi));
+      _mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)this, reinterpret_cast<TimerCallbackFunction_t>(&MQTTNetwork::_thunkConnectToMqtt));
   
-      mqttClient.onConnect(callback(this,&NetworkEngine::onMqttConnect));
-      mqttClient.onDisconnect(callback(this,&NetworkEngine::onMqttDisconnect));
-      mqttClient.onSubscribe(callback(this,&NetworkEngine::onMqttSubscribe));
-      mqttClient.onUnsubscribe(callback(this,&NetworkEngine::onMqttUnsubscribe));
-      mqttClient.onMessage(callback(this,&NetworkEngine::onMqttMessage));
-      mqttClient.onPublish(callback(this,&NetworkEngine::onMqttPublish));
+      mqttClient.onConnect(callback(this,&MQTTNetwork::onMqttConnect));
+      mqttClient.onDisconnect(callback(this,&MQTTNetwork::onMqttDisconnect));
+      mqttClient.onSubscribe(callback(this,&MQTTNetwork::onMqttSubscribe));
+      mqttClient.onUnsubscribe(callback(this,&MQTTNetwork::onMqttUnsubscribe));
+      mqttClient.onMessage(callback(this,&MQTTNetwork::onMqttMessage));
+      mqttClient.onPublish(callback(this,&MQTTNetwork::onMqttPublish));
       mqttClient.setServer(MQTT_HOST, MQTT_PORT);
 
       _connectToWifi();
 
-     _threadMail.start(callback(this,&NetworkEngine::run_mail_box));
+     _threadMail.start(callback(this,&MQTTNetwork::run_mail_box));
 }
 
 
 
-void NetworkEngine::run_mail_box(){
+void MQTTNetwork::run_mail_box(){
  
   while(true){
    
@@ -333,22 +309,48 @@ void NetworkEngine::run_mail_box(){
  // vTaskDelete(NULL);
 }
 
-void NetworkEngine::addOnMessageCallback(Callback<void(const String&,const String&)> func)
+void MQTTNetwork::addOnMessageCallback(Callback<void(const String&,const String&)> func)
 {
     _onMessageCallbacks.push_back(func);
 }
-void NetworkEngine::addTopic(const String& topic,int qos)
+void MQTTNetwork::addTopic(const String& topic,int qos)
 {
     _topics.push_back(topic);
 }
-void NetworkEngine::addOnMqttConnectCallback(Callback<void(bool)> func)
+void MQTTNetwork::addTopics(std::vector<String>& vec)
+{
+  for(auto& v : vec){
+    _topics.push_back(v);
+  }
+}
+void MQTTNetwork::addOnMqttConnectCallback(Callback<void(bool)> func)
 {
    _onMqttConnectCallbacks.push_back(func);
 }
-void NetworkEngine::addOnMqttDisonnectCallback(Callback<void(AsyncMqttClientDisconnectReason)> func)
+void MQTTNetwork::addOnMqttDisonnectCallback(Callback<void(AsyncMqttClientDisconnectReason)> func)
 {
    _onMqttDisconnectCallbacks.push_back(func);
 }
-
-
-  
+    /*
+void WiFiEvent(system_event_id_t event) {
+    Serial.printf("[WiFi-event] event: %d\n", event);
+    switch(event) {
+    
+    case SYSTEM_EVENT_STA_GOT_IP:
+        Serial.println("WiFi connected");
+        Serial.println("IP address: ");
+        Serial.println(WiFi.localIP());
+        MQTTNetwork.setMqttReconnectTimer(true);
+        break;
+    case SYSTEM_EVENT_STA_DISCONNECTED:
+        Serial.println("WiFi lost connection"); 
+        // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
+        if(thunk_event != SYSTEM_EVENT_STA_DISCONNECTED){
+            MQTTNetwork.setMqttReconnectTimer(false);
+            MQTTNetwork.setWifiReconnectTimer(true);
+        }
+        break;
+    default:break;
+    }
+    thunk_event = event;
+}*/

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MQTT_NETWORK_H
+#define MQTT_NETWORK_H
 
 #include <arduino.h>
 #include <app/AsyncMqttClient/AsyncMqttClient.h>
@@ -9,6 +10,7 @@
 #include "platform_debug.h"
 #include <map>
 #include <new>
+#include <vector>
 namespace mqtt
 {
 
@@ -23,19 +25,19 @@ typedef struct {
 }
 
 using namespace mqtt;
-class NetworkEngine
+class MQTTNetwork
 {
 public:
-    NetworkEngine()
+    MQTTNetwork()
     {
 
     }
-    NetworkEngine(const NetworkEngine& other)=default;
-    NetworkEngine(NetworkEngine&& other)=default;
-    ~NetworkEngine()=default;
+    MQTTNetwork(const MQTTNetwork& other)=default;
+    MQTTNetwork(MQTTNetwork&& other)=default;
+    ~MQTTNetwork()=default;
 
-    NetworkEngine& operator = (const NetworkEngine& that)=default;
-    NetworkEngine& operator = (NetworkEngine&& that)=default;
+    MQTTNetwork& operator = (const MQTTNetwork& that)=default;
+    MQTTNetwork& operator = (MQTTNetwork&& that)=default;
 
     void onMqttConnect(bool sessionPresent);
 
@@ -72,6 +74,7 @@ public:
     void WiFiEvent(system_event_id_t event, system_event_info_t info);
     void addOnMessageCallback(Callback<void(const String&,const String&)> func);
     void addTopic(const String& topic,int qos=0);
+    void addTopics(std::vector<String>& vec);
     void addOnMqttConnectCallback(Callback<void(bool)> func);
     void addOnMqttDisonnectCallback(Callback<void(AsyncMqttClientDisconnectReason)> func);
 private:
@@ -100,7 +103,7 @@ private:
     Thread _threadMail;
     
 };
-
+#endif
 /*
     void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
       Serial.println("Publish received.");
