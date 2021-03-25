@@ -12,7 +12,7 @@
 #include <esp_event_legacy.h>
 #include <WiFiType.h>
 #include <WiFi.h>
-#include "app/NetworkEngine/NetworkEngine.h"
+
 #include "platform_debug.h"
 #include "app/OLEDScreen/OLEDScreen.h"
 #include "rtos/cmsis_os2.h"
@@ -22,13 +22,16 @@ extern "C" {
   #include "freertos/task.h"
   #include "freertos/queue.h"
 }
-
 #include "rtos/Queue.h"
 #include "rtos/Mail.h"
 #include "rtos/MemoryPool.h"
 #include <app/AsyncMqttClient/AsyncMqttClient.h>
-#include "LoRaGatewayMaster.h"
+
+#include "MQTTNetwork.h"
 #include "LoRaNetwork.h"
+#include "LoRaGateway.h"
+#include "DataCollector.h"
+#include "LoRaBeacon.h"
 
 using namespace mstd;
 using namespace rtos;
@@ -55,25 +58,25 @@ ColorSensor<BH1749NUC> colorSensor(bh1749nuc,std_mutex,2);
 Thread thread("Thd1",1024*2,1);
 Thread thread1("Thd1",1024*2,1);
 
-
-NetworkEngine networkEngine;
-LoRaGatewayMaster master;
-OLEDScreen<12> oled(Heltec.display);
-
-//Test t;
-//ExceptionCatcher e;
 String DeviceInfo::BoardID="";
+OLEDScreen<12> oled(Heltec.display);
 TracePrinter tracePrinter;
+//Test t;
+MQTTNetwork mqttNetwork;
 LoRaNetwork loRaNetwork;
+
+DataCollector dataCollector(mqttNetwork);
+LoRaBeacon loRaBeacon(loRaNetwork);
+
+LoRaGateway loRaGateway(mqttNetwork,loRaNetwork);
+
 void setup() {
- 
+ // put your setup code here, to run once:
   pinMode(18,OUTPUT);
   pinMode(23,OUTPUT);
   pinMode(5,OUTPUT);
   pinMode(19,OUTPUT);
   pinMode(22,PULLUP);
-
-  // put your setup code here, to run once:
   //WIFI Kit series V1 not support Vext control
   Heltec.begin(true , true , true , true, BAND);
   
@@ -105,19 +108,34 @@ void setup() {
   //colorSensor.attach(callback(&e,&ExceptionCatcher::PrintTrace));
   //colorSensor.startup();
   //t.startup();
+  loRaNetwork.addOnMessageCallback(callback(&loRaGateway,&LoRaGateway::onMessageLoRaCallback));
+  loRaGateway.startup();
   
-  master.startup();
+  loRaNetwork.addOnMessageCallback(callback(&dataCollector,&DataCollector::onMessageLoRaCallback));
+  dataCollector.startup();
+  
+  loRaNetwork.addOnMessageCallback(callback(&loRaBeacon,&DataCollector::onMessageLoRaCallback));
+  loRaBeacon.startup();
 
-  loRaNetwork.addOnMessageCallback(callback(&master,&LoRaGatewayMaster::onMessageLoRaCallback));
+  mqttNetwork.addTopics(loRaGateway.getTopics());
+  mqttNetwork.addOnMessageCallback(callback(&loRaGateway,&LoRaGateway::onMessageMqttCallback));
+  mqttNetwork.addOnMqttConnectCallback(callback(&loRaGateway,&LoRaGateway::onMqttConnectCallback));
+  mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaGateway,&LoRaGateway::onMqttDisconnectCallback));
+
+  mqttNetwork.addTopics(dataCollector.getTopics());
+  mqttNetwork.addOnMessageCallback(callback(&dataCollector,&DataCollector::onMessageMqttCallback));
+  mqttNetwork.addOnMqttConnectCallback(callback(&dataCollector,&DataCollector::onMqttConnectCallback));
+  mqttNetwork.addOnMqttDisonnectCallback(callback(&dataCollector,&DataCollector::onMqttDisconnectCallback));
+  /*
+  mqttNetwork.addTopics(loRaBeacon.getTopics());
+  mqttNetwork.addOnMessageCallback(callback(&loRaBeacon,&LoRaBeacon::onMessageMqttCallback));
+  mqttNetwork.addOnMqttConnectCallback(callback(&loRaBeacon,&LoRaBeacon::onMqttConnectCallback));
+  mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaBeacon,&LoRaBeacon::onMqttDisconnectCallback));
+  */
+  mqttNetwork.startup();
   loRaNetwork.startup();
 
-  networkEngine.addTopic("Server/Request/"+DeviceInfo::BoardID);
-  networkEngine.addOnMessageCallback(callback(&master,&LoRaGatewayMaster::onMessageMqttCallback));
-  networkEngine.addOnMqttConnectCallback(callback(&master,&LoRaGatewayMaster::onMqttConnectCallback));
-  networkEngine.addOnMqttDisonnectCallback(callback(&master,&LoRaGatewayMaster::onMqttDisconnectCallback));
-  networkEngine.startup();
-
- // thread.start(callback(send_thread_mail));
+  //thread.start(callback(send_thread_mail));
   //thread1.start(callback(send_thread_mail));
   
 }
@@ -128,7 +146,6 @@ std::array<uint16_t,4> dataRGB;
 void loop() {
  
   while (true) {
-      
         ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));
   }
   
