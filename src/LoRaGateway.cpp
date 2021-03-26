@@ -2,38 +2,74 @@
 
 void LoRaGateway::startup()
 {
+    _topicCommandRequest = platform_debug::DeviceInfo::Family+ String("/Command/Request");
+    _topicSendFingerprints = platform_debug::DeviceInfo::Family+String("/send_fingerprint");
+    _topics.push_back(_topicCommandRequest);
+    _topics.push_back(_topicSendFingerprints);
     _threadMqttService.start(callback(this,&LoRaGateway::run_mqtt_service));
     _threadLoraService.start(callback(this,&LoRaGateway::run_lora_service));
 }
 void LoRaGateway::run_mqtt_service()
 {
-    DynamicJsonDocument  doc(1024);
+    
     while(true){
         osEvent evt= _mail_box_mqtt.get();
         if (evt.status == osEventMail) {
             mqtt::mail_t *mail = (mqtt::mail_t *)evt.value.p;
+
+            DynamicJsonDocument  doc(mail->payload.length()+128);
             DeserializationError error = deserializeJson(doc,mail->payload);
             if (!error)
             { 
-                if (doc.containsKey("beacon")) {
-                    platform_debug::TracePrinter::printTrace(doc["beacon"].as<String>());
-                } 
+                if(mail->topic == _topicSendFingerprints){
+                    for(JsonPair p : doc.as<JsonObject>()){
+                        String tagID = p.key().c_str();
+                        JsonArray array = p.value().as<JsonArray>();
+                        if(array.size()!=_mapSetupBeacons.size()){
+                            if(_mapRetry.find(tagID)==_mapRetry.end()){
+                                _mapRetry[tagID]=0;
+                            }else{
+                                _mapRetry[tagID]++;
+                            }
+                            if(_mapRetry[tagID]<3){
+                                _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"LT\"}");
+                            }else{
+                                _mapRetry.erase(tagID);
+                                platform_debug::TracePrinter::printTrace(String("[~]LoRa GW:Retry:timeout..."));
+                            }
+                        }
+                    }
+                }else{
+                    platform_debug::TracePrinter::printTrace(mail->topic);
+                    if(doc.containsKey("tagID")){
+                        if(doc.containsKey("cmd")){
+                            if(doc["cmd"].as<String>() == "LN"){
+                                _loRaNetwork.sendMessage(doc["tagID"],platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"LT\"}");
+                            }else if(doc["cmd"].as<String>() == "ON"){
+                                _loRaNetwork.sendMessage(doc["tagID"].as<String>(),platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"ON\"}");
+                            }else if(doc["cmd"].as<String>() == "OFF"){
+                                _loRaNetwork.sendMessage(doc["tagID"].as<String>(),platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
+                            }
+                        }
+                    }
+                }
             }else{
                 platform_debug::TracePrinter::printTrace(String("mqtt_service: JsonParse ERROR..."));
             }
-            
             _mail_box_mqtt.free(mail); 
         }
     }
 }
 
+
 void LoRaGateway::onMqttConnectCallback(bool sessionPresent)
 {
-    platform_debug::TracePrinter::printTrace("LoRa Gateway  Runnning...");
+    platform_debug::TracePrinter::printTrace("LoRa GW Start Running");
+
 }
 void LoRaGateway::onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reason)
 {
-    platform_debug::TracePrinter::printTrace("LoRa Gateway  Abort...");
+    platform_debug::TracePrinter::printTrace("LoRa Gateway Terminaled");
 }
 void LoRaGateway::onMessageMqttCallback(const String& topic,const String& payload)
 {
