@@ -57,7 +57,7 @@ void MQTTNetwork::_connectToWifi()
        // _mutex.unlock();
 }
 
-bool MQTTNetwork::publish(String& topic,String& payload, uint8_t qos, bool retain,bool dup, uint16_t message_id)
+bool MQTTNetwork::publish(const String& topic,const String& payload, uint8_t qos, bool retain,bool dup, uint16_t message_id)
 {
      _mutex.lock();
      if(!_connected){
@@ -67,50 +67,7 @@ bool MQTTNetwork::publish(String& topic,String& payload, uint8_t qos, bool retai
    _mutex.unlock();
    return  mqttClient.publish(topic.c_str(),qos, retain, payload.c_str(),payload.length(),dup,message_id) == 1;
 }
-bool MQTTNetwork::publish(String& topic,const String&& payload, uint8_t qos, bool retain,bool dup, uint16_t message_id)
-{
-    _mutex.lock();
-     if(!_connected){
-        _mutex.unlock();
-        return false;
-     }
-   _mutex.unlock();
-   return  mqttClient.publish(topic.c_str(),qos, retain, payload.c_str(),payload.length(),dup,message_id) == 1;
-}
-bool MQTTNetwork::publish(const String&& topic,String& payload, uint8_t qos, bool retain,bool dup, uint16_t message_id)
-{
-    _mutex.lock();
-     if(!_connected){
-        _mutex.unlock();
-        return false;
-     }
-   _mutex.unlock();
-   return  mqttClient.publish(topic.c_str(),qos, retain, payload.c_str(),payload.length(),dup,message_id) == 1;
-}
-bool MQTTNetwork::publish(const String&& topic,const String&& payload, uint8_t qos, bool retain,bool dup, uint16_t message_id)
-{
-     _mutex.lock();
-     if(!_connected){
-        _mutex.unlock();
-        return false;
-     }
-   _mutex.unlock();
-   return  mqttClient.publish(topic.c_str(),qos, retain, payload.c_str(),payload.length(),dup,message_id) == 1 ;
-}
-
-bool  MQTTNetwork::subscribe(const char* topic, uint8_t qos)
-{
-    _mutex.lock();
-     if(!_connected){
-        _mutex.unlock();
-        return false;
-     }
-   _mutex.unlock();
-
-  return  mqttClient.subscribe(topic, qos)!=0;;
-}
-
-bool  MQTTNetwork::subscribe(String& topic, uint8_t qos)
+bool  MQTTNetwork::subscribe(const String& topic, uint8_t qos)
 {
     _mutex.lock();
      if(!_connected){
@@ -121,45 +78,32 @@ bool  MQTTNetwork::subscribe(String& topic, uint8_t qos)
    
   return  mqttClient.subscribe(topic.c_str(), qos)!=0;;
 }
-bool  MQTTNetwork::subscribe(const String&& topic, uint8_t qos)
-{
-    _mutex.lock();
-     if(!_connected){
-        _mutex.unlock();
-        return false;
-     }
-   _mutex.unlock();
-   
-  return  mqttClient.subscribe(topic.c_str(), qos)!=0;;
-}
-
 bool MQTTNetwork::unsubscribe(const String& topic)
 { 
+   _mutex.lock();
+     if(!_connected){
+        _mutex.unlock();
+        return false;
+     }
+   _mutex.unlock();
    return unsubscribe(topic.c_str());
 }
 
-bool MQTTNetwork::unsubscribe(const char* topic)
-{
-  _mutex.lock();
-  uint16_t id = mqttClient.unsubscribe(topic);
-  _mutex.unlock();
-  return id!=0;
-}
+
 
 void MQTTNetwork::onMqttConnect(bool sessionPresent)
 {
      platform_debug::TracePrinter::printTrace("OK: Connected to MQTT.");
      _connected=true;
-     
-
-     for(auto& v : _topics){
-        platform_debug::TracePrinter::printTrace("Topic subscribe: "+v);
-        subscribe(v, 0);
-     }
-
     for(auto& v : _onMqttConnectCallbacks){
         v.call(sessionPresent);
-     }
+    }
+    mail_on_connect_t *mail = _mail_box_on_connect.alloc();
+    if(mail!=NULL){
+        mail->sessionPresent = sessionPresent;
+        _mail_box_on_connect.put(mail) ;
+    }
+
      // uint16_t packetIdSub = mqttClient.subscribe("test", 0);
      // _mutex.lock();
       
@@ -282,15 +226,15 @@ void MQTTNetwork::startup(){
       mqttClient.onPublish(callback(this,&MQTTNetwork::onMqttPublish));
       mqttClient.setServer(MQTT_HOST, MQTT_PORT);
 
+      _threadOnConnect.start(callback(this,&MQTTNetwork::run_mail_box_on_connect));
+      _threadOnMessage.start(callback(this,&MQTTNetwork::run_mail_box));
       _connectToWifi();
-
-     _threadMail.start(callback(this,&MQTTNetwork::run_mail_box));
+     
 }
 
 
 
 void MQTTNetwork::run_mail_box(){
- 
   while(true){
    
     osEvent evt= _mail_box.get();
@@ -298,13 +242,28 @@ void MQTTNetwork::run_mail_box(){
         mail_t *mail = (mail_t *)evt.value.p;
         for(auto& v:  _onMessageCallbacks){
               v.call(mail->topic,mail->payload);
-              Serial.println(mail->topic);
-              Serial.println(mail->payload);
         }
         
         _mail_box.free(mail); 
     }
-  
+  }
+ // vTaskDelete(NULL);
+}
+
+void MQTTNetwork::run_mail_box_on_connect(){
+  while(true){
+   
+    osEvent evt= _mail_box_on_connect.get();
+    if (evt.status == osEventMail) {
+        mqtt::mail_on_connect_t *mail = (mqtt::mail_on_connect_t *)evt.value.p;
+        for(auto& v : _topics){
+            platform_debug::TracePrinter::printTrace("[*]subscribe: "+v);
+            if(!subscribe(v, 0)){
+              break;
+            }
+        }
+        _mail_box_on_connect.free(mail); 
+    }
   }
  // vTaskDelete(NULL);
 }

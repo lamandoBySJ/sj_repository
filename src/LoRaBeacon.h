@@ -18,10 +18,10 @@ class LoRaBeacon
 {
 public:
     LoRaBeacon()=delete;
-    LoRaBeacon(LoRaNetwork& loRaNetwork):
-        _loRaNetwork(loRaNetwork),
-        _threadMqttService("mqttService",1024*6,1),
-        _threadLoraService("loraService",1024*4,1)
+    LoRaBeacon(MQTTNetwork& mqttNetwork):
+        _mqttNetwork(mqttNetwork),
+        _threadMqttService("mqttService",1024*4,1),
+        _threadLoraService("loraService",1024*6,1)
     {
         _topics.push_back(String("Command/Request/LoRaBeacon"));
     }
@@ -37,8 +37,8 @@ public:
         return _topics;
     }
 private:
-    LoRaNetwork& _loRaNetwork;
-   
+    //LoRaNetwork& _loRaNetwork;
+    MQTTNetwork& _mqttNetwork;
     Thread _threadMqttService;
     Thread _threadLoraService;
     

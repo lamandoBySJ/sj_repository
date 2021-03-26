@@ -52,6 +52,8 @@ void LoRaBeacon::onMessageMqttCallback(const String& topic,const String& payload
 void LoRaBeacon::run_lora_service()
 {
     
+    DynamicJsonDocument endNodeDoc(1024);
+    
     while(true){
         osEvent evt= _mail_box_lora.get();
         if (evt.status == osEventMail) {
@@ -71,8 +73,16 @@ void LoRaBeacon::run_lora_service()
                 }
             }else if(mail->receiver == String("FAFA")){
                 platform_debug::TracePrinter::printTrace("lora BCN:FAFA:sender:"+mail->sender);
+                
+                endNodeDoc["tagID"]=mail->sender;
+                endNodeDoc["rssi"]= mail->rssi;
+                endNodeDoc["beaconID"] = platform_debug::DeviceInfo::BoardID;
+                _mqttNetwork.publish("k49a/send_rssi",endNodeDoc.as<String>());
+                endNodeDoc.clear();
+
             }else {
                 platform_debug::TracePrinter::printTrace("[NA]lora BCN: this msg not for me:receiver:"+mail->receiver+String(",sender:")+mail->sender);
+                platform_debug::TracePrinter::printTrace("[NA]packet:"+mail->packet);
             }
             
             

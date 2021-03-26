@@ -13,7 +13,9 @@
 #include <vector>
 namespace mqtt
 {
-
+typedef struct {
+    bool sessionPresent;  
+} mail_on_connect_t;
 typedef struct {
     uint32_t counter=0;   
     AsyncMqttClientMessageProperties properties;
@@ -55,21 +57,15 @@ public:
 
     void startup();
     void run_mail_box();
+    void run_mail_box_on_connect();
     void run_debug_trace();
 
     void _connectToMqtt();
     void _connectToWifi();
     //bool publish(const char* topic,String& payload, uint8_t qos=0, bool retain=false,bool dup=true, uint16_t message_id=0);
-    bool publish(String& topic,String& payload, uint8_t qos=0, bool retain=false,bool dup=true, uint16_t message_id=0);
-    bool publish(String& topic,const String&& payload, uint8_t qos=0, bool retain=false,bool dup=true, uint16_t message_id=0);
-    bool publish(const String&& topic,String& payload, uint8_t qos=0, bool retain=false,bool dup=true, uint16_t message_id=0);
-    bool publish(const String&& topic,const String&& payload, uint8_t qos=0, bool retain=false,bool dup=true, uint16_t message_id=0);
-
-    bool subscribe(const char* topic, uint8_t qos=0);
-    bool subscribe(String& topic, uint8_t qos=0);
-    bool subscribe(const String&& topic, uint8_t qos=0);
+    bool publish(const String& topic,const String& payload, uint8_t qos=0, bool retain=false,bool dup=true, uint16_t message_id=0);
+    bool subscribe(const String& topic, uint8_t qos=0);
     bool unsubscribe(const String& topic);
-    bool unsubscribe(const char* topic);
    
     void WiFiEvent(system_event_id_t event, system_event_info_t info);
     void addOnMessageCallback(Callback<void(const String&,const String&)> func);
@@ -79,6 +75,8 @@ public:
     void addOnMqttDisonnectCallback(Callback<void(AsyncMqttClientDisconnectReason)> func);
 private:
    // void onMessageCallback(const String& topic,const String& payload);
+    Thread _threadOnMessage;
+    Thread _threadOnConnect;
     static void _thunkConnectToWifi(void* pvTimerID);
     static void _thunkConnectToMqtt(void* pvTimerID);
     inline void printTrace(const String& e);
@@ -95,12 +93,13 @@ private:
     bool _connected=false;
     system_event_id_t _event=SYSTEM_EVENT_WIFI_READY;
     //system_event_info_t _info;
-    rtos::Mail<mail_t, 16> _mail_box;
+    rtos::Mail<mqtt::mail_t, 16> _mail_box;
+    rtos::Mail<mqtt::mail_on_connect_t, 2> _mail_box_on_connect;
     std::vector<Callback<void(const String&,const String&)>>  _onMessageCallbacks;
     std::vector<Callback<void(bool)>>  _onMqttConnectCallbacks;
     std::vector<Callback<void(AsyncMqttClientDisconnectReason)>>  _onMqttDisconnectCallbacks;
     std::vector<String>  _topics;
-    Thread _threadMail;
+    
     
 };
 #endif

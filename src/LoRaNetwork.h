@@ -27,6 +27,7 @@ public:
     void startup();
     void run();
     void addOnMessageCallback(Callback<void(const lora::mail_t&)> func);
+    void sendMessage(const String& receiver,const String& sender,const String& packet);
 private:
     static LoRaNetwork* _loraNetwork;
     static void _thunkOnReceice(int packetSize);
@@ -34,6 +35,8 @@ private:
     Mail<lora::mail_t,16> _mail_box;
     std::set<String> _beaconSet;
     std::vector<Callback<void(const lora::mail_t&)>>  _onMessageCallbacks;
+    rtos::Mutex _mutex;
+    static long _lastSendTime;
 };
 
 #endif

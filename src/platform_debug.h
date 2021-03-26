@@ -257,6 +257,7 @@ private:
 struct DeviceInfo
 {
    static String BoardID;
+   static String Family;
 };
 
 typedef struct {

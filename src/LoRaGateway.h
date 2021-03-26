@@ -20,9 +20,9 @@ public:
         _mqttNetwork(mqttNetwork),
         _loRaNetwork(loRaNetwork),
         _threadMqttService("mqttService",1024*4,1),
-         _threadLoraService("loraService",1024*4,1)
+        _threadLoraService("loraService",1024*4,1)
     {
-        _topics.push_back(String("Command/Request/LoRaGateway"));
+        
     }
     void startup();
     void run_mqtt_service();
@@ -46,6 +46,10 @@ private:
     Mail<mqtt::mail_t,16> _mail_box_mqtt;
     Mail<lora::mail_t,16> _mail_box_lora;
     std::vector<String> _topics;
+    String _topicCommandRequest;
+    String _topicSendFingerprints;
+    std::map<String,String> _mapSetupBeacons;
+    std::map<String,int> _mapRetry;
 };
 
 

@@ -30,7 +30,7 @@ extern "C" {
 #include "MQTTNetwork.h"
 #include "LoRaNetwork.h"
 #include "LoRaGateway.h"
-#include "DataCollector.h"
+#include "LoRaDataCollector.h"
 #include "LoRaBeacon.h"
 
 using namespace mstd;
@@ -59,14 +59,15 @@ Thread thread("Thd1",1024*2,1);
 Thread thread1("Thd1",1024*2,1);
 
 String DeviceInfo::BoardID="";
+String DeviceInfo::Family="k49a";
 OLEDScreen<12> oled(Heltec.display);
 TracePrinter tracePrinter;
 //Test t;
 MQTTNetwork mqttNetwork;
 LoRaNetwork loRaNetwork;
 
-DataCollector dataCollector(mqttNetwork);
-LoRaBeacon loRaBeacon(loRaNetwork);
+LoRaDataCollector loRaDataCollector(mqttNetwork);
+LoRaBeacon loRaBeacon(mqttNetwork);
 
 LoRaGateway loRaGateway(mqttNetwork,loRaNetwork);
 
@@ -111,8 +112,8 @@ void setup() {
   loRaNetwork.addOnMessageCallback(callback(&loRaGateway,&LoRaGateway::onMessageLoRaCallback));
   loRaGateway.startup();
   
-  loRaNetwork.addOnMessageCallback(callback(&dataCollector,&DataCollector::onMessageLoRaCallback));
-  dataCollector.startup();
+  loRaNetwork.addOnMessageCallback(callback(&loRaDataCollector,&LoRaDataCollector::onMessageLoRaCallback));
+  loRaDataCollector.startup();
   
   loRaNetwork.addOnMessageCallback(callback(&loRaBeacon,&LoRaBeacon::onMessageLoRaCallback));
   loRaBeacon.startup();
@@ -122,10 +123,10 @@ void setup() {
   mqttNetwork.addOnMqttConnectCallback(callback(&loRaGateway,&LoRaGateway::onMqttConnectCallback));
   mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaGateway,&LoRaGateway::onMqttDisconnectCallback));
 
-  mqttNetwork.addTopics(dataCollector.getTopics());
-  mqttNetwork.addOnMessageCallback(callback(&dataCollector,&DataCollector::onMessageMqttCallback));
-  mqttNetwork.addOnMqttConnectCallback(callback(&dataCollector,&DataCollector::onMqttConnectCallback));
-  mqttNetwork.addOnMqttDisonnectCallback(callback(&dataCollector,&DataCollector::onMqttDisconnectCallback));
+  mqttNetwork.addTopics(loRaDataCollector.getTopics());
+  mqttNetwork.addOnMessageCallback(callback(&loRaDataCollector,&LoRaDataCollector::onMessageMqttCallback));
+  mqttNetwork.addOnMqttConnectCallback(callback(&loRaDataCollector,&LoRaDataCollector::onMqttConnectCallback));
+  mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaDataCollector,&LoRaDataCollector::onMqttDisconnectCallback));
   /*
   mqttNetwork.addTopics(loRaBeacon.getTopics());
   mqttNetwork.addOnMessageCallback(callback(&loRaBeacon,&LoRaBeacon::onMessageMqttCallback));
@@ -144,7 +145,7 @@ std::array<uint16_t,4> dataRGB;
 void loop() {
  
   while (true) {
-        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));
+    ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));
   }
   
 }
