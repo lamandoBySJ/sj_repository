@@ -43,7 +43,7 @@ void LoRaGateway::run_mqtt_service()
                     platform_debug::TracePrinter::printTrace(mail->topic);
                     if(doc.containsKey("tagID")){
                         if(doc.containsKey("cmd")){
-                            if(doc["cmd"].as<String>() == "LN"){
+                            if(doc["cmd"].as<String>() == "LT"){
                                 _loRaNetwork.sendMessage(doc["tagID"],platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"LT\"}");
                             }else if(doc["cmd"].as<String>() == "ON"){
                                 _loRaNetwork.sendMessage(doc["tagID"].as<String>(),platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"ON\"}");
