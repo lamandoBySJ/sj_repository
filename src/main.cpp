@@ -32,6 +32,7 @@ extern "C" {
 #include "LoRaGateway.h"
 #include "LoRaDataCollector.h"
 #include "LoRaBeacon.h"
+#include "esp_sleep.h"
 
 using namespace mstd;
 using namespace rtos;
@@ -73,6 +74,25 @@ LoRaGateway loRaGateway(mqttNetwork,loRaNetwork);
 
 void setup() {
  // put your setup code here, to run once:
+  /*esp_sleep_wakeup_cause_t cause =  esp_sleep_get_wakeup_cause();
+ 
+  switch(cause){
+    case ESP_SLEEP_WAKEUP_UNDEFINED:break;    //!< In case of deep sleep, reset was not caused by exit from deep sleep
+    case ESP_SLEEP_WAKEUP_ALL:break;           //!< Not a wakeup cause, used to disable all wakeup sources with esp_sleep_disable_wakeup_source
+    case ESP_SLEEP_WAKEUP_EXT0:break;          //!< Wakeup caused by external signal using RTC_IO
+    case ESP_SLEEP_WAKEUP_EXT1:break;         //!< Wakeup caused by external signal using RTC_CNTL
+    case ESP_SLEEP_WAKEUP_TIMER:break;         //!< Wakeup caused by timer
+    case ESP_SLEEP_WAKEUP_TOUCHPAD:break;      //!< Wakeup caused by touchpad
+    case ESP_SLEEP_WAKEUP_ULP:break;           //!< Wakeup caused by ULP program
+    case ESP_SLEEP_WAKEUP_GPIO:break;         //!< Wakeup caused by GPIO (light sleep only)
+    case ESP_SLEEP_WAKEUP_UART:break; 
+  }
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_26,0);
+  uint64_t mask = 1|1<<26;
+  esp_sleep_enable_ext1_wakeup(mask,ESP_EXT1_WAKEUP_ANY_HIGH);
+  */
+ //gpio_wakeup_enable(GPIO_NUM_0,GPIO_INTR_POSEDGE)
+ //gpio_wakeup_enable(GPIO_NUM_26,GPIO_INTR_POSEDGE)
   pinMode(18,OUTPUT);
   pinMode(23,OUTPUT);
   pinMode(5,OUTPUT);
