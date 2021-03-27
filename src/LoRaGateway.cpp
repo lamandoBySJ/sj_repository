@@ -21,26 +21,36 @@ void LoRaGateway::run_mqtt_service()
             DeserializationError error = deserializeJson(doc,mail->payload);
             if (!error)
             { 
+                platform_debug::TracePrinter::printTrace(mail->topic);
                 if(mail->topic == _topicSendFingerprints){
                     for(JsonPair p : doc.as<JsonObject>()){
                         String tagID = p.key().c_str();
                         JsonArray array = p.value().as<JsonArray>();
+                        
                         if(array.size()!=_mapSetupBeacons.size()){
                             if(_mapRetry.find(tagID)==_mapRetry.end()){
                                 _mapRetry[tagID]=0;
+                                //_loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"LT\"}");
                             }else{
                                 _mapRetry[tagID]++;
+                               // _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"LT\"}");
                             }
-                            if(_mapRetry[tagID]<3){
+                            if(_mapRetry[tagID]<2){
                                 _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"LT\"}");
                             }else{
                                 _mapRetry.erase(tagID);
-                                platform_debug::TracePrinter::printTrace(String("[~]LoRa GW:Retry:timeout..."));
+                                platform_debug::TracePrinter::printTrace(String("[~]LoRa GW:Retry:timeout:eps sleep..."));
+                                _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
                             }
+                        }else{
+                            if(_mapRetry.find(tagID) !=_mapRetry.end()){
+                                _mapRetry.erase(tagID);
+                            }
+                            platform_debug::TracePrinter::printTrace(String("[~]LoRa GW:OK:DataSent:eps sleep..."));
+                             _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
                         }
                     }
                 }else{
-                    platform_debug::TracePrinter::printTrace(mail->topic);
                     if(doc.containsKey("tagID")){
                         if(doc.containsKey("cmd")){
                             if(doc["cmd"].as<String>() == "LT"){

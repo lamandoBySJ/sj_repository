@@ -31,7 +31,7 @@ public:
     {
         _topics.push_back(String("Command/Request/LoRaDataCollector"));
         _mapSetupBeacons[String("9F8C")] = String("A001");
-        _mapSetupBeacons[String("A18C")] = String("A002");
+       // _mapSetupBeacons[String("A18C")] = String("A002");
 
     }
     void startup();

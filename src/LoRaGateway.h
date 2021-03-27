@@ -22,7 +22,7 @@ public:
         _threadMqttService("mqttService",1024*4,1),
         _threadLoraService("loraService",1024*4,1)
     {
-        
+         _mapSetupBeacons[String("9F8C")] = String("A001");
     }
     void startup();
     void run_mqtt_service();

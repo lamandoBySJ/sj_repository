@@ -72,6 +72,7 @@ void LoRaNetwork::sendMessage(const String& receiver,const String& sender,const 
 {   
     
     while( (millis()-LoRaNetwork::_lastSendTime) < 2000){
+        platform_debug::TracePrinter::printTrace("[ * delay * escape * ]");
         ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(random(1000,2000)));
     }
    // _mutex.lock();
