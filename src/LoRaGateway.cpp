@@ -39,15 +39,15 @@ void LoRaGateway::run_mqtt_service()
                                 _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"LT\"}");
                             }else{
                                 _mapRetry.erase(tagID);
-                                platform_debug::TracePrinter::printTrace(String("[~]LoRa GW:Retry:timeout:eps sleep..."));
                                 _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
+                                 platform_debug::TracePrinter::printTrace(String("[~]LoRa GW:Retry:timeout:eps sleep..."));
                             }
                         }else{
                             if(_mapRetry.find(tagID) !=_mapRetry.end()){
                                 _mapRetry.erase(tagID);
                             }
-                            platform_debug::TracePrinter::printTrace(String("[~]LoRa GW:OK:DataSent:eps sleep..."));
                              _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
+                             platform_debug::TracePrinter::printTrace(String("[~]LoRa GW:OK:DataSent:eps sleep..."));
                         }
                     }
                 }else{
