@@ -106,7 +106,7 @@ void setup() {
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
   platform_debug::PlatformDebug::println(" ************ IPS ************ ");
   tracePrinter.startup();
-
+  
   std::string mac_address=WiFi.macAddress().c_str();
   std::string mark=":";
   unsigned int nSize = mark.size();
