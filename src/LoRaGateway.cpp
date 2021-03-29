@@ -19,12 +19,11 @@ void LoRaGateway::run_mqtt_service()
         osEvent evt= _mail_box_mqtt.get();
         if (evt.status == osEventMail) {
             mqtt::mail_t *mail = (mqtt::mail_t *)evt.value.p;
-
-            DynamicJsonDocument  doc(mail->payload.length()+128);
+            platform_debug::TracePrinter::printTrace(mail->topic);
+            DynamicJsonDocument  doc(mail->payload.length()+1024);
             DeserializationError error = deserializeJson(doc,mail->payload);
             if (!error)
             { 
-                platform_debug::TracePrinter::printTrace(mail->topic);
                 if(mail->topic == _topicSendFingerprints){
                     for(JsonPair p : doc.as<JsonObject>()){
                         String tagID = p.key().c_str();
@@ -47,33 +46,52 @@ void LoRaGateway::run_mqtt_service()
                             if(_mapRetry.find(tagID) !=_mapRetry.end()){
                                 _mapRetry.erase(tagID);
                             }
-                             _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
-                             platform_debug::TracePrinter::printTrace(String("[~]LoRa GW:OK:DataSent:eps sleep..."));
+                            _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
+                            platform_debug::TracePrinter::printTrace(String("[~]LoRa GW:OK:DataSent:eps sleep..."));
+
+                            if(_mode == "learn"){
+                                _topicLT=DeviceInfo::Family+"/"+_mode+"/"+tagID+"/"+_mapTagLocation[tagID];
+                            }else{
+                                _topicLT=DeviceInfo::Family+"/"+_mode+"/"+tagID;
+                            }
+                            _payload="{";
+                            for(JsonObject obj:array){
+                                for(JsonPair p:obj){
+                                    _payload+=p.key().c_str();
+                                    _payload+=":";
+                                    _payload+=p.value().as<int>();
+                                    _payload+=",";
+                                }
+                            }
+                            _payload+="}";
+                            _mqttNetwork.publish(_topicLT,_payload);
                         }
                     }
                 }else {
-                    if(doc.containsKey("tagID")){
-                                        
-                    }
                     if(doc.containsKey("technology")){
                         if(doc["technology"].as<String>() == "LoRa"){
+                            if(doc.containsKey("cmd")&&doc.containsKey("tagID")){
+                                String tagID = doc["tagID"];
+                                String cmd = doc["cmd"].as<String>();
+                                if(  cmd== "learn"){
+                                    _mode="learn"; 
+                                    _mapTagLocation[tagID] =  doc["location"].as<String>();
+                                    _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"LT\"}"); 
+                                }else if( cmd == "track"){
+                                    _mode="track";     
+                                    _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"LT\"}"); 
+                                }else if( cmd == "ON"){
+                                    _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"ON\"}");
+                                }else if( cmd == "OFF"){
+                                    _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
+                                }
+                            }
                         }                    
-                    }
-                                    
-                    if(doc.containsKey("cmd")){
-                        if(doc["cmd"].as<String>() == "Ping"){
-                                    _mqttNetwork.publish(_topicCommandResponse,"{\"Device\":\"OK\"}");
-                        }else if(doc["cmd"].as<String>() == "LT"){     
-                                   _loRaNetwork.sendMessage(doc["tagID"],platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"LT\"}"); 
-                        }else if(doc["cmd"].as<String>() == "ON"){
-                                    _loRaNetwork.sendMessage(doc["tagID"].as<String>(),platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"ON\"}");
-                        }else if(doc["cmd"].as<String>() == "OFF"){
-                                    _loRaNetwork.sendMessage(doc["tagID"].as<String>(),platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
-                        }
-                    }
+                    }       
                 }
             }else{
                 platform_debug::TracePrinter::printTrace(String("GW:mqtt_service: JsonParse ERROR..."));
+                platform_debug::TracePrinter::printTrace(doc.as<String>());
             }
             _mail_box_mqtt.free(mail); 
         }

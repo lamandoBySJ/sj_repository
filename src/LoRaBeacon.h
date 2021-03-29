@@ -13,7 +13,7 @@
 #include <algorithm>
 
 using namespace lora;
-
+using namespace platform_debug;
 class LoRaBeacon
 {
 public:
@@ -23,7 +23,7 @@ public:
         _threadMqttService("mqttService",1024*4,1),
         _threadLoraService("loraService",1024*6,1)
     {
-        _topics.push_back(String("Command/Request/LoRaBeacon"));
+       
     }
     void startup();
     void run_mqtt_service();
@@ -47,6 +47,7 @@ private:
     Mail<mqtt::mail_t,16> _mail_box_mqtt;
     Mail<lora::mail_t,16> _mail_box_lora;
     std::vector<String> _topics;
+    String _topicCommand;
 };
 
 

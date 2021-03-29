@@ -9,6 +9,7 @@
 #include "DelegateClass.h"
 #include "platform_debug.h"
 #include <map>
+#include <set>
 #include <new>
 #include <vector>
 namespace mqtt
@@ -98,7 +99,7 @@ private:
     std::vector<Callback<void(const String&,const String&)>>  _onMessageCallbacks;
     std::vector<Callback<void(bool)>>  _onMqttConnectCallbacks;
     std::vector<Callback<void(AsyncMqttClientDisconnectReason)>>  _onMqttDisconnectCallbacks;
-    std::vector<String>  _topics;
+    std::set<String>  _topics;
     
     
 };

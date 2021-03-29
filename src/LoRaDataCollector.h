@@ -11,7 +11,7 @@
 #include <algorithm>
 #include "MQTTNetwork.h"
 #include <LoRaNetwork.h>
-
+using namespace platform_debug;
 namespace background
 {
     typedef struct {
@@ -29,7 +29,7 @@ public:
         _threadLoraService("loraService",1024*4,1),
         _threadBackgroundService("backgroundService",1024*2,1)
     {
-        _topics.push_back(String("Command/Request/LoRaDataCollector"));
+        
         _mapSetupBeacons[String("9F8C")] = String("A001");
        // _mapSetupBeacons[String("A18C")] = String("A002");
 
@@ -56,14 +56,15 @@ private:
     Mail<mqtt::mail_t,16> _mail_box_mqtt;
     Mail<lora::mail_t,16> _mail_box_lora;
     Mail<background::mail_t,32> _mail_box_background;
-    std::map<String,std::map<String,int>> _mapTrackDevices;
+    std::map<String,std::map<String,int>> _mapTrackedDevices;
     std::set<String> _setBeaconCollector;
     std::map<String,String> _mapSetupBeacons;
     std::vector<String> _topics;
-    std::map<String,std::set<String>> _mapTagCounter;
+    std::map<String,std::set<String>> _mapDataCollector;
     String _fingerprints;
     String _topicSendRssi;
-    String _topicLT;
+    String _topicFP;
+    String  _topicCommand;
     rtos::Mutex _mutex;
 };
 

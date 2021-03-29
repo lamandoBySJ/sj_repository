@@ -12,6 +12,7 @@
 #include <set>
 #include <vector>
 #include <algorithm>
+using namespace platform_debug;
 class LoRaGateway
 {
 public:
@@ -23,6 +24,7 @@ public:
         _threadLoraService("loraService",1024*4,1)
     {
          _mapSetupBeacons[String("9F8C")] = String("A001");
+         _mode="learn";
     }
     void startup();
     void run_mqtt_service();
@@ -48,8 +50,13 @@ private:
     std::vector<String> _topics;
     String _topicCommandRequest;
     String _topicSendFingerprints;
+    String _topicCommandResponse;
     std::map<String,String> _mapSetupBeacons;
     std::map<String,int> _mapRetry;
+    String _mode;
+    String  _topicLT;
+    String _payload;
+    std::map<String,String> _mapTagLocation;
 };
 
 

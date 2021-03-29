@@ -274,12 +274,12 @@ void MQTTNetwork::addOnMessageCallback(Callback<void(const String&,const String&
 }
 void MQTTNetwork::addTopic(const String& topic,int qos)
 {
-    _topics.push_back(topic);
+    _topics.insert(topic);
 }
 void MQTTNetwork::addTopics(std::vector<String>& vec)
 {
   for(auto& v : vec){
-    _topics.push_back(v);
+    _topics.insert(v);
   }
 }
 void MQTTNetwork::addOnMqttConnectCallback(Callback<void(bool)> func)

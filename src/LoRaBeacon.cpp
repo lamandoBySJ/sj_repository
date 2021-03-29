@@ -2,6 +2,9 @@
 
 void LoRaBeacon::startup()
 {
+    
+    _topicCommand = DeviceInfo::Family+ String("/command/request/")+DeviceInfo::BoardID;
+      _topics.push_back(_topicCommand);
     _threadMqttService.start(callback(this,&LoRaBeacon::run_mqtt_service));
     _threadLoraService.start(callback(this,&LoRaBeacon::run_lora_service));
 }
@@ -15,11 +18,11 @@ void LoRaBeacon::run_mqtt_service()
             DeserializationError error = deserializeJson(doc,mail->payload);
             if (!error)
             { 
-                if (doc.containsKey("beacon")) {
-                    platform_debug::TracePrinter::printTrace(doc["beacon"].as<String>());
+                if (doc.containsKey("beaconID")) {
+                    platform_debug::TracePrinter::printTrace(doc["beaconID"].as<String>());
                 } 
             }else{
-                platform_debug::TracePrinter::printTrace(String("mqtt_service: JsonParse ERROR..."));
+                platform_debug::TracePrinter::printTrace(String("[x]LoRA BCN: JsonParse ERROR..."));
             }
             
             _mail_box_mqtt.free(mail); 
@@ -29,11 +32,11 @@ void LoRaBeacon::run_mqtt_service()
 
 void LoRaBeacon::onMqttConnectCallback(bool sessionPresent)
 {
-    platform_debug::TracePrinter::printTrace("LoRa Gateway  Runnning...");
+    platform_debug::TracePrinter::printTrace("LoRa BCN:onMqttConnectCallback");
 }
 void LoRaBeacon::onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reason)
 {
-    platform_debug::TracePrinter::printTrace("LoRa Gateway  Abort...");
+    platform_debug::TracePrinter::printTrace("LoRa BCN:onMqttDisconnectCallback");
 }
 void LoRaBeacon::onMessageMqttCallback(const String& topic,const String& payload)
 {
@@ -41,8 +44,8 @@ void LoRaBeacon::onMessageMqttCallback(const String& topic,const String& payload
     {
         mqtt::mail_t *mail =  _mail_box_mqtt.alloc();
         if(mail!=NULL){
-            mail->topic = String(topic);
-            mail->payload = String(payload);
+            mail->topic = topic;
+            mail->payload = payload;
             _mail_box_mqtt.put(mail) ;
         }
     }

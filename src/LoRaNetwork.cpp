@@ -70,10 +70,10 @@ void LoRaNetwork::addOnMessageCallback(Callback<void(const lora::mail_t&)> func)
 
 void LoRaNetwork::sendMessage(const String& receiver,const String& sender,const String& packet)
 {   
-    
-    while( (millis()-LoRaNetwork::_lastSendTime) < 2000){
-        platform_debug::TracePrinter::printTrace("[ * delay * escape * ]");
-        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(random(1000,2000)));
+    char retry=6;
+    while( (millis()-LoRaNetwork::_lastSendTime) < 880 && --retry>0){
+        platform_debug::TracePrinter::printTrace("[ - delay "+String(retry,DEC)+"s escape - ]");
+        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(random(200,1000)));
     }
    // _mutex.lock();
     LoRa.beginPacket();  
