@@ -6,7 +6,7 @@ void LoRaGateway::startup()
     _topicCommandResponse = DeviceInfo::Family+ String("/command/response/")+DeviceInfo::BoardID;
     _topicCommandRequest = DeviceInfo::Family+ String("/command/request/")+DeviceInfo::BoardID;
     _topicSendFingerprints = DeviceInfo::Family+String("/send_fingerprint");
-    _topics.push_back(_topicCommandResponse);
+
     _topics.push_back(_topicCommandRequest);
     _topics.push_back(_topicSendFingerprints);
     _threadMqttService.start(callback(this,&LoRaGateway::run_mqtt_service));
@@ -73,7 +73,7 @@ void LoRaGateway::run_mqtt_service()
                             if(doc.containsKey("cmd")&&doc.containsKey("tagID")){
                                 String tagID = doc["tagID"];
                                 String cmd = doc["cmd"].as<String>();
-                                if(  cmd== "learn"){
+                                if( cmd== "learn"){
                                     _mode="learn"; 
                                     _mapTagLocation[tagID] =  doc["location"].as<String>();
                                     _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"LT\"}"); 
@@ -84,10 +84,19 @@ void LoRaGateway::run_mqtt_service()
                                     _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"ON\"}");
                                 }else if( cmd == "OFF"){
                                     _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
+                                }else if( cmd == "BeaconSetup"){
+
                                 }
+                            }else if(doc.containsKey("beacons")){
+                                _mapSetupBeacons.clear();
+                                for(auto v :doc["beacons"].as<JsonArray>()){
+                                    for(JsonPair p : v.as<JsonObject>()){
+                                        _mapSetupBeacons[p.key().c_str()]=p.value().as<String>();
+                                    }
+                                }     
                             }
                         }                    
-                    }       
+                    }    
                 }
             }else{
                 platform_debug::TracePrinter::printTrace(String("GW:mqtt_service: JsonParse ERROR..."));

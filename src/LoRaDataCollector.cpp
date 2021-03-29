@@ -20,12 +20,11 @@ void LoRaDataCollector::run_mqtt_service()
         if (evt.status == osEventMail) {
             mqtt::mail_t *mail = (mqtt::mail_t *)evt.value.p;
             
+            DynamicJsonDocument  doc(mail->payload.length()+1024);
+            DeserializationError error = deserializeJson(doc,mail->payload);
             if (mail->topic == _topicSendRssi) {
                 String tagID;
                 String beaconID;
-
-                DynamicJsonDocument  doc(mail->payload.length()+1024);
-                DeserializationError error = deserializeJson(doc,mail->payload);
                 if (!error)
                 {   
                     tagID =  doc["tagID"].as<String>();
@@ -65,6 +64,15 @@ void LoRaDataCollector::run_mqtt_service()
                     }
                     _mutex.unlock();
                 }   
+            }else{
+                if(doc.containsKey("beacons")){
+                    _mapSetupBeacons.clear();
+                    for(auto v :doc["beacons"].as<JsonArray>()){
+                        for(JsonPair p : v.as<JsonObject>()){
+                            _mapSetupBeacons[p.key().c_str()]=p.value().as<String>();
+                        }
+                    }     
+                }
             }
 
             _mail_box_mqtt.free(mail); 
