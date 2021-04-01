@@ -55,9 +55,6 @@ void LoRaBeacon::onMessageMqttCallback(const String& topic,const String& payload
 
 void LoRaBeacon::run_lora_service()
 {
-    
-
-    
     while(true){
         osEvent evt= _mail_box_lora.get();
         if (evt.status == osEventMail) {

@@ -26,7 +26,6 @@ void LoRaGateway::run_mqtt_service()
             { 
                 if(mail->topic == _topicSendFingerprints){
 
-                    
                     for(JsonPair p : doc.as<JsonObject>()){
                         String tagID = p.key().c_str();
                         JsonArray array = p.value().as<JsonArray>();

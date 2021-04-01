@@ -1,6 +1,6 @@
 #include "LoRaDataCollector.h"
 
-void LoRaDataCollector::startup()
+void LoRaDataCollector::startup(WirelessTechnologyType type)
 {
     _topicCommandResponse = DeviceInfo::Family+ String("/command/response/DC");
     _topicCommand = DeviceInfo::Family+ String("/command/request/DC");
@@ -9,8 +9,13 @@ void LoRaDataCollector::startup()
     _topics.push_back(_topicSendRssi);
     _topics.push_back(_topicCommand);
 
-    _threadMqttService.start(callback(this,&LoRaDataCollector::run_mqtt_service));
-   // _threadLoraService.start(callback(this,&LoRaDataCollector::run_lora_service));
+    
+    if(type == WirelessTechnologyType::WiFi){
+        _threadMqttService.start(callback(this,&LoRaDataCollector::run_mqtt_service));
+    }else{
+       _threadLoraService.start(callback(this,&LoRaDataCollector::run_lora_service));
+    }
+  
    _threadBackgroundService.start(callback(this,&LoRaDataCollector::run_background_service));
 }
 void LoRaDataCollector::run_mqtt_service()
