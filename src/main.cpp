@@ -122,13 +122,12 @@ void setup() {
   DeviceInfo::BoardID = String(mac_address.substr(mac_address.length()-4,4).c_str());
   platform_debug::PlatformDebug::println("DeviceInfo::BoardID:"+DeviceInfo::BoardID);
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-  //timeMachine.attach(callback(&e,&ExceptionCatcher::PrintTrace));
+
   //timeMachine.startup();
-  
   //timeMachine.setEpoch(1614764209+8*60*60);
-  //colorSensor.attach(callback(&e,&ExceptionCatcher::PrintTrace));
+
   //colorSensor.startup();
-  //t.startup();
+
   loRaNetwork.addOnMessageCallback(callback(&loRaGateway,&LoRaGateway::onMessageLoRaCallback));
   loRaGateway.startup();
   
@@ -155,9 +154,6 @@ void setup() {
   */
   mqttNetwork.startup();
   loRaNetwork.startup();
-
-  //thread.start(callback(send_thread_mail));
-  //thread1.start(callback(send_thread_mail));
   
 }
 
