@@ -114,21 +114,21 @@ void LoRaDataCollector::run_lora_service()
         osEvent evt= _mail_box_lora.get();
         if (evt.status == osEventMail) {
             lora::mail_t *mail = (lora::mail_t *)evt.value.p;
+            platform_debug::TracePrinter::printTrace("[*]lora DC:Rx:"+mail->receiver+String(":Tx:")+mail->sender);
             if(mail->receiver == platform_debug::DeviceInfo::BoardID){
-                platform_debug::TracePrinter::printTrace("lora DC:receiver:"+mail->receiver+String(",sender:")+mail->sender);
+                
                 DynamicJsonDocument  doc(mail->packet.length()+128);
                 DeserializationError error = deserializeJson(doc,mail->packet);
                 if (!error)
                 { 
                     platform_debug::TracePrinter::printTrace(mail->sender+String(":")+String(mail->rssi,DEC));
                 }else{
-                    platform_debug::TracePrinter::printTrace("lora DC: JsonParse ERROR...");
+                    platform_debug::TracePrinter::printTrace("[x]lora DC:JsonParse ERROR...");
                 }
             }else if(mail->receiver == String("FAFA")){
-               
-                platform_debug::TracePrinter::printTrace("lora DC:FAFA:sendor:"+mail->sender);
+                platform_debug::TracePrinter::printTrace("[*]lora DC:FAFA:n/a");
             }else{
-                platform_debug::TracePrinter::printTrace("[NA]lora DC:receiver:"+mail->receiver+String(",sender:")+mail->sender);
+                platform_debug::TracePrinter::printTrace("[*]lora DC:n/a");
             }
             
             _mail_box_lora.free(mail); 

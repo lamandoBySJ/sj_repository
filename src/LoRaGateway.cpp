@@ -140,24 +140,23 @@ void LoRaGateway::run_lora_service()
         osEvent evt= _mail_box_lora.get();
         if (evt.status == osEventMail) {
             lora::mail_t *mail = (lora::mail_t *)evt.value.p;
+            platform_debug::TracePrinter::printTrace("[#]lora GW:Rx:"+mail->receiver+String(":Tx:")+mail->sender);
             if(mail->receiver == platform_debug::DeviceInfo::BoardID){
                  DynamicJsonDocument  doc(mail->packet.length()+128);
                 DeserializationError error = deserializeJson(doc,mail->packet);
+                platform_debug::TracePrinter::printTrace(mail->packet);
                 if (!error)
                 { 
-                    platform_debug::TracePrinter::printTrace(mail->sender+String(":")+String(mail->rssi,DEC));
-                    if (doc.containsKey("beacon")) {
-                        platform_debug::TracePrinter::printTrace(doc["beacon"].as<String>());
-                    } 
+                    platform_debug::TracePrinter::printTrace("[#]lora GW: JsonParse OK!");
                 }else{
-                    platform_debug::TracePrinter::printTrace("lora GW: JsonParse ERROR...");
+                    platform_debug::TracePrinter::printTrace("[x]lora GW: JsonParse ERROR...");
                 }
                 
             }else if(mail->receiver == String("FAFA")){
-                platform_debug::TracePrinter::printTrace("lora GW:FAFA:sender:"+mail->sender);
+                platform_debug::TracePrinter::printTrace("[#]lora GW:FAFA:na/");
             }
             else{
-                platform_debug::TracePrinter::printTrace("[NA]lora GW: this msg not for me:sender:"+mail->sender);
+                platform_debug::TracePrinter::printTrace("[#]lora GW:n/a");
             }
             
             
