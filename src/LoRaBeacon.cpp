@@ -3,8 +3,8 @@
 void LoRaBeacon::startup()
 {
     
-    _topicCommand = DeviceInfo::Family+ String("/command/request/")+DeviceInfo::BoardID;
-      _topics.push_back(_topicCommand);
+    _topicCommand = DeviceInfo::Family+ String("/command/request/BCN");
+    _topics.push_back(_topicCommand);
     _threadMqttService.start(callback(this,&LoRaBeacon::run_mqtt_service));
     _threadLoraService.start(callback(this,&LoRaBeacon::run_lora_service));
 }
@@ -15,6 +15,7 @@ void LoRaBeacon::run_mqtt_service()
         osEvent evt= _mail_box_mqtt.get();
         if (evt.status == osEventMail) {
             mqtt::mail_t *mail = (mqtt::mail_t *)evt.value.p;
+            platform_debug::TracePrinter::printTrace(mail->topic);
             DeserializationError error = deserializeJson(doc,mail->payload);
             if (!error)
             { 
@@ -55,37 +56,37 @@ void LoRaBeacon::onMessageMqttCallback(const String& topic,const String& payload
 void LoRaBeacon::run_lora_service()
 {
     
-    DynamicJsonDocument endNodeDoc(1024);
+
     
     while(true){
         osEvent evt= _mail_box_lora.get();
         if (evt.status == osEventMail) {
             lora::mail_t *mail = (lora::mail_t *)evt.value.p;
+            platform_debug::TracePrinter::printTrace("[~]lora BCN:Rx:"+mail->receiver+":Tx:"+mail->sender+"Packet:"+mail->packet);
             if(mail->receiver == platform_debug::DeviceInfo::BoardID){
-                platform_debug::TracePrinter::printTrace("lora BCN:receiver:"+mail->receiver+String(",sender:")+mail->sender);
                 DynamicJsonDocument  doc(mail->packet.length()+128);
                 DeserializationError error = deserializeJson(doc,mail->packet);
                 if (!error)
                 { 
-                    platform_debug::TracePrinter::printTrace(mail->sender+String(":")+String(mail->rssi,DEC));
-                    if (doc.containsKey("beacon")) {
-                        platform_debug::TracePrinter::printTrace(doc["beacon"].as<String>());
+                    if (doc.containsKey("beaconID")) {
+                        platform_debug::TracePrinter::printTrace(doc["beaconID"].as<String>());
                     } 
                 }else{
-                    platform_debug::TracePrinter::printTrace("lora BCN: JsonParse ERROR...");
+                    platform_debug::TracePrinter::printTrace("[x]lora BCN: JsonParse ERROR...");
                 }
             }else if(mail->receiver == String("FAFA")){
-                platform_debug::TracePrinter::printTrace("lora BCN:FAFA:sender:"+mail->sender);
-                
+                DynamicJsonDocument endNodeDoc(1024);
                 endNodeDoc["tagID"]=mail->sender;
                 endNodeDoc["rssi"]= mail->rssi;
                 endNodeDoc["beaconID"] = platform_debug::DeviceInfo::BoardID;
                 _mqttNetwork.publish("k49a/send_rssi",endNodeDoc.as<String>());
                 endNodeDoc.clear();
-
+                platform_debug::TracePrinter::printTrace("[~]lora BCN:PUB:k49a/send_rssi:beaconID:"+
+                    platform_debug::DeviceInfo::BoardID+
+                    "-tagID:"+mail->sender+
+                    "-rssi:"+mail->rssi);
             }else {
-                platform_debug::TracePrinter::printTrace("[NA]lora BCN: this msg not for me:receiver:"+mail->receiver+String(",sender:")+mail->sender);
-                platform_debug::TracePrinter::printTrace("[NA]packet:"+mail->packet);
+                platform_debug::TracePrinter::printTrace("[~]lora BCN:n/a");
             }
             
             
