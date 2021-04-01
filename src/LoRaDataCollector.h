@@ -15,7 +15,8 @@ using namespace platform_debug;
 namespace background
 {
     typedef struct {
-        uint32_t counter=0;   
+        uint32_t counter=0;  
+        unsigned long currentMillis;
         String TAG_ID;
 } mail_t;
 }
@@ -65,6 +66,7 @@ private:
     String _topicSendRssi;
     String _topicFP;
     String  _topicCommand;
+    String  _topicCommandResponse;
     rtos::Mutex _mutex;
 };
 

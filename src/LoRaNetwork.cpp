@@ -72,7 +72,7 @@ void LoRaNetwork::sendMessage(const String& receiver,const String& sender,const 
 {   
     char retry=6;
     while( (millis()-LoRaNetwork::_lastSendTime) < 880 && --retry>0){
-        platform_debug::TracePrinter::printTrace("       [ delay ]      ("+String(retry,DEC)+")");
+        platform_debug::TracePrinter::printTrace("       < delay >      ("+String(retry,DEC)+")");
         ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(random(200,1000)));
     }
    // _mutex.lock();

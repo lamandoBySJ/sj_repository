@@ -3,8 +3,8 @@ using namespace platform_debug;
 
 void LoRaGateway::startup()
 {
-    _topicCommandResponse = DeviceInfo::Family+ String("/command/response/")+DeviceInfo::BoardID;
-    _topicCommandRequest = DeviceInfo::Family+ String("/command/request/")+DeviceInfo::BoardID;
+    _topicCommandResponse = DeviceInfo::Family+ String("/command/response/GW");
+    _topicCommandRequest = DeviceInfo::Family+ String("/command/request/GW");
     _topicSendFingerprints = DeviceInfo::Family+String("/send_fingerprint");
 
     _topics.push_back(_topicCommandRequest);
@@ -25,6 +25,8 @@ void LoRaGateway::run_mqtt_service()
             if (!error)
             { 
                 if(mail->topic == _topicSendFingerprints){
+
+                    
                     for(JsonPair p : doc.as<JsonObject>()){
                         String tagID = p.key().c_str();
                         JsonArray array = p.value().as<JsonArray>();
@@ -40,14 +42,14 @@ void LoRaGateway::run_mqtt_service()
                             }else{
                                 _mapRetry.erase(tagID);
                                 _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
-                                platform_debug::TracePrinter::printTrace(String("[~]LoRa GW:Retry:timeout:eps sleep..."));
+                                platform_debug::TracePrinter::printTrace(String("[x]LoRa GW:Retry:timeout:eps sleep..."));
                             }
                         }else{
                             if(_mapRetry.find(tagID) !=_mapRetry.end()){
                                 _mapRetry.erase(tagID);
                             }
                             _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
-                            platform_debug::TracePrinter::printTrace(String("[~]LoRa GW:OK:DataSent:eps sleep..."));
+                            platform_debug::TracePrinter::printTrace(String("[~]LoRa GW:OK:Sent:eps sleep..."));
 
                             if(_mode == "learn"){
                                 _topicLT=DeviceInfo::Family+"/"+_mode+"/"+tagID+"/"+_mapTagLocation[tagID];
@@ -84,16 +86,16 @@ void LoRaGateway::run_mqtt_service()
                                     _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"ON\"}");
                                 }else if( cmd == "OFF"){
                                     _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
-                                }else if( cmd == "BeaconSetup"){
-
                                 }
                             }else if(doc.containsKey("beacons")){
                                 _mapSetupBeacons.clear();
                                 for(auto v :doc["beacons"].as<JsonArray>()){
                                     for(JsonPair p : v.as<JsonObject>()){
                                         _mapSetupBeacons[p.key().c_str()]=p.value().as<String>();
+                                        platform_debug::TracePrinter::printTrace("GW:beaconID:"+String(p.key().c_str()));
                                     }
-                                }     
+                                }
+                                _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");         
                             }
                         }                    
                     }    
