@@ -19,7 +19,7 @@ void LoRaGateway::run_mqtt_service()
         osEvent evt= _mail_box_mqtt.get();
         if (evt.status == osEventMail) {
             mqtt::mail_t *mail = (mqtt::mail_t *)evt.value.p;
-            platform_debug::TracePrinter::printTrace(mail->topic);
+            platform_debug::TracePrinter::printTrace("[GW]MQTT:"+mail->topic);
             DynamicJsonDocument  doc(mail->payload.length()+1024);
             DeserializationError error = deserializeJson(doc,mail->payload);
             if (!error)
@@ -41,14 +41,14 @@ void LoRaGateway::run_mqtt_service()
                             }else{
                                 _mapRetry.erase(tagID);
                                 _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
-                                platform_debug::TracePrinter::printTrace(String("[x]LoRa GW:Retry:timeout:eps sleep..."));
+                                platform_debug::TracePrinter::printTrace(String("[GW]MQTT:Retry:timeout:eps sleep..."));
                             }
                         }else{
                             if(_mapRetry.find(tagID) !=_mapRetry.end()){
                                 _mapRetry.erase(tagID);
                             }
                             _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
-                            platform_debug::TracePrinter::printTrace(String("[~]LoRa GW:OK:Sent:eps sleep..."));
+                            platform_debug::TracePrinter::printTrace(String("[GW]MQTT:OK:Sent:eps sleep..."));
 
                             if(_mode == "learn"){
                                 _topicLT=DeviceInfo::Family+"/"+_mode+"/"+tagID+"/"+_mapTagLocation[tagID];
@@ -91,7 +91,7 @@ void LoRaGateway::run_mqtt_service()
                                 for(auto v :doc["beacons"].as<JsonArray>()){
                                     for(JsonPair p : v.as<JsonObject>()){
                                         _mapSetupBeacons[p.key().c_str()]=p.value().as<String>();
-                                        platform_debug::TracePrinter::printTrace("GW:beaconID:"+String(p.key().c_str()));
+                                        platform_debug::TracePrinter::printTrace("[GW]MQTT:beaconID:"+String(p.key().c_str()));
                                     }
                                 }
                                 _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");         
@@ -100,8 +100,7 @@ void LoRaGateway::run_mqtt_service()
                     }    
                 }
             }else{
-                platform_debug::TracePrinter::printTrace(String("GW:mqtt_service: JsonParse ERROR..."));
-                platform_debug::TracePrinter::printTrace(doc.as<String>());
+                platform_debug::TracePrinter::printTrace(String("[GW]:MQTT:[x]:JsonParse ERROR..."));
             }
             _mail_box_mqtt.free(mail); 
         }
@@ -111,12 +110,12 @@ void LoRaGateway::run_mqtt_service()
 
 void LoRaGateway::onMqttConnectCallback(bool sessionPresent)
 {
-    platform_debug::TracePrinter::printTrace("LoRa GW::onMqttConnectCallback");
+    platform_debug::TracePrinter::printTrace("[GW]MQTT::onMqttConnectCallback");
 
 }
 void LoRaGateway::onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reason)
 {
-    platform_debug::TracePrinter::printTrace("LoRa GW:onMqttDisconnectCallback");
+    platform_debug::TracePrinter::printTrace("[GW]MQTT:onMqttDisconnectCallback");
 }
 void LoRaGateway::onMessageMqttCallback(const String& topic,const String& payload)
 {
@@ -139,7 +138,7 @@ void LoRaGateway::run_lora_service()
         osEvent evt= _mail_box_lora.get();
         if (evt.status == osEventMail) {
             lora::mail_t *mail = (lora::mail_t *)evt.value.p;
-            platform_debug::TracePrinter::printTrace("[#]lora GW:Rx:"+mail->receiver+String(":Tx:")+mail->sender);
+            platform_debug::TracePrinter::printTrace("[GW]lora:Rx:"+mail->receiver+String(":Tx:")+mail->sender);
             if(mail->receiver == platform_debug::DeviceInfo::BoardID){
                  DynamicJsonDocument  doc(mail->packet.length()+128);
                 DeserializationError error = deserializeJson(doc,mail->packet);
@@ -152,10 +151,10 @@ void LoRaGateway::run_lora_service()
                 }
                 
             }else if(mail->receiver == String("FAFA")){
-                platform_debug::TracePrinter::printTrace("[#]lora GW:FAFA:na/");
+                platform_debug::TracePrinter::printTrace("[GW]lora:FAFA:n/a");
             }
             else{
-                platform_debug::TracePrinter::printTrace("[#]lora GW:n/a");
+                platform_debug::TracePrinter::printTrace("[GW]lora:n/a");
             }
             
             

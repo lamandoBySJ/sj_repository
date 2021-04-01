@@ -12,6 +12,12 @@
 #include "MQTTNetwork.h"
 #include <LoRaNetwork.h>
 using namespace platform_debug;
+enum class WirelessTechnologyType
+{
+    WiFi = 0,
+    LoRa,
+    Ble
+};
 namespace background
 {
     typedef struct {
@@ -35,7 +41,7 @@ public:
        // _mapSetupBeacons[String("A18C")] = String("A002");
 
     }
-    void startup();
+    void startup(WirelessTechnologyType type=WirelessTechnologyType::WiFi);
     void run_mqtt_service();
     void run_lora_service();
     void run_background_service();
