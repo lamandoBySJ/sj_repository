@@ -1,6 +1,8 @@
 #include "LoRaGateway.h"
 using namespace platform_debug;
 
+
+
 void LoRaGateway::startup()
 {
     _topicCommandResponse = DeviceInfo::Family+ String("/command/response/GW");
@@ -43,40 +45,40 @@ void LoRaGateway::run_mqtt_service()
                                 _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
                                 platform_debug::TracePrinter::printTrace(String("[GW]MQTT:Retry:timeout:eps sleep..."));
                             }
-                        }else{
-                            if(_mapRetry.find(tagID) !=_mapRetry.end()){
-                                _mapRetry.erase(tagID);
-                            }
-                            _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
-                            platform_debug::TracePrinter::printTrace(String("[GW]MQTT:OK:Sent:eps sleep..."));
-
-                            if(_mode == "learn"){
-                                _topicLT=DeviceInfo::Family+"/"+_mode+"/"+tagID+"/"+_mapTagLocation[tagID];
-                            }else{
-                                _topicLT=DeviceInfo::Family+"/"+_mode+"/"+tagID;
-                            }
-                            _payload="{";
-                            for(JsonObject obj:array){
-                                for(JsonPair p:obj){
-                                    _payload+=p.key().c_str();
-                                    _payload+=":";
-                                    _payload+=p.value().as<int>();
-                                    _payload+=",";
-                                }
-                            }
-                            _payload+="}";
-                            _mqttNetwork.publish(_topicLT,_payload);
                         }
                     }
                 }else {
-                    if(doc.containsKey("technology")){
-                        if(doc["technology"].as<String>() == "LoRa"){
-                            if(doc.containsKey("cmd")&&doc.containsKey("tagID")){
+                    if(doc.containsKey("beacons")){
+                        _mapSetupBeacons.clear();
+                        for(auto v :doc["beacons"].as<JsonArray>()){
+                            for(JsonPair p : v.as<JsonObject>()){
+                                _mapSetupBeacons[p.key().c_str()]=p.value().as<String>();
+                                platform_debug::TracePrinter::printTrace("[GW]MQTT:beaconID:"+String(p.key().c_str()));
+                            }
+                        }
+                        _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");         
+                    }else  if(doc.containsKey("tags")){
+
+                         _IPSProtocol.technology = doc["technology"].as<String>();
+                        _IPSProtocol.family     = doc["family"].as<String>();
+                        _IPSProtocol.gateway    = doc["gateway"].as<String>();
+                        _IPSProtocol.collector  = doc["collector"].as<String>();
+                        _IPSProtocol.mode       = doc["mode"].as<String>();
+                        _mapTagLocation.clear();
+                        for(auto v :doc["tags"].as<JsonArray>()){
+                            for(JsonPair p : v.as<JsonObject>()){
+                                _mapTagLocation[p.key().c_str()]=p.value().as<String>();
+                                platform_debug::TracePrinter::printTrace("[GW]MQTT:tagID:"+String(p.key().c_str()));
+                            } 
+                        }
+                        _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");    
+                    } else if(doc.containsKey("cmd")){
+                            // if(doc.containsKey("cmd")&&doc.containsKey("tagID")){
                                 String tagID = doc["tagID"];
                                 String cmd = doc["cmd"].as<String>();
                                 if( cmd== "learn"){
                                     _mode="learn"; 
-                                    _mapTagLocation[tagID] =  doc["location"].as<String>();
+                                  //  _mapTagLocation[tagID] =  doc["location"].as<String>();
                                     _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"LT\"}"); 
                                 }else if( cmd == "track"){
                                     _mode="track";     
@@ -86,17 +88,8 @@ void LoRaGateway::run_mqtt_service()
                                 }else if( cmd == "OFF"){
                                     _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
                                 }
-                            }else if(doc.containsKey("beacons")){
-                                _mapSetupBeacons.clear();
-                                for(auto v :doc["beacons"].as<JsonArray>()){
-                                    for(JsonPair p : v.as<JsonObject>()){
-                                        _mapSetupBeacons[p.key().c_str()]=p.value().as<String>();
-                                        platform_debug::TracePrinter::printTrace("[GW]MQTT:beaconID:"+String(p.key().c_str()));
-                                    }
-                                }
-                                _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");         
-                            }
-                        }                    
+                           // }  
+                         _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");                   
                     }    
                 }
             }else{
