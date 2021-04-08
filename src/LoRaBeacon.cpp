@@ -65,9 +65,7 @@ void LoRaBeacon::run_lora_service()
                 DeserializationError error = deserializeJson(doc,mail->packet);
                 if (!error)
                 { 
-                    if (doc.containsKey("beaconID")) {
-                        platform_debug::TracePrinter::printTrace("[BCN]lora:"+doc["beaconID"].as<String>());
-                    } 
+                    platform_debug::TracePrinter::printTrace("[BCN]lora:"+doc.as<String>());
                 }else{
                     platform_debug::TracePrinter::printTrace("[BCN]lora: JsonParse ERROR...");
                 }

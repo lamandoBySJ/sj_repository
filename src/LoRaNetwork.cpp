@@ -3,6 +3,7 @@
 
 using namespace platform_debug;
 
+rtos::Mutex LoRaNetwork::_mutex;
 LoRaNetwork* LoRaNetwork::_loraNetwork;
 long LoRaNetwork::_lastSendTime = 0;
 void LoRaNetwork::_thunkOnReceice(int packetSize)
@@ -70,12 +71,13 @@ void LoRaNetwork::addOnMessageCallback(Callback<void(const lora::mail_t&)> func)
 
 void LoRaNetwork::sendMessage(const String& receiver,const String& sender,const String& packet)
 {   
+    LoRaNetwork::_mutex.lock();
     char retry=60;
-    while( (millis()-LoRaNetwork::_lastSendTime) < 800 && --retry>0){
+    while( (millis()-LoRaNetwork::_lastSendTime) < 300 && --retry>0){
         platform_debug::TracePrinter::printTrace("       < delay >      ("+String(retry,DEC)+")");
-        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(random(200,800)));
+        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(100));
     }
-   // _mutex.lock();
+   
     LoRa.beginPacket();  
     //LoRa.setTxPower(14,RF_PACONFIG_PASELECT_PABOOST);
     for(char i=0;i<4;++i){
@@ -88,5 +90,5 @@ void LoRaNetwork::sendMessage(const String& receiver,const String& sender,const 
     LoRa.print(packet);           
     LoRa.endPacket();            
     LoRa.receive();  
-   // _mutex.unlock();                       
+    LoRaNetwork::_mutex.unlock();                       
 }

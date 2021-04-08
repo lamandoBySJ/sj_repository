@@ -30,7 +30,7 @@ extern "C" {
 #include "MQTTNetwork.h"
 #include "LoRaNetwork.h"
 #include "LoRaGateway.h"
-#include "LoRaDataCollector.h"
+#include "LoRaCollector.h"
 #include "LoRaBeacon.h"
 #include "esp_sleep.h"
 
@@ -67,7 +67,7 @@ TracePrinter tracePrinter;
 MQTTNetwork mqttNetwork;
 LoRaNetwork loRaNetwork;
 
-LoRaDataCollector loRaDataCollector(mqttNetwork);
+LoRaCollector loRaCollector(mqttNetwork);
 LoRaBeacon loRaBeacon(mqttNetwork);
 
 LoRaGateway loRaGateway(mqttNetwork,loRaNetwork);
@@ -131,8 +131,8 @@ void setup() {
   loRaNetwork.addOnMessageCallback(callback(&loRaGateway,&LoRaGateway::onMessageLoRaCallback));
   loRaGateway.startup();
   
-  loRaNetwork.addOnMessageCallback(callback(&loRaDataCollector,&LoRaDataCollector::onMessageLoRaCallback));
-  loRaDataCollector.startup();
+  loRaNetwork.addOnMessageCallback(callback(&loRaCollector,&LoRaCollector::onMessageLoRaCallback));
+  loRaCollector.startup();
   
   loRaNetwork.addOnMessageCallback(callback(&loRaBeacon,&LoRaBeacon::onMessageLoRaCallback));
   loRaBeacon.startup();
@@ -142,10 +142,10 @@ void setup() {
   mqttNetwork.addOnMqttConnectCallback(callback(&loRaGateway,&LoRaGateway::onMqttConnectCallback));
   mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaGateway,&LoRaGateway::onMqttDisconnectCallback));
 
-  mqttNetwork.addTopics(loRaDataCollector.getTopics());
-  mqttNetwork.addOnMessageCallback(callback(&loRaDataCollector,&LoRaDataCollector::onMessageMqttCallback));
-  mqttNetwork.addOnMqttConnectCallback(callback(&loRaDataCollector,&LoRaDataCollector::onMqttConnectCallback));
-  mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaDataCollector,&LoRaDataCollector::onMqttDisconnectCallback));
+  mqttNetwork.addTopics(loRaCollector.getTopics());
+  mqttNetwork.addOnMessageCallback(callback(&loRaCollector,&LoRaCollector::onMessageMqttCallback));
+  mqttNetwork.addOnMqttConnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttConnectCallback));
+  mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttDisconnectCallback));
   /*
   mqttNetwork.addTopics(loRaBeacon.getTopics());
   mqttNetwork.addOnMessageCallback(callback(&loRaBeacon,&LoRaBeacon::onMessageMqttCallback));

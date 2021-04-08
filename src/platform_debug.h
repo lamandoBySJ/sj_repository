@@ -9,7 +9,24 @@
 
 namespace platform_debug
 {
-
+struct Builder {
+        
+};
+struct IPSProtocol
+{
+    IPSProtocol(){
+        technology="LoRa";
+        family="k49a";
+        gateway="9F8C";
+        collector="9F8C";
+        mode = "learn";
+    }
+    String technology;
+    String family;
+    String gateway;
+    String collector;
+    String mode;
+};
 //template <typename Signature>
 //class PlatformDebug;
 class PlatformDebug

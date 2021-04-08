@@ -1,5 +1,5 @@
-#ifndef LORA_DATA_COLLECTOT_H
-#define LORA_DATA_COLLECTOT_H
+#ifndef LORA_COLLECTOT_H
+#define LORA_COLLECTOT_H
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -26,11 +26,11 @@ namespace background
         String TAG_ID;
 } mail_t;
 }
-class LoRaDataCollector
+class LoRaCollector
 {
 public:
-    LoRaDataCollector()=delete;
-    LoRaDataCollector(MQTTNetwork& mqttNetwork):
+    LoRaCollector()=delete;
+    LoRaCollector(MQTTNetwork& mqttNetwork):
         _mqttNetwork(mqttNetwork),
         _threadMqttService("mqttService",1024*4,1),
         _threadLoraService("loraService",1024*4,1),
@@ -59,7 +59,7 @@ private:
     Thread _threadMqttService;
     Thread _threadLoraService;
     Thread _threadBackgroundService;
-
+    IPSProtocol _IPSProtocol;
     Mail<mqtt::mail_t,16> _mail_box_mqtt;
     Mail<lora::mail_t,16> _mail_box_lora;
     Mail<background::mail_t,32> _mail_box_background;
@@ -68,12 +68,14 @@ private:
     std::map<String,String> _mapSetupBeacons;
     std::vector<String> _topics;
     std::map<String,std::set<String>> _mapDataCollector;
-    String _fingerprints;
-    String _topicSendRssi;
     String _topicFP;
+    String _topicSendRssi;
+    String _topicLT;
+    String _payload;
     String  _topicCommand;
     String  _topicCommandResponse;
     rtos::Mutex _mutex;
+    std::map<String,String> _mapTagLocation;
 };
 
 #endif

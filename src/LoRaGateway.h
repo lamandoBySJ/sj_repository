@@ -42,7 +42,7 @@ private:
     LoRaNetwork& _loRaNetwork;
     Thread _threadMqttService;
     Thread _threadLoraService;
-    
+    IPSProtocol _IPSProtocol;
     String _topicSubServerRequest;
     String _topicPubgatewayResponse;
     Mail<mqtt::mail_t,16> _mail_box_mqtt;
@@ -57,6 +57,7 @@ private:
     String  _topicLT;
     String _payload;
     std::map<String,String> _mapTagLocation;
+    
 };
 
 
