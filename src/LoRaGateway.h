@@ -12,6 +12,7 @@
 #include <set>
 #include <vector>
 #include <algorithm>
+#include "StringHelper.h"
 using namespace platform_debug;
 class LoRaGateway
 {
@@ -48,6 +49,8 @@ private:
     Mail<mqtt::mail_t,16> _mail_box_mqtt;
     Mail<lora::mail_t,16> _mail_box_lora;
     std::vector<String> _topics;
+    String _topicLearn;
+    String _topicTrack;
     String _topicCommandRequest;
     String _topicSendFingerprints;
     String _topicCommandResponse;
@@ -57,6 +60,8 @@ private:
     String  _topicLT;
     String _payload;
     std::map<String,String> _mapTagLocation;
+    std::vector<String> _topicMatch;
+    std::vector<String> _topicSplit;
     
 };
 

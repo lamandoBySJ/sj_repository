@@ -1,4 +1,5 @@
 #include "LoRaBeacon.h"
+using namespace platform_debug;
 
 void LoRaBeacon::startup()
 {
@@ -65,23 +66,21 @@ void LoRaBeacon::run_lora_service()
                 DeserializationError error = deserializeJson(doc,mail->packet);
                 if (!error)
                 { 
-                    platform_debug::TracePrinter::printTrace("[BCN]lora:"+doc.as<String>());
+                    platform_debug::TracePrinter::printTrace("[BCN]lora:Rx:"+doc.as<String>());
                 }else{
-                    platform_debug::TracePrinter::printTrace("[BCN]lora: JsonParse ERROR...");
+                    platform_debug::TracePrinter::printTrace("[BCN]lora:Rx: JsonParse ERROR...");
                 }
             }else if(mail->receiver == String("FAFA")){
                 DynamicJsonDocument endNodeDoc(1024);
-                endNodeDoc["tagID"]=mail->sender;
-                endNodeDoc["rssi"]= mail->rssi;
-                endNodeDoc["beaconID"] = platform_debug::DeviceInfo::BoardID;
-                _mqttNetwork.publish("k49a/send_rssi",endNodeDoc.as<String>());
+                endNodeDoc[mail->sender]= mail->rssi; 
+                _mqttNetwork.publish("k49a/send_rssi/"+DeviceInfo::BoardID,endNodeDoc.as<String>());
                 endNodeDoc.clear();
-                platform_debug::TracePrinter::printTrace("[BCN]lora:PUB:k49a/send_rssi:beaconID:"+
+                platform_debug::TracePrinter::printTrace("[BCN]lora:Rx:PUB:send_rssi:beaconID:"+
                     platform_debug::DeviceInfo::BoardID+
                     ",tagID:"+mail->sender+
                     ",rssi:"+mail->rssi);
             }else {
-                platform_debug::TracePrinter::printTrace("[BCN]lora:n/a");
+                platform_debug::TracePrinter::printTrace("[BCN]lora:Rx:[x]:n/a");
             }
             
             

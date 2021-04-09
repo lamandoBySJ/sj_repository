@@ -31,7 +31,7 @@ using namespace mqtt;
 class MQTTNetwork
 {
 public:
-    MQTTNetwork()
+    MQTTNetwork():_threadOnMessage("mqttService",1024*8,1)
     {
 
     }

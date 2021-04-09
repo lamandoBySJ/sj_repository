@@ -11,6 +11,7 @@
 #include <algorithm>
 #include "MQTTNetwork.h"
 #include <LoRaNetwork.h>
+#include "StringHelper.h"
 using namespace platform_debug;
 enum class WirelessTechnologyType
 {
@@ -64,7 +65,7 @@ private:
     Mail<lora::mail_t,16> _mail_box_lora;
     Mail<background::mail_t,32> _mail_box_background;
     std::map<String,std::map<String,int>> _mapTrackedDevices;
-    std::set<String> _setBeaconCollector;
+    std::set<String> _setBeaconList;
     std::map<String,String> _mapSetupBeacons;
     std::vector<String> _topics;
     std::map<String,std::set<String>> _mapDataCollector;
@@ -76,6 +77,8 @@ private:
     String  _topicCommandResponse;
     rtos::Mutex _mutex;
     std::map<String,String> _mapTagLocation;
+    std::vector<String> _topicSplit;
+    std::vector<String> _topicMatch;
 };
 
 #endif

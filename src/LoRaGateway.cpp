@@ -1,8 +1,5 @@
 #include "LoRaGateway.h"
 using namespace platform_debug;
-
-
-
 void LoRaGateway::startup()
 {
     _topicCommandResponse = DeviceInfo::Family+ String("/command/response/GW");
@@ -26,28 +23,10 @@ void LoRaGateway::run_mqtt_service()
             DeserializationError error = deserializeJson(doc,mail->payload);
             if (!error)
             { 
-                if(mail->topic == _topicSendFingerprints){
+                _topicSplit.clear();
+                StringHelper::split( _topicSplit,mail->topic.c_str(),"/");
+                if(_topicSplit.size()== 4){
 
-                    for(JsonPair p : doc.as<JsonObject>()){
-                        String tagID = p.key().c_str();
-                        JsonArray array = p.value().as<JsonArray>();
-                        
-                        if(array.size()!=_mapSetupBeacons.size()){
-                            if(_mapRetry.find(tagID)==_mapRetry.end()){
-                                _mapRetry[tagID]=0;
-                            }else{
-                                _mapRetry[tagID]++;
-                            }
-                            if(_mapRetry[tagID]<2){
-                                _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"LT\"}");
-                            }else{
-                                _mapRetry.erase(tagID);
-                                _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
-                                platform_debug::TracePrinter::printTrace(String("[GW]MQTT:Retry:timeout:eps sleep..."));
-                            }
-                        }
-                    }
-                }else {
                     if(doc.containsKey("beacons")){
                         _mapSetupBeacons.clear();
                         for(auto v :doc["beacons"].as<JsonArray>()){
@@ -57,7 +36,7 @@ void LoRaGateway::run_mqtt_service()
                             }
                         }
                         _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");         
-                    }else  if(doc.containsKey("tags")){
+                    }else if(doc.containsKey("tags")){
 
                          _IPSProtocol.technology = doc["technology"].as<String>();
                         _IPSProtocol.family     = doc["family"].as<String>();
@@ -74,15 +53,14 @@ void LoRaGateway::run_mqtt_service()
                         _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");    
                     } else if(doc.containsKey("cmd")){
                             // if(doc.containsKey("cmd")&&doc.containsKey("tagID")){
-                                String tagID = doc["tagID"];
+                                String tagID = doc["tagID"].as<String>();
                                 String cmd = doc["cmd"].as<String>();
                                 if( cmd== "learn"){
                                     _mode="learn"; 
-                                  //  _mapTagLocation[tagID] =  doc["location"].as<String>();
-                                    _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"LT\"}"); 
+                                    _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"learn\"}"); 
                                 }else if( cmd == "track"){
                                     _mode="track";     
-                                    _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"LT\"}"); 
+                                    _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"track\"}"); 
                                 }else if( cmd == "ON"){
                                     _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"ON\"}");
                                 }else if( cmd == "OFF"){
@@ -112,8 +90,9 @@ void LoRaGateway::onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reaso
 }
 void LoRaGateway::onMessageMqttCallback(const String& topic,const String& payload)
 {
-    if (std::find(_topics.begin(), _topics.end(), topic)!=_topics.end())
-    {
+    _topicMatch.clear();
+    StringHelper::split(_topicMatch,topic.c_str(),"/");
+    if(_topicMatch.size() == 4 && _topicMatch[3]=="GW"){
         mqtt::mail_t *mail =  _mail_box_mqtt.alloc();
         if(mail!=NULL){
             mail->topic = topic;
@@ -144,10 +123,10 @@ void LoRaGateway::run_lora_service()
                 }
                 
             }else if(mail->receiver == String("FAFA")){
-                platform_debug::TracePrinter::printTrace("[GW]lora:FAFA:n/a");
+                platform_debug::TracePrinter::printTrace("[GW]lora:Rx:FAFA:n/a");
             }
             else{
-                platform_debug::TracePrinter::printTrace("[GW]lora:n/a");
+                platform_debug::TracePrinter::printTrace("[GW]lora:Rx:[x]:n/a");
             }
             
             
