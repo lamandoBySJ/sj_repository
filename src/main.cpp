@@ -47,6 +47,7 @@ using namespace platform_debug;
 #endif
 #endif
 
+
 rtos::Mutex std_mutex;
 DS1307 ds1307(Wire1,21,22);
 TimeMachine<DS1307> timeMachine(ds1307,std_mutex,13);  
@@ -98,8 +99,14 @@ void setup() {
   pinMode(5,OUTPUT);
   pinMode(19,OUTPUT);
   pinMode(22,PULLUP);
+  
+  #ifdef NDEBUG
+    Heltec.begin(false, true , false , true, BAND);
+  #else
+    Heltec.begin(true, true , true , true, BAND);
+  #endif
   //WIFI Kit series V1 not support Vext control
-  Heltec.begin(true , true , true , true, BAND);
+  
   //LoRa.dumpRegisters(Serial);
   PlatformDebug::init(std::move(oled));
   PlatformDebug::printLogo();
@@ -130,28 +137,30 @@ void setup() {
 
   loRaNetwork.addOnMessageCallback(callback(&loRaGateway,&LoRaGateway::onMessageLoRaCallback));
   loRaGateway.startup();
+ 
+  //loRaNetwork.addOnMessageCallback(callback(&loRaCollector,&LoRaCollector::onMessageLoRaCallback));
+  //loRaCollector.startup();
   
-  loRaNetwork.addOnMessageCallback(callback(&loRaCollector,&LoRaCollector::onMessageLoRaCallback));
-  loRaCollector.startup();
+  //loRaNetwork.addOnMessageCallback(callback(&loRaBeacon,&LoRaBeacon::onMessageLoRaCallback));
+  //loRaBeacon.startup();
   
-  loRaNetwork.addOnMessageCallback(callback(&loRaBeacon,&LoRaBeacon::onMessageLoRaCallback));
-  loRaBeacon.startup();
-
   mqttNetwork.addTopics(loRaGateway.getTopics());
   mqttNetwork.addOnMessageCallback(callback(&loRaGateway,&LoRaGateway::onMessageMqttCallback));
   mqttNetwork.addOnMqttConnectCallback(callback(&loRaGateway,&LoRaGateway::onMqttConnectCallback));
   mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaGateway,&LoRaGateway::onMqttDisconnectCallback));
-
+/*
   mqttNetwork.addTopics(loRaCollector.getTopics());
   mqttNetwork.addOnMessageCallback(callback(&loRaCollector,&LoRaCollector::onMessageMqttCallback));
   mqttNetwork.addOnMqttConnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttConnectCallback));
   mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttDisconnectCallback));
+  */
   /*
   mqttNetwork.addTopics(loRaBeacon.getTopics());
   mqttNetwork.addOnMessageCallback(callback(&loRaBeacon,&LoRaBeacon::onMessageMqttCallback));
   mqttNetwork.addOnMqttConnectCallback(callback(&loRaBeacon,&LoRaBeacon::onMqttConnectCallback));
   mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaBeacon,&LoRaBeacon::onMqttDisconnectCallback));
   */
+  
   mqttNetwork.startup();
   loRaNetwork.startup();
   

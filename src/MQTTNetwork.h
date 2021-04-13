@@ -28,6 +28,7 @@ typedef struct {
 }
 
 using namespace mqtt;
+using namespace platform_debug;
 class MQTTNetwork
 {
 public:

@@ -102,23 +102,25 @@ void LoRaCollector::run_mqtt_service()
                             platform_debug::TracePrinter::printTrace("[DC]MQTT:beaconID:"+String(p.key().c_str()));
                         }
                     }
-                    _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");    
+                    
                 }else  if(doc.containsKey("tags")){
-
-                        _IPSProtocol.technology = doc["technology"].as<String>();
-                        _IPSProtocol.family     = doc["family"].as<String>();
-                        _IPSProtocol.gateway    = doc["gateway"].as<String>();
-                        _IPSProtocol.collector  = doc["collector"].as<String>();
-                        _IPSProtocol.mode       = doc["mode"].as<String>();
-                        _mapTagLocation.clear();
-                        for(auto v :doc["tags"].as<JsonArray>()){
-                            for(JsonPair p : v.as<JsonObject>()){
-                                _mapTagLocation[p.key().c_str()]=p.value().as<String>();
-                                platform_debug::TracePrinter::printTrace("[DC]MQTT:tagID:"+String(p.key().c_str())+",Location:"+p.value().as<String>());
-                            }
+                    _mapTagLocation.clear();
+                    for(auto v :doc["tags"].as<JsonArray>()){
+                        for(JsonPair p : v.as<JsonObject>()){
+                            _mapTagLocation[p.key().c_str()]=p.value().as<String>();
+                            platform_debug::TracePrinter::printTrace("[DC]MQTT:tagID:"+String(p.key().c_str())+",Location:"+p.value().as<String>());
                         }
-                        _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");    
+                    }
+                    
+                }else if(doc.containsKey("technology")){
+                    _IPSProtocol.technology = doc["technology"].as<String>();
+                    _IPSProtocol.family     = doc["family"].as<String>();
+                    _IPSProtocol.gateway    = doc["gateway"].as<String>();
+                    _IPSProtocol.collector  = doc["collector"].as<String>();
+                    _IPSProtocol.mode       = doc["mode"].as<String>();
+                    
                 }
+                _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");
             }
             
 

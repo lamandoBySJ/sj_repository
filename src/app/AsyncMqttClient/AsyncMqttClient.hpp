@@ -138,6 +138,9 @@ class AsyncMqttClient {
   uint16_t publish(const std::string &topic, const char *payload, size_t payload_length, uint8_t qos = 0,bool retain = false);
  
   //bool publish_json(const std::string &topic, const json::json_build_t &f, uint8_t qos = 0, bool retain = false);
+  void setClientId(const String& id){
+    sprintf(_generatedClientId, "%s", id.c_str());
+  }
  private:
   AsyncClient _client;
 

@@ -35,14 +35,8 @@ void LoRaGateway::run_mqtt_service()
                                 platform_debug::TracePrinter::printTrace("[GW]MQTT:beaconID:"+String(p.key().c_str()));
                             }
                         }
-                        _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");         
+                           
                     }else if(doc.containsKey("tags")){
-
-                         _IPSProtocol.technology = doc["technology"].as<String>();
-                        _IPSProtocol.family     = doc["family"].as<String>();
-                        _IPSProtocol.gateway    = doc["gateway"].as<String>();
-                        _IPSProtocol.collector  = doc["collector"].as<String>();
-                        _IPSProtocol.mode       = doc["mode"].as<String>();
                         _mapTagLocation.clear();
                         for(auto v :doc["tags"].as<JsonArray>()){
                             for(JsonPair p : v.as<JsonObject>()){
@@ -50,8 +44,15 @@ void LoRaGateway::run_mqtt_service()
                                 platform_debug::TracePrinter::printTrace("[GW]MQTT:tagID:"+String(p.key().c_str()));
                             } 
                         }
-                        _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");    
-                    } else if(doc.containsKey("cmd")){
+                         
+                    }else if(doc.containsKey("technology")){
+                        _IPSProtocol.technology = doc["technology"].as<String>();
+                        _IPSProtocol.family     = doc["family"].as<String>();
+                        _IPSProtocol.gateway    = doc["gateway"].as<String>();
+                        _IPSProtocol.collector  = doc["collector"].as<String>();
+                        _IPSProtocol.mode       = doc["mode"].as<String>();
+                           
+                    }else if(doc.containsKey("cmd")){
                             // if(doc.containsKey("cmd")&&doc.containsKey("tagID")){
                                 String tagID = doc["tagID"].as<String>();
                                 String cmd = doc["cmd"].as<String>();
@@ -66,9 +67,9 @@ void LoRaGateway::run_mqtt_service()
                                 }else if( cmd == "OFF"){
                                     _loRaNetwork.sendMessage(tagID,platform_debug::DeviceInfo::BoardID,"{\"cmd\":\"OFF\"}");
                                 }
-                           // }  
-                         _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");                   
-                    }    
+                           // }    
+                    }  
+                    _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");         
                 }
             }else{
                 platform_debug::TracePrinter::printTrace(String("[GW]:MQTT:[x]:JsonParse ERROR..."));
