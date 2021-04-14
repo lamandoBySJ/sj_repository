@@ -4,7 +4,7 @@ void LoRaGateway::startup()
 {
     _topicCommandResponse = DeviceInfo::Family+ String("/command/response/GW");
     _topicCommandRequest = DeviceInfo::Family+ String("/command/request/GW");
-    _topicTimeout = DeviceInfo::Family+String("/send_timeout/"+DeviceInfo::BoardID);
+    _topicTimeout = DeviceInfo::Family+String("/send_timeout/#");
 
     _topics.push_back(_topicCommandRequest);
     _topics.push_back(_topicTimeout);
@@ -70,6 +70,11 @@ void LoRaGateway::run_mqtt_service()
                            // }    
                     }  
                     _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");         
+                }else if(_topicSplit.size()== 3){
+                     _loRaNetwork.sendMessage(_topicSplit[2],platform_debug::DeviceInfo::BoardID,"{\"cmd\":\""+_IPSProtocol.mode+"\"}");
+                     platform_debug::TracePrinter::printTrace(String("[GW]:MQTT:[send_timeout]:"+mail->payload)); 
+                }else{
+                    platform_debug::TracePrinter::printTrace(String("[GW]:MQTT:[x]:"+mail->topic));
                 }
             }else{
                 platform_debug::TracePrinter::printTrace(String("[GW]:MQTT:[x]:JsonParse ERROR..."));
@@ -94,6 +99,13 @@ void LoRaGateway::onMessageMqttCallback(const String& topic,const String& payloa
     _topicMatch.clear();
     StringHelper::split(_topicMatch,topic.c_str(),"/");
     if(_topicMatch.size() == 4 && _topicMatch[3]=="GW"){
+        mqtt::mail_t *mail =  _mail_box_mqtt.alloc();
+        if(mail!=NULL){
+            mail->topic = topic;
+            mail->payload = payload;
+            _mail_box_mqtt.put(mail) ;
+        }
+    }else if(_topicMatch.size() == 3 && _topicMatch[1]=="send_timeout"){
         mqtt::mail_t *mail =  _mail_box_mqtt.alloc();
         if(mail!=NULL){
             mail->topic = topic;

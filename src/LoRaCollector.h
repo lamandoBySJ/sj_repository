@@ -23,7 +23,7 @@ namespace background
 {
     typedef struct {
         uint32_t counter=0;  
-        unsigned long currentMillis;
+        //unsigned long currentMillis;
         String TAG_ID;
 } mail_t;
 }
@@ -64,12 +64,13 @@ private:
     Mail<mqtt::mail_t,16> _mail_box_mqtt;
     Mail<lora::mail_t,16> _mail_box_lora;
     Mail<background::mail_t,32> _mail_box_background;
-    std::map<String,std::map<String,int>> _mapTrackedDevices;
-    std::set<String> _setBeaconList;
+    Mail<int,16> _mail_box_signal;
+    std::map<String,std::map<String,int>> _mapOnlineDevices;
+
     std::map<String,String> _mapSetupBeacons;
     std::vector<String> _topics;
     std::map<String,std::set<String>> _mapDataCollector;
-    String _topicFP;
+    String _topicTimeout;
     String _topicSendRssi;
     String _topicLT;
     String _payload;

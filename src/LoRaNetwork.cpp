@@ -73,11 +73,12 @@ void LoRaNetwork::sendMessage(const String& receiver,const String& sender,const 
 {   
     LoRaNetwork::_mutex.lock();
     char retry=60;
-    while( (millis()-LoRaNetwork::_lastSendTime) < 300 && --retry>0){
+    while( (millis()-LoRaNetwork::_lastSendTime) < 600 && --retry>0){
         platform_debug::TracePrinter::printTrace("       < delay >      ("+String(retry,DEC)+")");
         ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(100));
     }
-   
+
+    
     LoRa.beginPacket();  
     //LoRa.setTxPower(14,RF_PACONFIG_PASELECT_PABOOST);
     for(char i=0;i<4;++i){

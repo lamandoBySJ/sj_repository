@@ -5,7 +5,7 @@ void LoRaCollector::startup(WirelessTechnologyType type)
     _topicCommandResponse = DeviceInfo::Family+ String("/command/response/DC");
     _topicCommand = DeviceInfo::Family+ String("/command/request/DC");
    _topicSendRssi = platform_debug::DeviceInfo::Family+String("/send_rssi/#");
-   _topicFP = platform_debug::DeviceInfo::Family+String("/send_fingerprint");
+  
     _topics.push_back(_topicSendRssi);
     _topics.push_back(_topicCommand);
 
@@ -31,69 +31,37 @@ void LoRaCollector::run_mqtt_service()
             StringHelper::split( _topicSplit,mail->topic.c_str(),"/");
             if(_topicSplit.size() == 3){
                 if (_topicSplit[1] == "send_rssi") {
-                    String tagID;
-                    String beaconID;
                     if (!error)
                     {   
-                            //DynamicJsonDocument  d(_mapTrackedDevices.size()*10+1024);
-                        // JsonArray array =  d.createNestedArray(tagID);
-                        /* for(auto& v: _mapTrackedDevices[tagID]){
-                                JsonObject obj=array.createNestedObject();
-                                obj[v.first]=v.second;
-                            }*/
                         _mutex.lock();
-
-                        beaconID =  _topicSplit[2];
+                        String tagID;
+                        String beaconID =  _topicSplit[2];
                         for(JsonPair v: doc.as<JsonObject>()){
                             tagID = v.key().c_str();
-                            _mapTrackedDevices[tagID][beaconID]=v.value().as<int>();
+                            _mapOnlineDevices[tagID][beaconID]=v.value().as<int>();
                             break;
                         }
 
                         _mapDataCollector[tagID].insert(beaconID);
-
-                        if(_mapSetupBeacons.size() ==_mapDataCollector[tagID].size()){
-                            _setBeaconList.erase(tagID);
-                           
-                            _payload="{";
-                            for(auto& v: _mapTrackedDevices[tagID]){
-                                _payload+=v.first;
-                                _payload+=":";
-                                _payload+=v.second;
-                                _payload+=",";
+                        if(_mapDataCollector[tagID].size()==1){
+                            background::mail_t *mail_background =  _mail_box_background.alloc();
+                            if(mail_background!=NULL){
+                                mail_background->counter = 1;
+                                mail_background->TAG_ID = tagID;
+                                _mail_box_background.put(mail_background) ;
                             }
-                            _payload+="}";
-                            _mapDataCollector[tagID].clear();
-                            _mapDataCollector.erase(tagID);
-                            _mapTrackedDevices[tagID].clear();
-                            _mapTrackedDevices.erase(tagID);
-                            if(_IPSProtocol.mode=="learn"){
-                                _topicLT = _IPSProtocol.family+String("/")+_IPSProtocol.mode+String("/")+tagID+String("/")+_mapTagLocation[tagID];
-                            }else{
-                                _topicLT = _IPSProtocol.family+String("/track/")+tagID;
-                            }
-                            platform_debug::TracePrinter::printTrace("[DC]MQTT:OK:"+ _topicLT);
-
-                            _mqttNetwork.publish(_topicLT,_payload);
-
-                        }else{
-                        
-                            if(_setBeaconList.find(tagID) == _setBeaconList.end()){
-                                _setBeaconList.insert(tagID);
-                                background::mail_t *mail_background =  _mail_box_background.alloc();
-                                if(mail_background!=NULL){
-                                    mail_background->TAG_ID = tagID;
-                                    mail_background->currentMillis = millis();
-                                    _mail_box_background.put(mail_background) ;
-                                }
-                            }
+                        }
+ 
+                        if(_mapSetupBeacons.size() == _mapDataCollector[tagID].size()){
+                            int* sig = _mail_box_signal.alloc();
+                            _mail_box_signal.put(sig);
                         }
                         _mutex.unlock();
                     }   
                 }
             
             }else if(_topicSplit.size() == 4){
-                
+               
                 if(doc.containsKey("beacons")){
                     _mapSetupBeacons.clear();
                     for(auto v :doc["beacons"].as<JsonArray>()){
@@ -131,43 +99,61 @@ void LoRaCollector::run_mqtt_service()
 
 void LoRaCollector::run_background_service()
 {   
-    long long diffTime = 0;
     while(true){
         osEvent evt= _mail_box_background.get();
         if (evt.status == osEventMail) {
 
                 background::mail_t *mail_background = (background::mail_t *)evt.value.p;
-           
-                diffTime =  millis()-mail_background->currentMillis;
-                if( diffTime < 0){
-                    ThisThread::sleep_for(Kernel::Clock::duration_seconds(2000));
-                }else if(diffTime < 2000){
-                    ThisThread::sleep_for(Kernel::Clock::duration_seconds(2000-diffTime));
-                }
-
+                osEvent event = _mail_box_signal.get(1000);
                  _mutex.lock();
+                if (event.status == osEventMail) {
+                    platform_debug::TracePrinter::printTrace("[DC]MQTT:BKGD:osEventMail");
+                    _mail_box_signal.free((int*)evt.value.p);
+                   
+                    _payload="{";
+                    for(auto& v: _mapOnlineDevices[mail_background->TAG_ID]){
+                                    _payload+=v.first;
+                                    _payload+=":";
+                                    _payload+=v.second;
+                                    _payload+=",";
+                    }
+                    _payload+="}";
+                    if(_IPSProtocol.mode=="learn"){
+                        _topicLT = _IPSProtocol.family+String("/")+_IPSProtocol.mode+String("/")+mail_background->TAG_ID+String("/")+_mapTagLocation[mail_background->TAG_ID];
+                    }else{
+                        _topicLT = _IPSProtocol.family+String("/track/")+mail_background->TAG_ID;
+                    }
+                  
+                    _mqttNetwork.publish(_topicLT,_payload);
 
-                if(_setBeaconList.find(mail_background->TAG_ID) !=_setBeaconList.end()){ 
-                    DynamicJsonDocument  d(_mapTrackedDevices.size()*10+1024);
+                    _mapDataCollector[mail_background->TAG_ID].clear();
+                    _mapDataCollector.erase(mail_background->TAG_ID);
+
+                    _mapOnlineDevices[mail_background->TAG_ID].clear();
+                    _mapOnlineDevices.erase(mail_background->TAG_ID);
+                    //_mqttNetwork.publish(_IPSProtocol.family+"/send_error/"+DeviceInfo::BoardID,_fingerprints);
+                }else if (event.status == osEventTimeout){
+                    
+                    _mapDataCollector[mail_background->TAG_ID].clear();
+                    _mapDataCollector.erase(mail_background->TAG_ID);
+
+                    DynamicJsonDocument  d(_mapOnlineDevices.size()*10+1024);
                     JsonArray array =  d.createNestedArray(mail_background->TAG_ID);
-                    for(auto& v: _mapTrackedDevices[mail_background->TAG_ID]){
+                    for(auto& v: _mapOnlineDevices[mail_background->TAG_ID]){
                         JsonObject obj=array.createNestedObject();
                         obj[v.first]=v.second;
                     }
-                    int size = _mapTrackedDevices.size();
-                    _mapDataCollector[mail_background->TAG_ID].clear();
-                    _mapDataCollector.erase(mail_background->TAG_ID);
-                    _mapTrackedDevices[mail_background->TAG_ID].clear();
-                    _mapTrackedDevices.erase(mail_background->TAG_ID);
                     String _fingerprints=d.as<String>();  
-                    platform_debug::TracePrinter::printTrace("[x]BK:"+String(size,DEC)+":"+String(":")+_fingerprints);
-
-                    _mqttNetwork.publish(_topicFP,_fingerprints);
-                }else{
-                    platform_debug::TracePrinter::printTrace("[~]BK:OK");
+                  // if(mail_background->counter <3){
+                        platform_debug::TracePrinter::printTrace("[DC]:"+String(mail_background->counter,DEC)+":Timeout:0x"+String(event.status,HEX)+":"+String(":")+_fingerprints);
+                        _topicTimeout = _IPSProtocol.family+String("/send_timeout/"+mail_background->TAG_ID);
+                        _mqttNetwork.publish(_topicTimeout,_fingerprints);
+                       
+                   //}else{
+                     
+                  // }
                 }
                 _mutex.unlock();
-            
             _mail_box_background.free(mail_background); 
         }
     }
