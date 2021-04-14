@@ -4,10 +4,10 @@ void LoRaGateway::startup()
 {
     _topicCommandResponse = DeviceInfo::Family+ String("/command/response/GW");
     _topicCommandRequest = DeviceInfo::Family+ String("/command/request/GW");
-    _topicSendFingerprints = DeviceInfo::Family+String("/send_fingerprint");
+    _topicTimeout = DeviceInfo::Family+String("/send_timeout/"+DeviceInfo::BoardID);
 
     _topics.push_back(_topicCommandRequest);
-    _topics.push_back(_topicSendFingerprints);
+    _topics.push_back(_topicTimeout);
     _threadMqttService.start(callback(this,&LoRaGateway::run_mqtt_service));
     _threadLoraService.start(callback(this,&LoRaGateway::run_lora_service));
 }

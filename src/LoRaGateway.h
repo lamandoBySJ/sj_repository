@@ -52,7 +52,7 @@ private:
     String _topicLearn;
     String _topicTrack;
     String _topicCommandRequest;
-    String _topicSendFingerprints;
+    String _topicTimeout;
     String _topicCommandResponse;
     std::map<String,String> _mapSetupBeacons;
     std::map<String,int> _mapRetry;
