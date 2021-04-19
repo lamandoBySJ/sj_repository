@@ -63,7 +63,7 @@ typedef unsigned int  gid_t;    ///< Group ID
 /* Flags for open() and fcntl(GETFL/SETFL)
  * At present, fcntl only supports reading and writing O_NONBLOCK
  */
-#define O_RDONLY 0        ///< Open for reading
+/*#define O_RDONLY 0        ///< Open for reading
 #define O_WRONLY 1        ///< Open for writing
 #define O_RDWR   2        ///< Open for reading and writing
 #define O_NONBLOCK 0x0004 ///< Non-blocking mode
@@ -74,13 +74,13 @@ typedef unsigned int  gid_t;    ///< Group ID
 #define O_BINARY   0x8000 ///< Open file in binary mode
 
 #define O_ACCMODE   (O_RDONLY|O_WRONLY|O_RDWR)
-
+*/
 #define NAME_MAX 255    ///< Maximum size of a name in a file path
-
+/*
 #define STDIN_FILENO  0
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
-
+*/
 #include <time.h>
 
 /** \addtogroup platform-public-api */

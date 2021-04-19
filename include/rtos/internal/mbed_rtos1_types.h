@@ -19,13 +19,15 @@
 
 #if MBED_CONF_RTOS_PRESENT || defined(UNITTEST)
 
-//#include "cmsis_os.h"
+#include "cmsis_os.h"
 typedef int32_t osStatus;
 typedef int32_t osPriority;
 #else
-
-typedef int32_t osStatus;
-typedef int32_t osPriority;
+#include "rtos/cmsis_os2.h"
+//typedef int32_t osStatus;
+//typedef int32_t osPriority;
+#include "rtos/cmsis_os.h"
+#include "mbed_rtos_storage.h"
 #endif
 
 #endif

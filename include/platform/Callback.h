@@ -25,7 +25,8 @@
 #include "platform/mbed_toolchain.h"
 #include <cxxsupport/mstd_type_traits.h>
 #include <cxxsupport/mstd_functional.h>
-
+#include <arduino.h>
+#include <HardwareSerial.h>
 // Controlling switches from config:
 // MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL - support storing non-trivial function objects
 // MBED_CONF_PLATFORM_CALLBACK_COMPARABLE - support memcmp comparing stored objects (requires zero padding)
@@ -505,14 +506,16 @@ public:
     {
         MBED_ASSERT(bool(*this));
         auto op_call = reinterpret_cast<call_type *>(call_fn());
-        return op_call(this, args...);
+        //return op_call(this, args...);
+        return op_call(this, std::forward<ArgTs>(args)...);
     }
 
     /** Call the attached function
      */
     R operator()(ArgTs... args) const
     {
-        return call(args...);
+       // return call(args...);
+       return call(std::forward<ArgTs>(args)...);
     }
 
     /** Test if function has been assigned

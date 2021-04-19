@@ -75,6 +75,9 @@ struct Clock {
     Clock() = delete;
     /* Standard TrivialClock fields */
     using duration = std::chrono::milliseconds;
+    using duration_seconds = std::chrono::seconds;
+    using duration_milliseconds = std::chrono::milliseconds;
+    using duration_microseconds = std::chrono::microseconds;
     using rep = duration::rep;
     using period = duration::period;
 #if MBED_CONF_RTOS_PRESENT
