@@ -66,11 +66,12 @@ private:
     Mail<background::mail_t,32> _mail_box_background;
     Mail<int,16> _mail_box_signal;
     std::map<String,std::map<String,int>> _mapOnlineDevices;
-
     std::map<String,String> _mapSetupBeacons;
     std::vector<String> _topics;
     std::map<String,std::set<String>> _mapDataCollector;
+    std::map<String,int> _mapTimeoutExpired;
     String _topicTimeout;
+    String _topicTimeoutExpired;
     String _topicSendRssi;
     String _topicLT;
     String _payload;
@@ -80,6 +81,7 @@ private:
     std::map<String,String> _mapTagLocation;
     std::vector<String> _topicSplit;
     std::vector<String> _topicMatch;
+    long _millis;
 };
 
 #endif
