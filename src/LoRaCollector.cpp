@@ -152,7 +152,7 @@ void LoRaCollector::run_background_service()
               
                     platform_debug::TracePrinter::printTrace("[DC]:"+String(mail_background->counter,DEC)+":Timeout:0x"+String(event.status,HEX)+":"+String(":")+_fingerprints);
                     if( ++_mapTimeoutExpired[mail_background->TAG_ID] > 1){
-                        _topicTimeoutExpired=_IPSProtocol.family+String("/send_timeout_expired/"+mail_background->TAG_ID);
+                        _topicTimeoutExpired=_IPSProtocol.family+String("/send_countdown_expired/"+mail_background->TAG_ID);
                         _mqttNetwork.publish(_topicTimeoutExpired,_fingerprints);
                         _mapTimeoutExpired.erase(mail_background->TAG_ID);
                     }else{
