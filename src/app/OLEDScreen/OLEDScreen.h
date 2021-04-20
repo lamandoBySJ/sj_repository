@@ -8,11 +8,12 @@
 #include "rtos/rtos.h"
 
 using namespace std;
+
 template<int N=12>
-class OLEDScreen
+class OLEDScreen 
 {
 public:
-    OLEDScreen()=delete;
+    OLEDScreen()=default;
     OLEDScreen(SSD1306Wire* ssd1306);
     ~OLEDScreen();
     OLEDScreen(const OLEDScreen& other)
@@ -41,7 +42,7 @@ public:
 
     OLEDScreen& operator=(const OLEDScreen& other)
     {
-      Serial.println("copy ==========construct");
+      Serial.println("assign=&");
       if (this != &other) {
         delete this->display;
         if(other.display!=nullptr){
@@ -56,7 +57,7 @@ public:
 
   OLEDScreen& operator=(OLEDScreen&& other)
   {
-      Serial.println("move ==============construct");
+      Serial.println("move=&&");
         if (this != &other){
             delete this->display;
             this->display  = other.display ;
@@ -69,9 +70,8 @@ public:
    void logo();
    bool init();
 
-  void println(const String &s);
-  void printf(const char* data);
-
+  size_t println(const String &s);
+  size_t printf(const char *format, ...);
 private:
   SSD1306Wire* display=nullptr;
 

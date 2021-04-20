@@ -33,7 +33,10 @@ extern "C" {
 #include "LoRaCollector.h"
 #include "LoRaBeacon.h"
 #include "esp_sleep.h"
+#include <cxxsupport/mstd_new.h>
+#include <new>
 
+using namespace std;
 using namespace mstd;
 using namespace rtos;
 using namespace platform_debug;
@@ -58,24 +61,23 @@ ColorSensor<BH1749NUC> colorSensor(bh1749nuc,std_mutex,2);
 //ColorSensor<ColorSensorBase> colorSensor2(&bh1749nuc,mutex);
 
 Thread thread("Thd1",1024*2,1);
-Thread thread1("Thd1",1024*2,1);
 
 String DeviceInfo::BoardID="";
 String DeviceInfo::Family="k49a";
 OLEDScreen<12> oled(Heltec.display);
 TracePrinter tracePrinter;
-//Test t;
 MQTTNetwork mqttNetwork;
-LoRaNetwork loRaNetwork;
-
-LoRaCollector loRaCollector(mqttNetwork);
-LoRaBeacon loRaBeacon(mqttNetwork);
-
-LoRaGateway loRaGateway(mqttNetwork,loRaNetwork);
-
+//Test t;
 void setup() {
  // put your setup code here, to run once:
-  /*esp_sleep_wakeup_cause_t cause =  esp_sleep_get_wakeup_cause();
+  //WIFI Kit series V1 not support Vext control
+  #ifdef NDEBUG
+    Heltec.begin(false, true , false , true, BAND);
+  #else
+    Heltec.begin(true, true , true , true, BAND);
+  #endif
+ 
+  esp_sleep_wakeup_cause_t cause =  esp_sleep_get_wakeup_cause();
  
   switch(cause){
     case ESP_SLEEP_WAKEUP_UNDEFINED:break;    //!< In case of deep sleep, reset was not caused by exit from deep sleep
@@ -88,28 +90,28 @@ void setup() {
     case ESP_SLEEP_WAKEUP_GPIO:break;         //!< Wakeup caused by GPIO (light sleep only)
     case ESP_SLEEP_WAKEUP_UART:break; 
   }
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_26,0);
-  uint64_t mask = 1|1<<26;
-  esp_sleep_enable_ext1_wakeup(mask,ESP_EXT1_WAKEUP_ANY_HIGH);
-  */
- //gpio_wakeup_enable(GPIO_NUM_0,GPIO_INTR_POSEDGE)
- //gpio_wakeup_enable(GPIO_NUM_26,GPIO_INTR_POSEDGE)
+  //esp_sleep_enable_ext0_wakeup(GPIO_NUM_26,0);
+  //uint64_t mask = 1|1<<26;
+  //esp_sleep_enable_ext1_wakeup(mask,ESP_EXT1_WAKEUP_ANY_HIGH);
+ 
+  //gpio_wakeup_enable(GPIO_NUM_0,GPIO_INTR_LOW_LEVEL);
+  //gpio_wakeup_enable(GPIO_NUM_26,GPIO_INTR_HIGH_LEVEL);
+  //esp_sleep_enable_gpio_wakeup();
+
   pinMode(18,OUTPUT);
   pinMode(23,OUTPUT);
   pinMode(5,OUTPUT);
   pinMode(19,OUTPUT);
   pinMode(22,PULLUP);
-  
-  #ifdef NDEBUG
-    Heltec.begin(false, true , false , true, BAND);
-  #else
-    Heltec.begin(true, true , true , true, BAND);
-  #endif
-  //WIFI Kit series V1 not support Vext control
-  
+
   //LoRa.dumpRegisters(Serial);
-  PlatformDebug::init(std::move(oled));
-  PlatformDebug::printLogo();
+  //PlatformDebug::init(oled);
+  //PlatformDebug::init(OLEDScreen<12>(Heltec.display));
+  //PlatformDebug::init(Serial);
+  PlatformDebug::init(Serial,oled);
+  //PlatformDebug::init(Serial,OLEDScreen<12>(Heltec.display));
+  //PlatformDebug::init(Serial);
+  //PlatformDebug::printLogo();
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
   platform_debug::PlatformDebug::println(" ************ IPS ************ ");
   tracePrinter.startup();
@@ -130,41 +132,18 @@ void setup() {
   platform_debug::PlatformDebug::println("DeviceInfo::BoardID:"+DeviceInfo::BoardID);
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
 
-  //timeMachine.startup();
-  //timeMachine.setEpoch(1614764209+8*60*60);
+
+  timeMachine.startup();
+  timeMachine.setEpoch(1614764209+8*60*60);
 
   //colorSensor.startup();
-
-  loRaNetwork.addOnMessageCallback(callback(&loRaGateway,&LoRaGateway::onMessageLoRaCallback));
-  loRaGateway.startup();
- 
-  loRaNetwork.addOnMessageCallback(callback(&loRaCollector,&LoRaCollector::onMessageLoRaCallback));
-  loRaCollector.startup();
-  
-  //loRaNetwork.addOnMessageCallback(callback(&loRaBeacon,&LoRaBeacon::onMessageLoRaCallback));
-  //loRaBeacon.startup();
- ///*
-  mqttNetwork.addTopics(loRaGateway.getTopics());
-  mqttNetwork.addOnMessageCallback(callback(&loRaGateway,&LoRaGateway::onMessageMqttCallback));
-  mqttNetwork.addOnMqttConnectCallback(callback(&loRaGateway,&LoRaGateway::onMqttConnectCallback));
-  mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaGateway,&LoRaGateway::onMqttDisconnectCallback));
-  // */
- ///*
-  mqttNetwork.addTopics(loRaCollector.getTopics());
-  mqttNetwork.addOnMessageCallback(callback(&loRaCollector,&LoRaCollector::onMessageMqttCallback));
-  mqttNetwork.addOnMqttConnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttConnectCallback));
-  mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttDisconnectCallback));
-  //*/
-  /*
-  mqttNetwork.addTopics(loRaBeacon.getTopics());
-  mqttNetwork.addOnMessageCallback(callback(&loRaBeacon,&LoRaBeacon::onMessageMqttCallback));
-  mqttNetwork.addOnMqttConnectCallback(callback(&loRaBeacon,&LoRaBeacon::onMqttConnectCallback));
-  mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaBeacon,&LoRaBeacon::onMqttDisconnectCallback));
-  */
+  //mqttNetwork.addTopics(loRaCollector.getTopics());
+  //mqttNetwork.addOnMessageCallback(callback(&loRaCollector,&LoRaCollector::onMessageMqttCallback));
+  //mqttNetwork.addOnMqttConnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttConnectCallback));
+  //mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttDisconnectCallback));
   
   mqttNetwork.startup();
-  loRaNetwork.startup();
-  
+
 }
 
 std::array<uint16_t,4> dataRGB;

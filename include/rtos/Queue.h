@@ -244,7 +244,7 @@ public:
      *       parameter is set to 0.
      * @deprecated Replaced with try_put and try_put_for. In future put will be an untimed blocking call.
      */
-    MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Replaced with try_put and try_put_for. In future put will be an untimed blocking call.")
+    //MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Replaced with try_put and try_put_for. In future put will be an untimed blocking call.")
     osStatus put(T *data, uint32_t millisec = 0, uint8_t prio = 0)
     {   
         return osMessageQueuePut(_id, &data, prio, millisec);
@@ -336,7 +336,7 @@ public:
      *        parameter is set to 0.
      * @deprecated Replaced with try_get and try_get_for. In future get will be an untimed blocking call.
      */
-    MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Replaced with try_get and try_get_for. In future get will be an untimed blocking call.")
+    //MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Replaced with try_get and try_get_for. In future get will be an untimed blocking call.")
     osEvent get(uint32_t millisec = osWaitForever)
     {
         osEvent event;
