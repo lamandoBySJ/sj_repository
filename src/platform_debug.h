@@ -66,7 +66,6 @@ public:
         PlatformDebug::_platformDebug->_onPrintlnCallbacks.push_back( Callback<size_t(const String&)>(&t,(FunctionPtrHardwareSerial)&T::println));
     }
 
-    
 
     template <class T,class...Args>
     static void init(const T& t,const Args&...args)//:_objs(std::forward<ArgTs>(args)...)
@@ -79,6 +78,7 @@ public:
         }
         SFINAE_test(std::forward<T>(const_cast<T&>(t)));
         init(std::forward<const Args>(args)...);
+       // init(std::forward<Args>(const_cast<Args&>(args)...)...);
         #endif
     }
    static inline void printLogo() 
