@@ -8,6 +8,7 @@
 #include <ColorSensorBase.h>
 #include <cxxsupport/mstd_type_traits.h>
 #include "platform_debug.h"
+#include <mutex>
 using namespace platform_debug;
 using namespace rtos;
 
@@ -16,8 +17,8 @@ class ColorSensor
 {
 public:
     ColorSensor()=delete;
-    ColorSensor(T&,rtos::Mutex& mutex);
-    ColorSensor(T&,rtos::Mutex& mutex,uint8_t rst);
+    ColorSensor(T&,std::mutex& mutex);
+    ColorSensor(T&,std::mutex& mutex,uint8_t rst);
     ~ColorSensor()=default;
     void startup(bool pwrEnable=true);
     bool getRGB(std::array<uint16_t,4>& data);
@@ -27,7 +28,7 @@ public:
     void measurementModeInactive();
 private:
     T& _colorSensor;
-    rtos::Mutex& _mutex;
+    std::mutex& _mtx;
     uint8_t _rst;
     std::array<callbackFun, 4> ptrFuns;
     std::array<uint16_t,4> _data;

@@ -19,37 +19,46 @@ public:
     OLEDScreen(const OLEDScreen& other)
     {
       Serial.println("copy construct");
-      if (other.display != nullptr){
-           display = new SSD1306Wire(0x3c, SDA_OLED, SCL_OLED, RST_OLED, GEOMETRY_128_64);
-         // this->display = other.display ;
-          _head=other._head;
-          _tail=other._tail;
-         // textVector.clear();
-      }   
+      if (this != &other) {
+        if (other.display != nullptr){
+            this->~OLEDScreen();
+            this->display = other.display;
+            _head=other._head;
+            _tail=other._tail;
+          // textVector.clear();
+        }else{
+            generate();
+        }   
+      }
     }
     OLEDScreen(OLEDScreen&& other)
     {
       Serial.println("move construct");
-      if (other.display != nullptr){
+      if (this != &other) {
+          if (other.display != nullptr){
               this->~OLEDScreen();
               this->display = other.display;
               other.display = nullptr;
               _head=other._head;
               _tail=other._tail;
              // textVector.clear();
-        }
+          }else{
+               generate();
+          }
+      }
     }
 
     OLEDScreen& operator=(const OLEDScreen& other)
     {
       Serial.println("assign=&");
       if (this != &other) {
-        delete this->display;
+        this->~OLEDScreen();
         if(other.display!=nullptr){
-            // display = new SSD1306Wire(0x3c, SDA_OLED, SCL_OLED, RST_OLED, GEOMETRY_128_64);
-             display = other.display ;
+             display = other.display;
              _head=other._head;
               _tail=other._tail;
+        }else{
+              generate();
         }
       }
       return *this;
@@ -58,13 +67,18 @@ public:
   OLEDScreen& operator=(OLEDScreen&& other)
   {
       Serial.println("move=&&");
-        if (this != &other){
-            delete this->display;
-            this->display  = other.display ;
-            other.display  = nullptr;
-            _head=other._head;
+      if (this != &other){
+            this->~OLEDScreen();
+            if(other.display!=nullptr){
+              this->display  = other.display ;
+              other.display  = nullptr;
+              _head=other._head;
               _tail=other._tail;
-        }
+            }else{
+               generate();
+            }
+            
+      }
        return *this;
    }
    void logo();
@@ -72,6 +86,12 @@ public:
 
   size_t println(const String &s);
   size_t printf(const char *format, ...);
+protected:
+  void generate(){
+      this-> display = new SSD1306Wire(0x3c, SDA_OLED, SCL_OLED, RST_OLED, GEOMETRY_128_64);
+      _head=0;
+      _tail=0;
+  }
 private:
   SSD1306Wire* display=nullptr;
 

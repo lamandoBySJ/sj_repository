@@ -7,6 +7,7 @@
 #include "RTCBase.h"
 #include "DelegateClass.h"
 #include "platform_debug.h"
+#include <mutex>
 using namespace rtos;
 
 template<typename RTC>
@@ -14,8 +15,8 @@ class TimeMachine
 {
 public:
     TimeMachine()=delete;
-    TimeMachine(RTC& rtc,rtos::Mutex& mutex);
-    TimeMachine(RTC& rtc,rtos::Mutex& mutex,uint8_t rst);
+    TimeMachine(RTC& rtc,std::mutex& mutex);
+    TimeMachine(RTC& rtc,std::mutex& mutex,uint8_t rst);
     ~TimeMachine()=default;
     void startup(bool pwrEnable=true);
     time_t getEpoch();
@@ -23,7 +24,7 @@ public:
     void setEpoch(time_t epoch);
 private:
     RTC& _rtc;
-    rtos::Mutex& _mutex;
+    std::mutex& _mtx;  
     uint8_t _rst;
     bool selftest();
 };

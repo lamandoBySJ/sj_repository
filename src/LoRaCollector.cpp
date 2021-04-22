@@ -93,7 +93,7 @@ void LoRaCollector::run_mqtt_service()
                 _mqttNetwork.publish(_topicCommandResponse,"{\""+DeviceInfo::BoardID+"\":\"OK\"}");
             }
             
-
+            
             _mail_box_mqtt.free(mail); 
         }
     }

@@ -5,6 +5,9 @@
 #include <rtos/rtos.h>
 #include <app/TimeMachine/TimeMachine.h>
 #include "platform_debug.h"
+#include <mutex>
+#include <thread>
+#include <functional>
 //vTaskSuspend(handleTaskDebug);
 
 
@@ -69,5 +72,14 @@ private:
    // std::vector<mbed::Callback<void(const String&,const String&)>>  _debugCallbacks;
 };
 
-
+namespace thread_test{
+    void task_a();
+      void task_b();
+      int test_unique_lock_1();
+      void print_thread_id(int id) ;
+      void print_thread_id_2(int id) ;
+      void print_thread_id_test(int id) ;
+      void print_thread_id_test2(int id) ;
+      int test_unique_lock_cd();
+}
 #endif

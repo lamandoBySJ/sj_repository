@@ -105,3 +105,106 @@ void loop(){
          Serial.println(String(++cnt,DEC)+"___________________________________"+String(evt.status,DEC));
         */
 //void TaskDebug( void *pvParameters );
+
+namespace thread_test{
+  /*
+static bool run=true;
+static std::mutex foo, bar;
+static std::mutex mtx;   
+  void task_a()
+{
+    std::lock(foo, bar);         // simultaneous lock (prevents deadlock)
+    std::unique_lock<std::mutex> lck1(foo, std::adopt_lock);
+    std::unique_lock<std::mutex> lck2(bar, std::adopt_lock);
+      //std::cout << "task a\n";
+        Serial.println("task a\n");
+    while (run)
+    {
+       std::this_thread::sleep_for(chrono::seconds(1));
+       Serial.println("task a\n");
+      // (unlocked automatically on destruction of lck1 and lck2)
+    }
+}
+void task_b()
+{
+  while (1)
+  {
+      // unique_lock::unique_lock: Constructs a unique_lock
+    // foo.lock(); bar.lock(); // replaced by:
+    std::unique_lock<std::mutex> lck1, lck2;
+    lck1 = std::unique_lock<std::mutex>(bar, std::defer_lock);
+    lck2 = std::unique_lock<std::mutex>(foo, std::defer_lock);
+    std::lock(lck1, lck2);       // simultaneous lock (prevents deadlock)
+    //std::cout << "task b\n";
+    Serial.println("task b\n");
+    // (unlocked automatically on destruction of lck1 and lck2)
+  }
+}
+int test_unique_lock_1()
+{
+	std::thread th1(task_a);
+	std::thread th2(task_b);
+
+	th1.join();
+	th2.join();
+
+	return 0;
+}
+
+
+ 
+void print_thread_id(int id) {
+	std::unique_lock<std::mutex> lck(mtx, std::defer_lock);
+	// critical section (exclusive access to std::cout signaled by locking lck):
+	// unique_lock::lock: Calls member lock of the managed mutex object.
+	lck.lock();
+	Serial.println(String("thread #")+ String(id,DEC));
+	// unique_lock::unlock: Calls member unlock of the managed mutex object, and sets the owning state to false
+	lck.unlock();
+}
+void print_thread_id_2(int id) {
+	std::unique_lock<std::mutex> lck(mtx, std::defer_lock);
+	// critical section (exclusive access to std::cout signaled by locking lck):
+	// unique_lock::lock: Calls member lock of the managed mutex object.
+	lck.lock();
+	Serial.println(String("2thread #")+ String(id,DEC));
+	// unique_lock::unlock: Calls member unlock of the managed mutex object, and sets the owning state to false
+	lck.unlock();
+}
+
+void print_thread_id_test(int id) {
+	std::unique_lock<std::mutex> lck(mtx, std::defer_lock);
+	// critical section (exclusive access to std::cout signaled by locking lck):
+	// unique_lock::lock: Calls member lock of the managed mutex object.
+	lck.lock();
+	Serial.println(String("thread #")+ String(id,DEC));
+	// unique_lock::unlock: Calls member unlock of the managed mutex object, and sets the owning state to false
+//	lck.unlock();
+while(run){std::this_thread::sleep_for(chrono::seconds(1));}
+}
+
+void print_thread_id_test2(int id) {
+	std::unique_lock<std::mutex> lck(mtx, std::defer_lock);
+	// critical section (exclusive access to std::cout signaled by locking lck):
+	// unique_lock::lock: Calls member lock of the managed mutex object.
+	lck.lock();
+	Serial.println(String("2thread #")+ String(id,DEC));
+	// unique_lock::unlock: Calls member unlock of the managed mutex object, and sets the owning state to false
+	//lck.unlock();
+
+}
+int test_unique_lock_cd()
+{
+std::thread threads[10];
+std::thread threads2[10];
+	// spawn 10 threads:
+	for (int i = 0; i<10; ++i){
+	    threads[i] = std::thread(print_thread_id, i + 1);
+    	threads2[i] = std::thread(print_thread_id_2, i + 1);
+  }
+	
+	for (auto& th : threads) th.join();
+	for (auto& th : threads2) th.join();
+	return 0;
+}*/
+}

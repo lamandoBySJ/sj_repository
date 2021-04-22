@@ -22,18 +22,21 @@ bool OLEDScreen<N>::init(){
   if(!display->init()){
     return false;
   }
-      #if !defined(NDEBUG)
+  #if !defined(NDEBUG)
       display->flipScreenVertically();
       display->setFont(ArialMT_Plain_10);
       display->drawString(0, 0, "OLED initial done!");
       display->display();
-      #endif
+  #endif
   return true;
 }
 template<int N>
 OLEDScreen<N>::~OLEDScreen()
 {
+  if(display){
     delete display;
+    display=nullptr;
+  }
 }
 template<int N>
 void OLEDScreen<N>::logo(){
@@ -294,6 +297,10 @@ void OLEDScreen<N>::printScreen(const char* data)
     #endif
 }
 
+
+template class OLEDScreen<12>;
+
+/*
 template<int N>
 void OLEDScreen<N>::screenPrint(const char* data)
 {
@@ -359,9 +366,6 @@ void OLEDScreen<N>::screenPrint(const char* data)
 
     #endif
 }
-template class OLEDScreen<12>;
-
-/*
 OLEDScreen* OLEDScreen::getTerminal()
 {
   if( xSemaphoreTake(OLEDScreen:: xSemaphore, ( TickType_t ) portMAX_DELAY) == pdTRUE ){
