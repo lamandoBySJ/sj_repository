@@ -83,15 +83,18 @@ void TimeMachine<RTC>::setEpoch(time_t epoch)
 }
 
 template<typename RTC>
-String TimeMachine<RTC>::getDateTime()
+bool TimeMachine<RTC>::getDateTime(String& datetime)
 {
     std::unique_lock<std::mutex> _mutex(_mtx, std::defer_lock);
      _mutex.lock();
      if(_rtc.isRunning()){
-        return _rtc.getDateTime(true);
+        datetime =  _rtc.getDateTime(true);
+        return true;
+     }else{
+        return false;
      }
-    return "";
 }
+
 /*
 template<>
 class TimeMachine<RTCBase>

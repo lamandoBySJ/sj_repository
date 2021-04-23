@@ -39,6 +39,13 @@ extern "C" {
 #include <functional>
 #include <Test.h>
 
+#include <HTTPClient.h>
+#include <httpUpdate.h>
+#include <Esp32httpUpdate.h>
+#include "FS.h"
+#include "FFat.h"
+#include "FFatHelper.h"
+
 using namespace std;
 using namespace mstd;
 using namespace rtos;
@@ -53,6 +60,9 @@ using namespace platform_debug;
 #endif
 #endif
 
+//python3 esptool.py --port COM20 --baud 115200 write_flash -fm dio -fs 16MB  0x410000 partitions.bin
+//C:\Users\Administrator\.platformio\packages\framework-arduinoespressif32\tools\partitions
+
 std::mutex mtx;           // mutex for critical section
 rtos::Mutex std_mutex;
 //DS1307 ds1307(Wire1,21,22); //stlb
@@ -60,7 +70,7 @@ DS1307 ds1307(Wire1,32,33); //ips
 TimeMachine<DS1307> timeMachine(ds1307,mtx,13);  
 //TimeMachine<RTCBase> timeMachine(&RTC,std_mutex);
 
-BH1749NUC bh1749nuc(Wire1,4,15);
+BH1749NUC bh1749nuc(Wire,4,15);
 ColorSensor<BH1749NUC> colorSensor(bh1749nuc,mtx,2);
 //ColorSensor<ColorSensorBase> colorSensor2(&bh1749nuc,mutex);
 
@@ -71,8 +81,9 @@ TracePrinter tracePrinter;
 MQTTNetwork mqttNetwork;
 //Test t;
 using namespace thread_test;
-
-#define OLEDSCREEN 1
+using namespace esp32_http_update;
+//#define OLEDSCREEN 1
+bool update = false;
 void setup() {
  // put your setup code here, to run once:
   //WIFI Kit series V1 not support Vext control
@@ -103,9 +114,6 @@ void setup() {
   pinMode(22,PULLUP);
 
   #ifdef NDEBUG
-    #ifdef OLEDSCREEN
-    #undef OLEDSCREEN
-    #endif
     Heltec.begin(false, true , false , true, BAND);
   #else
     #ifdef OLEDSCREEN
@@ -113,7 +121,7 @@ void setup() {
       PlatformDebug::init(Serial,OLEDScreen<12>(Heltec.display));
       PlatformDebug::printLogo();
     #else
-      Heltec.begin(false, true , true , true, BAND);
+      Heltec.begin(false, false , true , true, BAND);
       PlatformDebug::init(Serial);
     #endif
   #endif
@@ -126,7 +134,7 @@ void setup() {
   platform_debug::PlatformDebug::println(" ************ IPS ************ ");
   pinMode(0, PULLUP);
   attachInterrupt(0,[]()->void{
-
+      update = true;
   },FALLING);
   
   tracePrinter.startup();
@@ -150,8 +158,7 @@ void setup() {
 
   timeMachine.startup();
   //timeMachine.setEpoch(1614764209+8*60*60);
-
-  //colorSensor.startup();
+ // colorSensor.startup();
   //mqttNetwork.addTopics(loRaCollector.getTopics());
   //mqttNetwork.addOnMessageCallback(callback(&loRaCollector,&LoRaCollector::onMessageMqttCallback));
   //mqttNetwork.addOnMqttConnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttConnectCallback));
@@ -163,22 +170,54 @@ void setup() {
   //threads[0]= std::thread(print_thread_id_test, 1);
   //threads[1]= std::thread(print_thread_id_test2, 2);
 
- // test_unique_lock_cd();
+  // test_unique_lock_cd();
  
- // while(1){  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));};
- platform_debug::PlatformDebug::println(">>>>>>>>>>>>>>>>> Setup over >>>>>>>>>>>>>>>>>>");
+  // while(1){  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));};
+  platform_debug::PlatformDebug::println(">>>>>>>>>>>>>>>> Setup over >>>>>>>>>>>>>>>>>>");
+  
+
+  if(FFatHelper::init()){
+      platform_debug::PlatformDebug::println("OK:File system mounted");
+  }else{
+      platform_debug::PlatformDebug::println("ERROR:File system:");
+  }
+
+  platform_debug::PlatformDebug::println("---------------- "+String(__TIME__)+" ----------------");
 }
 
-std::array<uint16_t,4> dataRGB;
+RGB rgb;
+static String currentTime="";
 void loop() {
+
   while (true) {
-      platform_debug::PlatformDebug::println("Time:" + timeMachine.getDateTime());
-      //ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));
-      std::this_thread::sleep_for(chrono::seconds(1));
+    if( timeMachine.getDateTime(currentTime)){
+        platform_debug::PlatformDebug::println(currentTime);
+    }else{
+        platform_debug::PlatformDebug::println("ERROR:currentTime");
+    }
+    
+     if(update){
+       platform_debug::PlatformDebug::println("Start:OTA...");
+       esp32_http_update::t_httpUpdate_return ret =  esp32_http_update::ESPhttpUpdate.update("http://192.168.1.100/bin/firmware.bin");
+
+        switch(ret) {
+            case esp32_http_update::HTTP_UPDATE_FAILED:
+                platform_debug::PlatformDebug::printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+                break;
+            case esp32_http_update::HTTP_UPDATE_NO_UPDATES:
+               platform_debug::PlatformDebug::println("HTTP_UPDATE_NO_UPDATES");
+                break;
+            case esp32_http_update::HTTP_UPDATE_OK:
+                platform_debug::PlatformDebug::println("HTTP_UPDATE_OK");
+                std::this_thread::sleep_for(chrono::seconds(3));
+                ESP.restart();
+                break;
+        }
+     }
+    std::this_thread::sleep_for(chrono::seconds(3));
+    //ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));
   }
 }
 
-
-  
 
 

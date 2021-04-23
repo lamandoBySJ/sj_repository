@@ -45,9 +45,7 @@
  
 #define DS1307_ADDR 0x68
 
-
- 
-class DS1307 : public RTCBase
+class DS1307 //: public RTCBase
 {
     public:
         DS1307() = delete;
@@ -64,7 +62,7 @@ class DS1307 : public RTCBase
         //void setDateTime(time_t timestamp);
        // time_t datetime(String& nowtime);
        // virtual time_t timestamp(String& nowtime) override;
-        String getDateTime(bool duplicate=false);
+        String& getDateTime(bool duplicate=false);
         bool begin();
 
         bool isRunning(void);
@@ -88,7 +86,7 @@ class DS1307 : public RTCBase
         void setDate(uint8_t day, uint8_t month, uint16_t year);
         void setTime(uint8_t hour, uint8_t minute, uint8_t second);
 
-        void setDateTime(const char* date,const  char* time) override;
+        void setDateTime(const char* date,const  char* time);
 
         uint8_t getSeconds();
         uint8_t getMinutes();

@@ -5,7 +5,7 @@ class RTCBase
 {
 public:
      
-   virtual String getDateTime(bool duplicate=false) = 0;
+   virtual String& getDateTime(bool duplicate=false) = 0;
    virtual bool begin() = 0; 
    virtual bool isRunning(void)  = 0;
    virtual void startClock(void)  = 0;

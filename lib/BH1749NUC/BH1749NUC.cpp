@@ -164,82 +164,60 @@ bool BH1749NUC::data_get(uint16_t& data)
         return success;
 }
 */
-bool BH1749NUC::red_data_get(uint16_t& data)
+bool BH1749NUC::red_data_get(rgb1bit16_t& rgb)
 {   
-   // _reg_addr[0]=BH1749NUC_RED_DATA_L8BIT_REG_ADDR;
-   // _reg_addr[1]=BH1749NUC_RED_DATA_H8BIT_REG_ADDR;
-   //  return data_get(data);
-      /*   auto p = std::begin(data_raw->u8bit);
-        return std::all_of(std::begin(data_raw->u8bit),std::end(data_raw->u8bit),[&]{
-            
-            return platform_read(BH1749NUC_RED_DATA_L8BIT_REG_ADDR, p++, 1);
-        });
-      */
+        /*
         bool ret;
         ret = platform_read(BH1749NUC_RED_DATA_L8BIT_REG_ADDR, (uint8_t*)&_reg_value.u8bit[0], 1);
         ret = platform_read(BH1749NUC_RED_DATA_H8BIT_REG_ADDR, (uint8_t*)&_reg_value.u8bit[1], 1);
         data=_reg_value.i16bit;
-         //ESPLogcat::printf("reg_red", "ret:%d<<<<<<<red:%d,%d,%d>>>>>>>>\n",ret,data_raw.u8bit[0],data_raw.u8bit[1],(uint16_t)data_raw.i16bit);
-        return ret;
-       
-}
-
-bool BH1749NUC::green_data_get(uint16_t& data)
-{       
-      /*_reg_addr[0]=BH1749NUC_GREEN_DATA_L8BIT_REG_ADDR;
-    _reg_addr[1]=BH1749NUC_GREEN_DATA_H8BIT_REG_ADDR;
-     return data_get(data);
-      rgb1bit16_t data_raw;
-        bool ret;
-        ret = platform_read(BH1749NUC_GREEN_DATA_L8BIT_REG_ADDR, (uint8_t*)&data_raw.u8bit[0], 1);
-        ret = platform_read(BH1749NUC_GREEN_DATA_H8BIT_REG_ADDR, (uint8_t*)&data_raw.u8bit[1], 1);
-       (*val)=data_raw.i16bit;
-        return ret;*/
-          bool ret;
-        ret = platform_read(BH1749NUC_GREEN_DATA_L8BIT_REG_ADDR, (uint8_t*)&_reg_value.u8bit[0], 1);
-        ret = platform_read(BH1749NUC_GREEN_DATA_H8BIT_REG_ADDR, (uint8_t*)&_reg_value.u8bit[1], 1);
-        data=_reg_value.i16bit;
-         //ESPLogcat::printf("reg_red", "ret:%d<<<<<<<red:%d,%d,%d>>>>>>>>\n",ret,data_raw.u8bit[0],data_raw.u8bit[1],(uint16_t)data_raw.i16bit);
-        return ret;
-}
-
-bool BH1749NUC::blue_data_get(uint16_t& data)
-{
-    /*_reg_addr[0]=BH1749NUC_BLUE_DATA_L8BIT_REG_ADDR;
-    _reg_addr[1]=BH1749NUC_BLUE_DATA_H8BIT_REG_ADDR;
-     return data_get(data);
-         rgb1bit16_t data_raw;
-        bool ret;
-        ret = platform_read(BH1749NUC_BLUE_DATA_L8BIT_REG_ADDR, (uint8_t*)&data_raw.u8bit[0], 1);
-        ret = platform_read(BH1749NUC_BLUE_DATA_H8BIT_REG_ADDR, (uint8_t*)&data_raw.u8bit[1], 1);
-        (*val)=data_raw.i16bit;
         return ret;
         */
-        bool ret;
-        ret = platform_read(BH1749NUC_BLUE_DATA_L8BIT_REG_ADDR, (uint8_t*)&_reg_value.u8bit[0], 1);
-        ret = platform_read(BH1749NUC_BLUE_DATA_H8BIT_REG_ADDR, (uint8_t*)&_reg_value.u8bit[1], 1);
-        data=_reg_value.i16bit;
-         //ESPLogcat::printf("reg_red", "ret:%d<<<<<<<red:%d,%d,%d>>>>>>>>\n",ret,data_raw.u8bit[0],data_raw.u8bit[1],(uint16_t)data_raw.i16bit);
-        return ret;
+        return std::all_of(_data.begin(),_data.end(),[&] (char& index){
+        return platform_read(index==0?BH1749NUC_RED_DATA_L8BIT_REG_ADDR:BH1749NUC_RED_DATA_H8BIT_REG_ADDR, (uint8_t*)&rgb.u8bit[index], 1);
+    });
+}
+
+bool BH1749NUC::green_data_get(rgb1bit16_t& rgb)
+{    
+    /*
+    bool ret;
+    ret = platform_read(BH1749NUC_GREEN_DATA_L8BIT_REG_ADDR, (uint8_t*)&_reg_value.u8bit[0], 1);
+    ret = platform_read(BH1749NUC_GREEN_DATA_H8BIT_REG_ADDR, (uint8_t*)&_reg_value.u8bit[1], 1);
+    data=_reg_value.i16bit;
+    return ret;
+    */   
+   return std::all_of(_data.begin(),_data.end(),[&] (char& index){
+        return platform_read(index==0?BH1749NUC_GREEN_DATA_L8BIT_REG_ADDR:BH1749NUC_GREEN_DATA_H8BIT_REG_ADDR, (uint8_t*)&rgb.u8bit[index], 1);
+    });
+}
+
+bool BH1749NUC::blue_data_get(rgb1bit16_t& rgb)
+{
+    /*
+    bool ret;
+    ret = platform_read(BH1749NUC_BLUE_DATA_L8BIT_REG_ADDR, (uint8_t*)&_reg_value.u8bit[0], 1);
+    ret = platform_read(BH1749NUC_BLUE_DATA_H8BIT_REG_ADDR, (uint8_t*)&_reg_value.u8bit[1], 1);
+    data=_reg_value.i16bit;
+    return ret;
+    */   
+    return std::all_of(_data.begin(),_data.end(),[&] (char& index){
+        return platform_read(index==0?BH1749NUC_BLUE_DATA_L8BIT_REG_ADDR:BH1749NUC_BLUE_DATA_H8BIT_REG_ADDR, (uint8_t*)&rgb.u8bit[index], 1);
+    });
 }
     
-bool BH1749NUC::ir_data_get(uint16_t& data)
+bool BH1749NUC::ir_data_get(rgb1bit16_t& rgb)
 {
-   /* _reg_addr[0]=BH1749NUC_IR_DATA_L8BIT_REG_ADDR;
-    _reg_addr[1]=BH1749NUC_IR_DATA_H8BIT_REG_ADDR;
-     return data_get(data);
-       rgb1bit16_t data_raw;
-        bool ret;
-        ret = platform_read(BH1749NUC_IR_DATA_L8BIT_REG_ADDR, (uint8_t*)&data_raw.u8bit[0], 1);
-        ret = platform_read(BH1749NUC_IR_DATA_H8BIT_REG_ADDR, (uint8_t*)&data_raw.u8bit[1], 1);
-        *val=data_raw.i16bit;
-        return ret;*/
-         bool ret;
-        ret = platform_read(BH1749NUC_IR_DATA_L8BIT_REG_ADDR, (uint8_t*)&_reg_value.u8bit[0], 1);
-        ret = platform_read(BH1749NUC_IR_DATA_H8BIT_REG_ADDR, (uint8_t*)&_reg_value.u8bit[1], 1);
-        data=_reg_value.i16bit;
-         //ESPLogcat::printf("reg_red", "ret:%d<<<<<<<red:%d,%d,%d>>>>>>>>\n",ret,data_raw.u8bit[0],data_raw.u8bit[1],(uint16_t)data_raw.i16bit);
-        return ret;
+    /*
+    bool ret;
+    ret = platform_read(BH1749NUC_IR_DATA_L8BIT_REG_ADDR, (uint8_t*)&_reg_value.u8bit[0], 1);
+    ret = platform_read(BH1749NUC_IR_DATA_H8BIT_REG_ADDR, (uint8_t*)&_reg_value.u8bit[1], 1);
+    data=_reg_value.i16bit;
+    return ret;
+    */   
+    return std::all_of(_data.begin(),_data.end(),[&] (char& index){
+        return platform_read(index==0?BH1749NUC_IR_DATA_L8BIT_REG_ADDR:BH1749NUC_IR_DATA_H8BIT_REG_ADDR, (uint8_t*)&rgb.u8bit[index], 1);
+    });
 }
 
 bool BH1749NUC::platform_read(uint8_t reg_address, uint8_t* data,uint8_t len)

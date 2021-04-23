@@ -649,12 +649,14 @@ time_t DS1307::getEpoch()
           String(epoch_tm.tm_sec,DEC);
 	return (epoch);
 }
-
-String DS1307::getDateTime(bool duplicate)
+//placement new的好处：
+//）在已分配好的内存上进行对象的构建，构建速度快。
+//2）已分配好的内存可以反复利用，有效的避免内存碎片问题。
+String& DS1307::getDateTime(bool duplicate)
 {
-  if(duplicate){
+  //if(duplicate){
     getEpoch();
-  }
+ // }
 	return DS1307::datetime;
 }
 /* NVRAM Functions */

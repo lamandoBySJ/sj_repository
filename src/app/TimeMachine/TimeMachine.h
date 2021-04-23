@@ -20,7 +20,7 @@ public:
     ~TimeMachine()=default;
     void startup(bool pwrEnable=true);
     time_t getEpoch();
-    String getDateTime();
+    bool getDateTime(String&);
     void setEpoch(time_t epoch);
 private:
     RTC& _rtc;

@@ -61,27 +61,25 @@ void ColorSensor<T>::measurementModeInactive()
 }
 
 template<typename T>
-bool ColorSensor<T>::getRGB(std::array<uint16_t,4>& data)
+bool ColorSensor<T>::getRGB(RGB& rgb)
 {
   int timeout=3000;
  std::unique_lock<std::mutex> _mutex(_mtx, std::defer_lock);
+
   _mutex.lock();
   do{
        _colorSensor.mode_control2_get(&_mode_control2.reg);
-        
        if(--timeout==0){
          return false;
        }
        delay(1);
-       
-    } while (!_mode_control2.bitfield.valid);
- 
-  auto ptr = data.begin();
-  return std::all_of(ptrFuns.begin(),ptrFuns.end(),[&] (callbackFun& p){
-    bool result = (_colorSensor.*p)(*ptr);
-    ptr++;
-    return result;
-  });
+  } while (!_mode_control2.bitfield.valid);
+
+ return (_colorSensor.*ptrFuns[0])(rgb.R) &&
+  (_colorSensor.*ptrFuns[1])(rgb.G)&&
+  (_colorSensor.*ptrFuns[2])(rgb.B)&&
+  (_colorSensor.*ptrFuns[3])(rgb.IR);
+
 }
 /*
 template<>

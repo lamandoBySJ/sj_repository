@@ -38,7 +38,7 @@ void send_thread(void)
         message->voltage = (i * 0.1) * 33;
         message->current = (i * 0.1) * 11;
         message->counter = i;
-        osStatus  status = queue.put(message);
+       // osStatus  status = queue.put(message);
         ThisThread::sleep_for(100);
     }
   vTaskDelete(NULL);
