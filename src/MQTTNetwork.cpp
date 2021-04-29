@@ -216,7 +216,7 @@ void MQTTNetwork::setWifiReconnectTimer(bool start)
 void MQTTNetwork::startup(){
 
       mqttClient.setClientId(DeviceInfo::BoardID);
-        WiFi.onEvent(std::bind(&MQTTNetwork::WiFiEvent,this,std::placeholders::_1,std::placeholders::_2));
+      WiFi.onEvent(std::bind(&MQTTNetwork::WiFiEvent,this,std::placeholders::_1,std::placeholders::_2));
       _wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)this, reinterpret_cast<TimerCallbackFunction_t>(&MQTTNetwork::_thunkConnectToWifi));
       _mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)this, reinterpret_cast<TimerCallbackFunction_t>(&MQTTNetwork::_thunkConnectToMqtt));
   
@@ -227,6 +227,7 @@ void MQTTNetwork::startup(){
       mqttClient.onMessage(callback(this,&MQTTNetwork::onMqttMessage));
       mqttClient.onPublish(callback(this,&MQTTNetwork::onMqttPublish));
       mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+      platform_debug::TracePrinter::printTrace(MQTT_HOST.toString()+":"+String(MQTT_PORT,DEC));
 
       _threadOnConnect.start(callback(this,&MQTTNetwork::run_mail_box_on_connect));
       _threadOnMessage.start(callback(this,&MQTTNetwork::run_mail_box));

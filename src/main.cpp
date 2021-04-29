@@ -33,7 +33,7 @@ extern "C" {
 #include "LoRaCollector.h"
 #include "LoRaBeacon.h"
 #include "esp_sleep.h"
-
+#include "FFatHelper.h"
 using namespace mstd;
 using namespace rtos;
 using namespace platform_debug;
@@ -48,23 +48,13 @@ using namespace platform_debug;
 #endif
 
 
-rtos::Mutex std_mutex;
-DS1307 ds1307(Wire1,21,22);
-TimeMachine<DS1307> timeMachine(ds1307,std_mutex,13);  
-//TimeMachine<RTCBase> timeMachine(&RTC,std_mutex);
-
-BH1749NUC bh1749nuc(Wire1,4,15);
-ColorSensor<BH1749NUC> colorSensor(bh1749nuc,std_mutex,2);
-//ColorSensor<ColorSensorBase> colorSensor2(&bh1749nuc,mutex);
-
-Thread thread("Thd1",1024*2,1);
-Thread thread1("Thd1",1024*2,1);
+String beacon_properties::path="/beacon_properties";
 
 String DeviceInfo::BoardID="";
 String DeviceInfo::Family="k49a";
 OLEDScreen<12> oled(Heltec.display);
 TracePrinter tracePrinter;
-//Test t;
+
 MQTTNetwork mqttNetwork;
 LoRaNetwork loRaNetwork;
 
@@ -129,38 +119,51 @@ void setup() {
   DeviceInfo::BoardID = String(mac_address.substr(mac_address.length()-4,4).c_str());
   platform_debug::PlatformDebug::println("DeviceInfo::BoardID:"+DeviceInfo::BoardID);
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+  
+  if(FFatHelper::init()){
+      platform_debug::PlatformDebug::println("FFat Mount OK");
+  }else{
+     platform_debug::PlatformDebug::println("FFat Mount Failed");
+  }
+
+  String text ="";
+  if(!FFatHelper::readFile(FFat,beacon_properties::path,text)){
+      text="{\"beacons\":[{\"15BC\":\"a\"},{\"15E8\":\"b\"},{\"1570\":\"c\"},{\"16BC\":\"d\"}]}";
+  }
+
 
   //timeMachine.startup();
   //timeMachine.setEpoch(1614764209+8*60*60);
 
   //colorSensor.startup();
-
+  /*
   loRaNetwork.addOnMessageCallback(callback(&loRaGateway,&LoRaGateway::onMessageLoRaCallback));
+  loRaGateway.setupBeacons(text);
   loRaGateway.startup();
- 
-  loRaNetwork.addOnMessageCallback(callback(&loRaCollector,&LoRaCollector::onMessageLoRaCallback));
-  loRaCollector.startup();
-  
-  //loRaNetwork.addOnMessageCallback(callback(&loRaBeacon,&LoRaBeacon::onMessageLoRaCallback));
-  //loRaBeacon.startup();
- ///*
   mqttNetwork.addTopics(loRaGateway.getTopics());
   mqttNetwork.addOnMessageCallback(callback(&loRaGateway,&LoRaGateway::onMessageMqttCallback));
   mqttNetwork.addOnMqttConnectCallback(callback(&loRaGateway,&LoRaGateway::onMqttConnectCallback));
   mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaGateway,&LoRaGateway::onMqttDisconnectCallback));
-  // */
- ///*
+ // */
+
+///*
+  loRaNetwork.addOnMessageCallback(callback(&loRaCollector,&LoRaCollector::onMessageLoRaCallback));
+  loRaCollector.setupBeacons(text);
+  loRaCollector.startup();
   mqttNetwork.addTopics(loRaCollector.getTopics());
   mqttNetwork.addOnMessageCallback(callback(&loRaCollector,&LoRaCollector::onMessageMqttCallback));
   mqttNetwork.addOnMqttConnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttConnectCallback));
   mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttDisconnectCallback));
-  //*/
+ // */
+
   /*
+  loRaNetwork.addOnMessageCallback(callback(&loRaBeacon,&LoRaBeacon::onMessageLoRaCallback));
+  loRaBeacon.startup();
   mqttNetwork.addTopics(loRaBeacon.getTopics());
   mqttNetwork.addOnMessageCallback(callback(&loRaBeacon,&LoRaBeacon::onMessageMqttCallback));
   mqttNetwork.addOnMqttConnectCallback(callback(&loRaBeacon,&LoRaBeacon::onMqttConnectCallback));
   mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaBeacon,&LoRaBeacon::onMqttDisconnectCallback));
-  */
+  //*/
   
   mqttNetwork.startup();
   loRaNetwork.startup();

@@ -9,9 +9,14 @@
 
 namespace platform_debug
 {
+
+struct beacon_properties{
+    static String path;
+};
+/*
 struct Builder {
         
-};
+};*/
 struct IPSProtocol
 {
     IPSProtocol(){

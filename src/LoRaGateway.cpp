@@ -4,10 +4,10 @@ void LoRaGateway::startup()
 {
     _topicCommandResponse = DeviceInfo::Family+ String("/command/response/GW");
     _topicCommandRequest = DeviceInfo::Family+ String("/command/request/GW");
-    _topicTimeout = DeviceInfo::Family+String("/send_timeout/#");
+   // _topicTimeout = DeviceInfo::Family+String("/send_timeout/#");
 
     _topics.push_back(_topicCommandRequest);
-    _topics.push_back(_topicTimeout);
+    //_topics.push_back(_topicTimeout);
     _threadMqttService.start(callback(this,&LoRaGateway::run_mqtt_service));
     _threadLoraService.start(callback(this,&LoRaGateway::run_lora_service));
 }
@@ -35,7 +35,11 @@ void LoRaGateway::run_mqtt_service()
                                 platform_debug::TracePrinter::printTrace("[GW]MQTT:beaconID:"+String(p.key().c_str()));
                             }
                         }
-                           
+                        if(FFatHelper::writeFile(FFat,beacon_properties::path,doc.as<String>())){
+                            platform_debug::TracePrinter::printTrace("[GW]MQTT:W:beacons:OK");
+                        }else{
+                            platform_debug::TracePrinter::printTrace("[GW]MQTT:W:beacons:ERROR");
+                        }
                     }else if(doc.containsKey("tags")){
                         _mapTagLocation.clear();
                         for(auto v :doc["tags"].as<JsonArray>()){
@@ -53,6 +57,7 @@ void LoRaGateway::run_mqtt_service()
                         _IPSProtocol.mode       = doc["mode"].as<String>();
                            
                     }else if(doc.containsKey("cmd")){
+                        
                             // if(doc.containsKey("cmd")&&doc.containsKey("tagID")){
                                 String tagID = doc["tagID"].as<String>();
                                 String cmd = doc["cmd"].as<String>();
@@ -96,7 +101,7 @@ void LoRaGateway::onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reaso
 }
 void LoRaGateway::onMessageMqttCallback(const String& topic,const String& payload)
 {
-    _topicMatch.clear();
+   /* _topicMatch.clear();
     StringHelper::split(_topicMatch,topic.c_str(),"/");
     if(_topicMatch.size() == 4 && _topicMatch[3]=="GW"){
         mqtt::mail_t *mail =  _mail_box_mqtt.alloc();
@@ -112,7 +117,13 @@ void LoRaGateway::onMessageMqttCallback(const String& topic,const String& payloa
             mail->payload = payload;
             _mail_box_mqtt.put(mail) ;
         }
-    }
+    }*/
+    mqtt::mail_t *mail =  _mail_box_mqtt.alloc();
+        if(mail!=NULL){
+            mail->topic = topic;
+            mail->payload = payload;
+            _mail_box_mqtt.put(mail) ;
+        }
 }
 
 
