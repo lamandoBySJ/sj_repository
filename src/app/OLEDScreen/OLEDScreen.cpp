@@ -22,18 +22,21 @@ bool OLEDScreen<N>::init(){
   if(!display->init()){
     return false;
   }
-      #if !defined(NDEBUG)
+  #if !defined(NDEBUG)
       display->flipScreenVertically();
       display->setFont(ArialMT_Plain_10);
       display->drawString(0, 0, "OLED initial done!");
       display->display();
-      #endif
+  #endif
   return true;
 }
 template<int N>
 OLEDScreen<N>::~OLEDScreen()
 {
+  if(display){
     delete display;
+    display=nullptr;
+  }
 }
 template<int N>
 void OLEDScreen<N>::logo(){
@@ -76,21 +79,52 @@ void OLEDScreen<N>::println(const String& data)
  //   println();
 //  #endif
 }
-
-
 */
+
 template<int N> 
-void OLEDScreen<N>::printf(const char* data)
+size_t OLEDScreen<N>::printf(const char *format, ...) 
 {
 #if !defined(NDEBUG)
-    print(String(data));
+    char loc_buf[64];
+    char * temp = loc_buf;
+    va_list arg;
+    va_list copy;
+    va_start(arg, format);
+    va_copy(copy, arg);
+    int len = vsnprintf(temp, sizeof(loc_buf), format, copy);
+    va_end(copy);
+    if(len < 0) {
+        va_end(arg);
+        return 0;
+    };
+    if(len >= sizeof(loc_buf)){
+        temp = (char*) malloc(len+1);
+        if(temp == NULL) {
+            va_end(arg);
+            return 0;
+        }
+        len = vsnprintf(temp, len+1, format, arg);
+    }
+    va_end(arg);
+    //len = write((uint8_t*)temp, len);
+    print(temp);
+    if(temp != loc_buf){
+        free(temp);
+    }
+    return len;
+    
+#else
+    return 0;
 #endif
 }
 template<int N> 
-void OLEDScreen<N>::println(const String& s)
+size_t OLEDScreen<N>::println(const String& s)
 {
 #if !defined(NDEBUG)
     print(s+String("\n"));
+    return 0;
+#else
+    return 0;
 #endif
 }
 template<int N>
@@ -263,6 +297,10 @@ void OLEDScreen<N>::printScreen(const char* data)
     #endif
 }
 
+
+template class OLEDScreen<12>;
+
+/*
 template<int N>
 void OLEDScreen<N>::screenPrint(const char* data)
 {
@@ -328,9 +366,6 @@ void OLEDScreen<N>::screenPrint(const char* data)
 
     #endif
 }
-template class OLEDScreen<12>;
-
-/*
 OLEDScreen* OLEDScreen::getTerminal()
 {
   if( xSemaphoreTake(OLEDScreen:: xSemaphore, ( TickType_t ) portMAX_DELAY) == pdTRUE ){

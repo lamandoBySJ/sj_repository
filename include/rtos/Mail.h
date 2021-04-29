@@ -111,7 +111,7 @@ public:
      * @note If blocking is required, use Mail::try_alloc_for or Mail::try_alloc_until
      * @deprecated Replaced with try_alloc. In future alloc() will be an untimed blocking call.
      */
-    MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Replaced with try_alloc. In future alloc() will be an untimed blocking call.")
+    //MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Replaced with try_alloc. In future alloc() will be an untimed blocking call.")
     T *alloc(MBED_UNUSED uint32_t millisec = 0)
     {
         return try_alloc();
@@ -157,7 +157,7 @@ public:
      * @note You may call this function from ISR context if the millisec parameter is set to 0.
      * @deprecated Pass a chrono duration, not an integer millisecond count. For example use `5s` rather than `5000`.
      */
-    MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Pass a chrono duration, not an integer millisecond count. For example use `5s` rather than `5000`.")
+    //MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Pass a chrono duration, not an integer millisecond count. For example use `5s` rather than `5000`.")
     T *alloc_for(uint32_t millisec)
     {
         return try_alloc_for(std::chrono::duration<uint32_t, std::milli>(millisec));
@@ -332,7 +332,7 @@ public:
      * @note You may call this function from ISR context if the millisec parameter is set to 0.
      * @deprecated Replaced with try_get and try_get_for. In future get will be an untimed blocking call.
      */
-    MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Replaced with try_get and try_get_for. In future get will be an untimed blocking call.")
+    //MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Replaced with try_get and try_get_for. In future get will be an untimed blocking call.")
     osEvent get(uint32_t millisec = osWaitForever)
     {
         osEvent evt = _queue.get(millisec);

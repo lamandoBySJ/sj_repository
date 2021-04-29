@@ -110,7 +110,7 @@ uint32_t flags_wait_any(uint32_t flags, bool clear = true);
   @see Thread::flags_set
   @deprecated Pass a chrono duration, not an integer millisecond count. For example use `5s` rather than `5000`.
 */
-MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Pass a chrono duration, not an integer millisecond count. For example use `5s` rather than `5000`.")
+//MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Pass a chrono duration, not an integer millisecond count. For example use `5s` rather than `5000`.")
 uint32_t flags_wait_all_for(uint32_t flags, uint32_t millisec, bool clear = true);
 
 /** Wait for all of the specified Thread Flags to become signaled for the current thread.
@@ -137,7 +137,7 @@ uint32_t flags_wait_all_for(uint32_t flags, Kernel::Clock::duration_u32 rel_time
   @deprecated Pass a chrono time_point, not an integer millisecond count. For example use `Kernel::Clock::now() + 5s`
               rather than `Kernel::get_ms_count() + 5000`.
 */
-MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Pass a chrono time_point, not an integer millisecond count. For example use `Kernel::Clock::now() + 5s` rather than `Kernel::get_ms_count() + 5000`.")
+//MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Pass a chrono time_point, not an integer millisecond count. For example use `Kernel::Clock::now() + 5s` rather than `Kernel::get_ms_count() + 5000`.")
 uint32_t flags_wait_all_until(uint32_t flags, uint64_t millisec, bool clear = true);
 
 /** Wait for all of the specified Thread Flags to become signaled for the current thread.
@@ -163,7 +163,7 @@ uint32_t flags_wait_all_until(uint32_t flags, Kernel::Clock::time_point abs_time
   @see Thread::flags_set
   @deprecated Pass a chrono duration, not an integer millisecond count. For example use `5s` rather than `5000`.
 */
-MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Pass a chrono duration, not an integer millisecond count. For example use `5s` rather than `5000`.")
+//MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Pass a chrono duration, not an integer millisecond count. For example use `5s` rather than `5000`.")
 uint32_t flags_wait_any_for(uint32_t flags, uint32_t millisec, bool clear = true);
 
 /** Wait for any of the specified Thread Flags to become signaled for the current thread.
@@ -190,7 +190,7 @@ uint32_t flags_wait_any_for(uint32_t flags, Kernel::Clock::duration_u32 rel_time
   @deprecated Pass a chrono time_point, not an integer millisecond count. For example use `Kernel::Clock::now() + 5s`
               rather than `Kernel::get_ms_count() + 5000`.
 */
-MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Pass a chrono time_point, not an integer millisecond count. For example use `Kernel::Clock::now() + 5s` rather than `Kernel::get_ms_count() + 5000`.")
+//MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Pass a chrono time_point, not an integer millisecond count. For example use `Kernel::Clock::now() + 5s` rather than `Kernel::get_ms_count() + 5000`.")
 uint32_t flags_wait_any_until(uint32_t flags, uint64_t millisec, bool clear = true);
 
 /** Wait for any of the specified Thread Flags to become signaled for the current thread.
@@ -213,7 +213,7 @@ uint32_t flags_wait_any_until(uint32_t flags, Kernel::Clock::time_point abs_time
   @note The equivalent functionality is accessible in C via thread_sleep_for.
   @deprecated Pass a chrono duration, not an integer millisecond count. For example use `5s` rather than `5000`.
 */
-MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Pass a chrono duration, not an integer millisecond count. For example use `5s` rather than `5000`.")
+//MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Pass a chrono duration, not an integer millisecond count. For example use `5s` rather than `5000`.")
 void sleep_for(uint32_t millisec);
 
 /** Sleep for a specified time period:
@@ -234,7 +234,7 @@ void sleep_for(Kernel::Clock::duration_u32 rel_time);
   @deprecated Pass a chrono time_point, not an integer millisecond count. For example use
               `Kernel::Clock::now() + 5s` rather than `Kernel::get_ms_count() + 5000`.
 */
-MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Pass a chrono time_point, not an integer millisecond count. For example use `Kernel::Clock::now() + 5s` rather than `Kernel::get_ms_count() + 5000`.")
+//MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Pass a chrono time_point, not an integer millisecond count. For example use `Kernel::Clock::now() + 5s` rather than `Kernel::get_ms_count() + 5000`.")
 void sleep_until(uint64_t millisec);
 
 /** Sleep until a specified time in millisec

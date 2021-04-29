@@ -14,13 +14,13 @@ int32_t ColorSensor<T>::thunk_read_reg(void *thread_ptr)
 */
 
 template<typename T>
-ColorSensor<T>::ColorSensor(T& als,rtos::Mutex& mutex):_colorSensor(als),_mutex(mutex)
+ColorSensor<T>::ColorSensor(T& als,std::mutex& mutex):_colorSensor(als),_mtx(mutex)
 {
     _rst = 0;
 }
 
 template<typename T>
-ColorSensor<T>::ColorSensor(T& als,rtos::Mutex& mutex,uint8_t rst):_colorSensor(als),_mutex(mutex)
+ColorSensor<T>::ColorSensor(T& als,std::mutex& mutex,uint8_t rst):_colorSensor(als),_mtx(mutex)
 {
     _rst = rst;
 }
@@ -37,9 +37,10 @@ void ColorSensor<T>::startup(bool pwrEnable)
     ptrFuns[1]= &T::green_data_get;
     ptrFuns[2]= &T::blue_data_get;
     ptrFuns[3]= &T::ir_data_get;
+   std::unique_lock<std::mutex> _mutex(_mtx, std::defer_lock);
      _mutex.lock();
     bool cuccess =  _colorSensor.begin();
-    _mutex.unlock();
+    
 
     if(cuccess){
        digitalWrite(5,HIGH);
@@ -60,31 +61,25 @@ void ColorSensor<T>::measurementModeInactive()
 }
 
 template<typename T>
-bool ColorSensor<T>::getRGB(std::array<uint16_t,4>& data)
+bool ColorSensor<T>::getRGB(RGB& rgb)
 {
   int timeout=3000;
-  
-  do{
-       _mutex.lock();
-       _colorSensor.mode_control2_get(&_mode_control2.reg);
-        _mutex.unlock();
+ std::unique_lock<std::mutex> _mutex(_mtx, std::defer_lock);
 
+  _mutex.lock();
+  do{
+       _colorSensor.mode_control2_get(&_mode_control2.reg);
        if(--timeout==0){
          return false;
        }
        delay(1);
-       
-    } while (!_mode_control2.bitfield.valid);
- 
+  } while (!_mode_control2.bitfield.valid);
 
-  auto ptr = data.begin();
-  return std::all_of(ptrFuns.begin(),ptrFuns.end(),[&] (callbackFun& p){
-    _mutex.lock();
-    bool result = (_colorSensor.*p)(*ptr);
-    ptr++;
-    _mutex.unlock();
-    return result;
-  });
+ return (_colorSensor.*ptrFuns[0])(rgb.R) &&
+  (_colorSensor.*ptrFuns[1])(rgb.G)&&
+  (_colorSensor.*ptrFuns[2])(rgb.B)&&
+  (_colorSensor.*ptrFuns[3])(rgb.IR);
+
 }
 /*
 template<>

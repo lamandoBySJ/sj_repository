@@ -5,6 +5,7 @@
 #include <Wire.h>
 #include <ColorSensorBase.h>
 #include <BH1749NUC_REG/bh1749nuc_reg.h>
+#include <array>
 //#include <platform/mbed_debug.h>
 //#include <cxxsupport/mstd_type_traits.h>
 
@@ -39,6 +40,8 @@ public:
         this->_scl=scl;
         this->_frequency =frequency;
         this->_device_address = 0x39;
+        _data[0]=0;
+        _data[1] =1;
     }
     ~BH1749NUC();
     bool begin() override;
@@ -64,16 +67,16 @@ public:
     bool mode_control2_set(uint8_t val);
     bool mode_control2_get(uint8_t *val);
    
-    bool red_data_get(uint16_t& data);
-    bool green_data_get(uint16_t& data);
-    bool blue_data_get(uint16_t& data);
-    bool ir_data_get(uint16_t& data);  
+    bool red_data_get(rgb1bit16_t& rgb);
+    bool green_data_get(rgb1bit16_t& rgb);
+    bool blue_data_get(rgb1bit16_t& rgb);
+    bool ir_data_get(rgb1bit16_t& rgb);  
     //bool data_get(uint16_t& data);
 
 private:
     bool platform_write(uint8_t reg_address, uint8_t* data,uint8_t len);
     bool platform_read(uint8_t reg_address, uint8_t* data,uint8_t len);
-
+    std::array<char,2> _data;
     TwoWire& _wire;
     byte _facturerId;
     uint8_t _sda;

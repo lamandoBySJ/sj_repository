@@ -5,33 +5,38 @@
 #include "rtos/rtos.h"
 #include "Wire.h"
 #include <BH1749NUC.h>
+#include "BH1749NUC_REG/bh1749nuc_reg.h"
 #include <ColorSensorBase.h>
 #include <cxxsupport/mstd_type_traits.h>
 #include "platform_debug.h"
+#include <mutex>
 using namespace platform_debug;
 using namespace rtos;
-
+struct RGB
+{
+    rgb1bit16_t R;
+    rgb1bit16_t G;
+    rgb1bit16_t B;
+    rgb1bit16_t IR;
+};
 template<typename T>
 class ColorSensor 
 {
 public:
     ColorSensor()=delete;
-    ColorSensor(T&,rtos::Mutex& mutex);
-    ColorSensor(T&,rtos::Mutex& mutex,uint8_t rst);
+    ColorSensor(T&,std::mutex& mutex);
+    ColorSensor(T&,std::mutex& mutex,uint8_t rst);
     ~ColorSensor()=default;
     void startup(bool pwrEnable=true);
-    bool getRGB(std::array<uint16_t,4>& data);
-    using callbackFun=bool(T::*)(uint16_t& value);
-
+    bool getRGB(RGB& rgb);
     void measurementModeActive();
     void measurementModeInactive();
 private:
     T& _colorSensor;
-    rtos::Mutex& _mutex;
+    std::mutex& _mtx;
     uint8_t _rst;
+    using callbackFun=bool(T::*)(rgb1bit16_t& value);
     std::array<callbackFun, 4> ptrFuns;
-    std::array<uint16_t,4> _data;
-
     bh1749nuc_mode_control2_t _mode_control2;
 };
 
