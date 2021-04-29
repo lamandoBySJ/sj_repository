@@ -15,6 +15,8 @@ extern "C" {
 #include "esp_sleep.h"
 #include <mutex>
 #include <thread>
+#include "rtos/Queue.h"
+#include "rtos/MemoryPool.h"
 
 using namespace std;
 using namespace mstd;
@@ -107,7 +109,6 @@ void setup() {
   }
 
   platform_debug::DeviceInfo::BoardID = String(mac_address.substr(mac_address.length()-4,4).c_str());
-  
 
 }
 
