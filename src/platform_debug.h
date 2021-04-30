@@ -5,6 +5,8 @@
 #include "app/OLEDScreen/OLEDScreen.h"
 #include "platform/Callback.h"
 #include <stddef.h>
+#include <mutex>
+#include <stdarg.h>
 //#define NDEBUG
 
 namespace platform_debug
@@ -240,31 +242,56 @@ public:
         //vTaskDelete(NULL);
         #endif
     }
-    static inline  void printTrace(const char* e)
+    
+    static inline  void printfTrace(const char* format,...)
     {
         #if !defined(NDEBUG)
-        TracePrinter::printTrace(String(e));
+        char loc_buf[64];
+        char * temp = loc_buf;
+        va_list arg;
+        va_list copy;
+
+        va_start(arg, format);
+        va_copy(copy, arg);
+        int len = vsnprintf(temp, sizeof(loc_buf), format, copy);
+        va_end(copy);
+        if(len < 0) {
+            printTrace(String(temp));
+            va_end(arg);
+            return;
+        };
+        if(len >= sizeof(loc_buf)){
+            temp = (char*) malloc(len+1);
+            if(temp == NULL) {
+                va_end(arg);
+                return;
+            }
+            len = vsnprintf(temp, len+1, format, arg);
+        }
+        va_end(arg);
+       // len = write((uint8_t*)temp, len);
+        printTrace(String(temp));
         #endif
     }
-
+    
     static inline void printTrace(const String& e)
     {
         #if !defined(NDEBUG)
-        _tracePrinter->std_trace_mutex.lock();
+        std::unique_lock<std::mutex> _mutex(_mtx, std::defer_lock);
+        _mutex.lock();
         mail_trace_t *mail = _tracePrinter->_mail_box.alloc();
-        mail->log =DeviceInfo::BoardID+String(":")+ String(e);
+        mail->log = e;
         _tracePrinter->_mail_box.put(mail) ;
-        _tracePrinter->std_trace_mutex.unlock();
         #endif
     }
-
+    
 private:
     
     #if !defined(NDEBUG)
     static TracePrinter* _tracePrinter;
     rtos::Mail<mail_trace_t, 64> _mail_box;
     Thread _thread;
-    static rtos::Mutex std_trace_mutex;
+    static std::mutex _mtx;
     #endif
 };
 //std::vector<Callback<void(const char*)>>  PlatformDebug::_debug;

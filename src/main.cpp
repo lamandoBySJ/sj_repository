@@ -45,6 +45,8 @@ extern "C" {
 #include "FS.h"
 #include "FFat.h"
 #include "FFatHelper.h"
+#include "ESPwebServer.h"
+#include "RGBCollector.h"
 
 using namespace std;
 using namespace mstd;
@@ -59,14 +61,28 @@ using namespace platform_debug;
 #define ARDUINO_RUNNING_CORE 1
 #endif
 #endif
-
 //python3 esptool.py --port COM20 --baud 115200 write_flash -fm dio -fs 16MB  0x410000 partitions.bin
 //C:\Users\Administrator\.platformio\packages\framework-arduinoespressif32\tools\partitions
+String rgb_properties::path ="/als_constant";
+uint16_t rgb_properties::r_offset = 0;
+uint16_t rgb_properties::g_offset = 0;
+uint16_t rgb_properties::b_offset = 0;
+String user_properties::path = "/user_constant";
+String user_properties::ssid = "IoTwlan";
+String user_properties::pass = "mitac1993";
+String user_properties::host = "mslmqtt.mic.com.cn";
+int    user_properties::port = 1883;
 
-std::mutex mtx;           // mutex for critical section
-rtos::Mutex std_mutex;
-//DS1307 ds1307(Wire1,21,22); //stlb
-DS1307 ds1307(Wire1,32,33); //ips
+
+String web_properties::ap_ssid="";
+String web_properties::ap_pass="Aa000000";
+String web_properties::http_user="admin";
+String web_properties::http_pass="admin";
+String web_properties::server_upload_uri = "<form method='POST' action='/upload' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>";
+// mutex for critical section
+std::mutex mtx; 
+DS1307 ds1307(Wire1,21,22); //stlb
+//DS1307 ds1307(Wire1,32,33); //ips
 TimeMachine<DS1307> timeMachine(ds1307,mtx,13);  
 //TimeMachine<RTCBase> timeMachine(&RTC,std_mutex);
 
@@ -76,14 +92,20 @@ ColorSensor<BH1749NUC> colorSensor(bh1749nuc,mtx,2);
 
 String DeviceInfo::BoardID="";
 String DeviceInfo::Family="k49a";
-OLEDScreen<12> oled(Heltec.display);
+//OLEDScreen<12> oled(Heltec.display);
 TracePrinter tracePrinter;
-MQTTNetwork mqttNetwork;
+MQTTNetwork MQTTnetwork;
 //Test t;
 using namespace thread_test;
 using namespace esp32_http_update;
 //#define OLEDSCREEN 1
 bool update = false;
+bool  web_update= false;
+DynamicJsonDocument  docProperties(1024);
+ESPWebServer ESPwebServer;
+
+RGBCollector<BH1749NUC> RGBcollector(MQTTnetwork,colorSensor);
+OLEDScreen<12> oled(Heltec.display);
 void setup() {
  // put your setup code here, to run once:
   //WIFI Kit series V1 not support Vext control
@@ -129,12 +151,19 @@ void setup() {
   //PlatformDebug::init(Serial);
   //PlatformDebug::init(Serial,oled);
   //PlatformDebug::init(oled);
+  //PlatformDebug::init(std::move(oled));
   //PlatformDebug::init(OLEDScreen<12>(Heltec.display));
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
   platform_debug::PlatformDebug::println(" ************ IPS ************ ");
+
+  //int Maxint = numeric_limits<int32_t>::max();
+  //int Minint = numeric_limits<int32_t>::min();
+  //platform_debug::PlatformDebug::println(" ************ Max ************ "+String(Maxint,DEC));
+  //platform_debug::PlatformDebug::println(" ************ Min ************ "+String(Minint,DEC));
   pinMode(0, PULLUP);
   attachInterrupt(0,[]()->void{
-      update = true;
+      //update = true;
+      web_update = true;
   },FALLING);
   
   tracePrinter.startup();
@@ -150,31 +179,11 @@ void setup() {
         pos= mac_address.find(mark);
     }
   }
+  web_properties::ap_ssid = String(WiFi.macAddress().c_str());
 
   platform_debug::DeviceInfo::BoardID = String(mac_address.substr(mac_address.length()-4,4).c_str());
   platform_debug::PlatformDebug::println("DeviceInfo::BoardID:"+platform_debug::DeviceInfo::BoardID);
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-
-
-  timeMachine.startup();
-  //timeMachine.setEpoch(1614764209+8*60*60);
- // colorSensor.startup();
-  //mqttNetwork.addTopics(loRaCollector.getTopics());
-  //mqttNetwork.addOnMessageCallback(callback(&loRaCollector,&LoRaCollector::onMessageMqttCallback));
-  //mqttNetwork.addOnMqttConnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttConnectCallback));
-  //mqttNetwork.addOnMqttDisonnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttDisconnectCallback));
-  
-  mqttNetwork.startup();
-
-  //std::thread threads[2];
-  //threads[0]= std::thread(print_thread_id_test, 1);
-  //threads[1]= std::thread(print_thread_id_test2, 2);
-
-  // test_unique_lock_cd();
- 
-  // while(1){  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));};
-  platform_debug::PlatformDebug::println(">>>>>>>>>>>>>>>> Setup over >>>>>>>>>>>>>>>>>>");
-  
 
   if(FFatHelper::init()){
       platform_debug::PlatformDebug::println("OK:File system mounted");
@@ -182,11 +191,81 @@ void setup() {
       platform_debug::PlatformDebug::println("ERROR:File system:");
   }
 
-  platform_debug::PlatformDebug::println("---------------- "+String(__TIME__)+" ----------------");
+  //FFatHelper::deleteFiles(FFat, "/", 0);
+  FFatHelper::listDir(FFat, "/", 0);
+  if(!FFatHelper::exists("/TowerColor")){
+      FFatHelper::createDir(FFat,"/TowerColor");
+      platform_debug::PlatformDebug::println("Dir created:/TowerColor");
+  }
+  if(!FFatHelper::exists("/data")){
+      FFatHelper::createDir(FFat,"/data");
+      platform_debug::PlatformDebug::println("Dir created:/data");
+  }
+  String text;
+  if(FFatHelper::readFile(FFat,user_properties::path,text)){
+      platform_debug::PlatformDebug::println(text); 
+      DeserializationError error = deserializeJson(docProperties, text);
+      if(!error){
+          user_properties::ssid =  docProperties["ssid"].as<String>();
+          user_properties::pass =  docProperties["pass"].as<String>();
+          user_properties::host =  docProperties["host"].as<String>();
+          user_properties::port =  docProperties["port"].as<int>();
+          platform_debug::PlatformDebug::println("user_properties::ssid:"+user_properties::ssid);
+          platform_debug::PlatformDebug::println("user_properties::pass:"+user_properties::pass);
+          platform_debug::PlatformDebug::println("user_properties::host:"+user_properties::host);
+          platform_debug::PlatformDebug::println("user_properties::port:"+String(user_properties::port,DEC));
+      }
+  }else{
+    docProperties.clear();
+    docProperties["ssid"] = user_properties::ssid;
+    docProperties["pass"] = user_properties::pass;
+    docProperties["host"] = user_properties::host;
+    docProperties["port"] = user_properties::port;
+    FFatHelper::writeFile(FFat,user_properties::path,docProperties.as<String>());
+  }
+
+  if(FFatHelper::readFile(FFat,rgb_properties::path,text)){
+      DeserializationError error= deserializeJson(docProperties, text);
+      if(!error){
+          rgb_properties::r_offset =  docProperties["r_offset"].as<uint16_t>();
+          rgb_properties::g_offset =  docProperties["g_offset"].as<uint16_t>();
+          rgb_properties::b_offset =  docProperties["b_offset"].as<uint16_t>();
+          platform_debug::PlatformDebug::println("rgb_properties::r_offset:"+String(rgb_properties::r_offset));
+          platform_debug::PlatformDebug::println("rgb_properties::g_offset:"+String(rgb_properties::g_offset));
+          platform_debug::PlatformDebug::println("rgb_properties::b_offset:"+String(rgb_properties::b_offset));
+      }
+  }else{
+      docProperties.clear();
+      docProperties["r_offset"] = rgb_properties::r_offset;
+      docProperties["g_offset"] = rgb_properties::g_offset;
+      docProperties["b_offset"] = rgb_properties::b_offset;
+      FFatHelper::writeFile(FFat,rgb_properties::path,docProperties.as<String>());
+  }
+  
+  timeMachine.startup(true,__DATE__,__TIME__);
+  //timeMachine.setEpoch(1614764209+8*60*60);
+  colorSensor.startup();
+  // MQTTnetwork.addTopic("web");
+  // MQTTnetwork.addOnMessageCallback(callback(&loRaCollector,&LoRaCollector::onMessageMqttCallback));
+  // MQTTnetwork.addOnMqttConnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttConnectCallback));
+  // MQTTnetwork.addOnMqttDisonnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttDisconnectCallback));
+  //MQTTnetwork.startup();
+  //std::thread threads[2];
+  //threads[0]= std::thread(print_thread_id_test, 1);
+  //threads[1]= std::thread(print_thread_id_test2, 2);
+  // test_unique_lock_cd();
+  ESPwebServer.setCallbackPostMailToCollector(callback(&RGBcollector,&RGBCollector<BH1749NUC>::delegateMethodPostMail));
+  RGBcollector.setWebSocketClientEventCallback(callback(&ESPwebServer,&ESPWebServer::delegateMethodWebSocketClientPostEvent));
+  RGBcollector.setWebSocketClientTextCallback(callback(&ESPwebServer,&ESPWebServer::delegateMethodWebSocketClientText));
+  RGBcollector.startup();
+  ESPwebServer.startup();
+ // while(1){  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));};
+  platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
 }
 
 RGB rgb;
 static String currentTime="";
+
 void loop() {
 
   while (true) {
@@ -196,7 +275,8 @@ void loop() {
         platform_debug::PlatformDebug::println("ERROR:currentTime");
     }
     
-     if(update){
+    if(update){
+
        platform_debug::PlatformDebug::println("Start:OTA...");
        esp32_http_update::t_httpUpdate_return ret =  esp32_http_update::ESPhttpUpdate.update("http://192.168.1.100/bin/firmware.bin");
 
@@ -214,10 +294,19 @@ void loop() {
                 break;
         }
      }
-    std::this_thread::sleep_for(chrono::seconds(3));
+     
+   // RGBcollector.delegateMethodPostMail(MeasEventType::EventSystemMeasure);
+    std::this_thread::sleep_for(chrono::seconds(10));
     //ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));
+    
   }
 }
-
+/*
+if(web_update){
+       web_update =false;
+       if(!ESPwebServer.isRunning()) {
+         ESPwebServer.startup();
+       }
+     }*/
 
 

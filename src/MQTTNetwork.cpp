@@ -28,6 +28,7 @@ rtos::Mutex MQTTNetwork::_mutex;
 rtos::Mutex MQTTNetwork::std_mutex;
 IPAddress MQTTNetwork::MQTT_HOST(192, 168, 1, 133);
 uint16_t MQTTNetwork::MQTT_PORT =1883;
+
 const char* MQTTNetwork::WIFI_SSID="IPS";
 const char* MQTTNetwork::WIFI_PASSWORD="Aa000000";
 
@@ -230,6 +231,8 @@ void MQTTNetwork::startup(){
 
       _threadOnConnect.start(callback(this,&MQTTNetwork::run_mail_box_on_connect));
       _threadOnMessage.start(callback(this,&MQTTNetwork::run_mail_box));
+      WIFI_SSID = user_properties::ssid.c_str();
+      WIFI_PASSWORD = user_properties::pass.c_str();
       _connectToWifi();
      
 }

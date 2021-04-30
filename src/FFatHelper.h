@@ -15,6 +15,7 @@
 #include "FFat.h"
 #include <unordered_set>
 #include <mutex>
+#include "platform_debug.h" 
 
 using namespace std;
 
@@ -26,19 +27,22 @@ public:
     
     static bool init();
     static bool exists(String path);
-    static bool listDir(fs::FS &fs, const char * dirname, uint8_t levels,std::unordered_set<std::string>& dir_set,std::unordered_set<std::string>& file_set);
+    static bool listDir(fs::FS &fs,  const String& , uint8_t levels);
+    static bool deleteFiles(fs::FS &fs,  const String& , uint8_t levels);
    // static bool listDir(fs::FS &fs, const char * dirname, uint8_t levels,std::unordered_set<String>& dir_set,std::unordered_set<String>& file_set);
-    static bool createDir(fs::FS &fs, const char * path);
+    static bool createDir(fs::FS &fs, const String& );
 
-    static bool removeDir(fs::FS &fs, const char * path);
+    static bool removeDir(fs::FS &fs,  const String&  path);
     static bool readFile(fs::FS &fs,const  String& path,String& text);
     static bool writeFile(fs::FS &fs,const  String& path,const String& message);
+    static bool writeFile(fs::FS &fs,const String& path,const uint8_t * text,size_t len);
     static bool appendFile(fs::FS &fs, const String& path, const String& text);
-   
-    static bool renameFile(fs::FS &fs, const char * path1, const char * path2);
-    static bool deleteFile(fs::FS &fs, const char * path);
+   static bool appendFile(fs::FS &fs,const String& path,const uint8_t * text,size_t len);
+
+    static bool renameFile(fs::FS &fs, const String&  path1, const String&  path2);
+    static bool deleteFile(fs::FS &fs,  const String&  path);
     
-     static bool isDirectory(fs::FS &fs, const char * path);
+     static bool isDirectory(fs::FS &fs,  const String&  path);
 private:
    static std::mutex _mtx;
 };

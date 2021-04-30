@@ -37,16 +37,16 @@ void ColorSensor<T>::startup(bool pwrEnable)
     ptrFuns[1]= &T::green_data_get;
     ptrFuns[2]= &T::blue_data_get;
     ptrFuns[3]= &T::ir_data_get;
-   std::unique_lock<std::mutex> _mutex(_mtx, std::defer_lock);
-     _mutex.lock();
+    std::unique_lock<std::mutex> _mutex(_mtx, std::defer_lock);
+    _mutex.lock();
     bool cuccess =  _colorSensor.begin();
     
-
     if(cuccess){
-       digitalWrite(5,HIGH);
-       return;
+      digitalWrite(5,HIGH);
+    }else{
+      digitalWrite(5,LOW);
     }
-    platform_debug::TracePrinter::printTrace(String("ALS:ERROR")+String(__FILE__)+String(":")+String(__LINE__));
+    platform_debug::TracePrinter::printTrace(String("ColorSensor:")+String(cuccess ? "OK":"ERROR:"+String(__FILE__)+String(":")+String(__LINE__)));
 }
 
 template<typename T>
@@ -65,8 +65,8 @@ bool ColorSensor<T>::getRGB(RGB& rgb)
 {
   int timeout=3000;
  std::unique_lock<std::mutex> _mutex(_mtx, std::defer_lock);
-
   _mutex.lock();
+
   do{
        _colorSensor.mode_control2_get(&_mode_control2.reg);
        if(--timeout==0){
@@ -81,6 +81,7 @@ bool ColorSensor<T>::getRGB(RGB& rgb)
   (_colorSensor.*ptrFuns[3])(rgb.IR);
 
 }
+
 /*
 template<>
 class ColorSensor<ColorSensorBase>

@@ -7,5 +7,5 @@ rtos::Mutex  PlatformDebug::std_mutex;
 bool PlatformDebug::_finished=false;
 #if !defined(NDEBUG)
 TracePrinter* TracePrinter::_tracePrinter;
-rtos::Mutex TracePrinter::std_trace_mutex;
+std::mutex TracePrinter::_mtx;
 #endif

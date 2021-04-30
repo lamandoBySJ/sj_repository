@@ -40,8 +40,8 @@ public:
         this->_scl=scl;
         this->_frequency =frequency;
         this->_device_address = 0x39;
-        _data[0]=0;
-        _data[1] =1;
+        _data[0] = 0;
+        _data[1] = 1;
     }
     ~BH1749NUC();
     bool begin() override;

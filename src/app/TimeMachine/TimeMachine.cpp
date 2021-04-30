@@ -13,7 +13,7 @@ TimeMachine<RTC>::TimeMachine(RTC& rtc,std::mutex& mutex,uint8_t rst):_rtc(rtc),
 }
 
 template<typename RTC>
-void TimeMachine<RTC>::startup(bool pwrEnable)
+void TimeMachine<RTC>::startup(bool pwrEnable,const char* date,const  char* time)
  {
      
     if(pwrEnable){
@@ -29,7 +29,7 @@ void TimeMachine<RTC>::startup(bool pwrEnable)
      if(_rtc.isRunning()){
        _rtc.stopClock();
      }
-      _rtc.setDateTime(__DATE__,__TIME__);
+      _rtc.setDateTime(date,time);
      //_rtc.setEpoch(1610000000);
      _rtc.setHourMode(CLOCK_H24);
      _rtc.startClock();
@@ -37,8 +37,17 @@ void TimeMachine<RTC>::startup(bool pwrEnable)
 
     if(selftest()){
         digitalWrite(19,HIGH);
+    }else{
+        digitalWrite(19,LOW);
     }
     
+ }
+ template<typename RTC>
+ void TimeMachine<RTC>::setDateTime(const char* date,const  char* time)
+ {
+      std::unique_lock<std::mutex> _mutex(_mtx, std::defer_lock);
+     _mutex.lock();
+      _rtc.setDateTime(date,time);
  }
 
 template<typename RTC>

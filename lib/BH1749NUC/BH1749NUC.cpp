@@ -28,7 +28,7 @@ bool BH1749NUC::begin()
     _wire.endTransmission() ;
 
     byte whoamI= getManufacturerId();
-     
+
     if(whoamI == _facturerId){
         success=true;
         init(GainIR::X1, GainRGB::X1, MeasMode::Forbidden);
@@ -39,15 +39,17 @@ bool BH1749NUC::init(GainIR gain_ir,GainRGB gain_rgb,MeasMode meas_mode)
 {
     bh1749nuc_system_control_t system_control;
     system_control.bitfield.sw_reset=1;
+    system_control.bitfield.int_reset=1;
     system_control_set(system_control.reg);
-
+    delay(200);
     bh1749nuc_mode_control1_t mode_control1;
     mode_control1.bitfield.ir_gain=static_cast<uint8_t>(gain_ir);
     mode_control1.bitfield.rgb_gain=static_cast<uint8_t>(gain_rgb);
     mode_control1.bitfield.measurement_mode=static_cast<uint8_t>(meas_mode);
 
+ 
     mode_control1_set(mode_control1.reg);
-    //mode_control1_get(&mode_control1.reg);
+    mode_control1_get(&mode_control1.reg);
     return true;
 }
 
@@ -92,7 +94,7 @@ bool BH1749NUC::ir_gain_set(uint8_t val)
         uint8_t dummy;
         bool ret = platform_read(BH1749NUC_MODE_CONTROL1_REG_ADDR, &dummy, 1);
         if (true == ret ) {
-            ret =platform_write(BH1749NUC_MODE_CONTROL1_REG_ADDR, &(val), 1);
+         bool   ret =platform_write(BH1749NUC_MODE_CONTROL1_REG_ADDR, &(val), 1);
         }
     
         return ret;
@@ -108,15 +110,13 @@ bool BH1749NUC::rgb_gain_set(uint8_t val)
         uint8_t dummy;
         bool ret = platform_read(BH1749NUC_MODE_CONTROL1_REG_ADDR, &dummy, 1);
         if (true == ret) {
-            ret = platform_write(BH1749NUC_MODE_CONTROL1_REG_ADDR, &(val), 1);
+     bool       ret = platform_write(BH1749NUC_MODE_CONTROL1_REG_ADDR, &(val), 1);
         }
         return ret;
 }
 bool BH1749NUC::rgb_gain_get( uint8_t *val)
 {
         bool ret = platform_read( BH1749NUC_MODE_CONTROL1_REG_ADDR, val, 1);
-        //bh1749nuc_mode_control1_reg_t mode_control1_reg;
-       // *val=mode_control1_reg.rgb_gain;
         return ret;
 }
 
@@ -173,7 +173,7 @@ bool BH1749NUC::red_data_get(rgb1bit16_t& rgb)
         data=_reg_value.i16bit;
         return ret;
         */
-        return std::all_of(_data.begin(),_data.end(),[&] (char& index){
+    return std::all_of(_data.begin(),_data.end(),[&] (char& index){
         return platform_read(index==0?BH1749NUC_RED_DATA_L8BIT_REG_ADDR:BH1749NUC_RED_DATA_H8BIT_REG_ADDR, (uint8_t*)&rgb.u8bit[index], 1);
     });
 }

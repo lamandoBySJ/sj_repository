@@ -13,7 +13,13 @@
 #include <new>
 #include <vector>
 namespace mqtt
-{
+{    struct user_properties{
+        static String path;
+        static String ssid;
+        static String pass;
+        static String host;
+        static int   port;
+    };
 typedef struct {
     bool sessionPresent;  
 } mail_on_connect_t;
@@ -101,8 +107,6 @@ private:
     std::vector<Callback<void(bool)>>  _onMqttConnectCallbacks;
     std::vector<Callback<void(AsyncMqttClientDisconnectReason)>>  _onMqttDisconnectCallbacks;
     std::set<String>  _topics;
-    
-    
 };
 #endif
 /*

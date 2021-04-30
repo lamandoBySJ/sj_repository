@@ -12,12 +12,29 @@
 #include <mutex>
 using namespace platform_debug;
 using namespace rtos;
+
+struct rgb_properties
+{
+    static String path;
+    static uint16_t r_offset;
+    static uint16_t g_offset;
+    static uint16_t b_offset;
+};
 struct RGB
 {
+    RGB(){
+        R.i16bit = 0;
+        G.i16bit = 0;
+        B.i16bit = 0;
+        IR.i16bit = 0;
+    }
     rgb1bit16_t R;
     rgb1bit16_t G;
     rgb1bit16_t B;
     rgb1bit16_t IR;
+    uint32_t h;
+    uint32_t s;
+    uint32_t l;
 };
 template<typename T>
 class ColorSensor 
