@@ -12,14 +12,10 @@
 #include <set>
 #include <new>
 #include <vector>
+#include <mutex>
+#include <thread>
 namespace mqtt
-{    struct user_properties{
-        static String path;
-        static String ssid;
-        static String pass;
-        static String host;
-        static int   port;
-    };
+{
 typedef struct {
     bool sessionPresent;  
 } mail_on_connect_t;
@@ -31,6 +27,13 @@ typedef struct {
     String topic;
     String payload;
 } mail_t;
+struct user_properties{
+static String path ;
+static String ssid ;
+static String pass ;
+static String host ;
+static int    port ;
+};
 }
 
 using namespace mqtt;
@@ -38,7 +41,7 @@ using namespace platform_debug;
 class MQTTNetwork
 {
 public:
-    MQTTNetwork():_threadOnMessage("mqttService",1024*8,1)
+    MQTTNetwork():_threadOnMessage("mqttService",1024*8,1),_mtx(),_autoConnect(true)
     {
 
     }
@@ -67,9 +70,10 @@ public:
     void run_mail_box();
     void run_mail_box_on_connect();
     void run_debug_trace();
-
+    bool connected();
     void _connectToMqtt();
     void _connectToWifi();
+    void disconnect(bool autoConnect=false);
     //bool publish(const char* topic,String& payload, uint8_t qos=0, bool retain=false,bool dup=true, uint16_t message_id=0);
     bool publish(const String& topic,const String& payload, uint8_t qos=0, bool retain=false,bool dup=true, uint16_t message_id=0);
     bool subscribe(const String& topic, uint8_t qos=0);
@@ -92,13 +96,15 @@ private:
     
     TimerHandle_t _mqttReconnectTimer;
     TimerHandle_t _wifiReconnectTimer;
+    static const char* MQTT_HOST ;
     static const char* WIFI_SSID;
     static const char* WIFI_PASSWORD;
-    static IPAddress MQTT_HOST ;
+    //static IPAddress MQTT_HOST ;
+
     static uint16_t MQTT_PORT ;
     static AsyncMqttClient mqttClient;
-    static rtos::Mutex _mutex,std_mutex;
-    bool _connected=false;
+    std::mutex _mtx;
+   
     system_event_id_t _event=SYSTEM_EVENT_WIFI_READY;
     //system_event_info_t _info;
     rtos::Mail<mqtt::mail_t, 16> _mail_box;
@@ -107,6 +113,8 @@ private:
     std::vector<Callback<void(bool)>>  _onMqttConnectCallbacks;
     std::vector<Callback<void(AsyncMqttClientDisconnectReason)>>  _onMqttDisconnectCallbacks;
     std::set<String>  _topics;
+    bool _autoConnect;
+    
 };
 #endif
 /*

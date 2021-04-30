@@ -37,17 +37,14 @@ extern "C" {
 #include <mutex>
 #include <thread>
 #include <functional>
-#include <Test.h>
-
 #include <HTTPClient.h>
-#include <httpUpdate.h>
 #include <Esp32httpUpdate.h>
 #include "FS.h"
 #include "FFat.h"
 #include "FFatHelper.h"
 #include "ESPwebServer.h"
 #include "RGBCollector.h"
-
+#include "OTAService.h"
 using namespace std;
 using namespace mstd;
 using namespace rtos;
@@ -73,8 +70,7 @@ String user_properties::pass = "mitac1993";
 String user_properties::host = "mslmqtt.mic.com.cn";
 int    user_properties::port = 1883;
 
-
-String web_properties::ap_ssid="";
+String web_properties::ap_ssid="STLB_SSID";
 String web_properties::ap_pass="Aa000000";
 String web_properties::http_user="admin";
 String web_properties::http_pass="admin";
@@ -95,10 +91,7 @@ String DeviceInfo::Family="k49a";
 //OLEDScreen<12> oled(Heltec.display);
 TracePrinter tracePrinter;
 MQTTNetwork MQTTnetwork;
-//Test t;
-using namespace thread_test;
-using namespace esp32_http_update;
-//#define OLEDSCREEN 1
+
 bool update = false;
 bool  web_update= false;
 DynamicJsonDocument  docProperties(1024);
@@ -106,6 +99,8 @@ ESPWebServer ESPwebServer;
 
 RGBCollector<BH1749NUC> RGBcollector(MQTTnetwork,colorSensor);
 OLEDScreen<12> oled(Heltec.display);
+
+//#define OLEDSCREEN 
 void setup() {
  // put your setup code here, to run once:
   //WIFI Kit series V1 not support Vext control
@@ -154,7 +149,7 @@ void setup() {
   //PlatformDebug::init(std::move(oled));
   //PlatformDebug::init(OLEDScreen<12>(Heltec.display));
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-  platform_debug::PlatformDebug::println(" ************ IPS ************ ");
+  platform_debug::PlatformDebug::println(" ************ STLB ************ ");
 
   //int Maxint = numeric_limits<int32_t>::max();
   //int Minint = numeric_limits<int32_t>::min();
@@ -162,8 +157,7 @@ void setup() {
   //platform_debug::PlatformDebug::println(" ************ Min ************ "+String(Minint,DEC));
   pinMode(0, PULLUP);
   attachInterrupt(0,[]()->void{
-      //update = true;
-      web_update = true;
+     
   },FALLING);
   
   tracePrinter.startup();
@@ -180,8 +174,8 @@ void setup() {
     }
   }
   web_properties::ap_ssid = String(WiFi.macAddress().c_str());
-
-  platform_debug::DeviceInfo::BoardID = String(mac_address.substr(mac_address.length()-4,4).c_str());
+  platform_debug::DeviceInfo::BoardID = String(mac_address.c_str());
+  //platform_debug::DeviceInfo::BoardID = String(mac_address.substr(mac_address.length()-4,4).c_str());
   platform_debug::PlatformDebug::println("DeviceInfo::BoardID:"+platform_debug::DeviceInfo::BoardID);
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
 
@@ -210,6 +204,7 @@ void setup() {
           user_properties::pass =  docProperties["pass"].as<String>();
           user_properties::host =  docProperties["host"].as<String>();
           user_properties::port =  docProperties["port"].as<int>();
+          
           platform_debug::PlatformDebug::println("user_properties::ssid:"+user_properties::ssid);
           platform_debug::PlatformDebug::println("user_properties::pass:"+user_properties::pass);
           platform_debug::PlatformDebug::println("user_properties::host:"+user_properties::host);
@@ -249,11 +244,9 @@ void setup() {
   // MQTTnetwork.addOnMessageCallback(callback(&loRaCollector,&LoRaCollector::onMessageMqttCallback));
   // MQTTnetwork.addOnMqttConnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttConnectCallback));
   // MQTTnetwork.addOnMqttDisonnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttDisconnectCallback));
-  //MQTTnetwork.startup();
-  //std::thread threads[2];
-  //threads[0]= std::thread(print_thread_id_test, 1);
-  //threads[1]= std::thread(print_thread_id_test2, 2);
-  // test_unique_lock_cd();
+  
+  MQTTnetwork.startup();
+
   ESPwebServer.setCallbackPostMailToCollector(callback(&RGBcollector,&RGBCollector<BH1749NUC>::delegateMethodPostMail));
   RGBcollector.setWebSocketClientEventCallback(callback(&ESPwebServer,&ESPWebServer::delegateMethodWebSocketClientPostEvent));
   RGBcollector.setWebSocketClientTextCallback(callback(&ESPwebServer,&ESPWebServer::delegateMethodWebSocketClientText));
@@ -275,26 +268,6 @@ void loop() {
         platform_debug::PlatformDebug::println("ERROR:currentTime");
     }
     
-    if(update){
-
-       platform_debug::PlatformDebug::println("Start:OTA...");
-       esp32_http_update::t_httpUpdate_return ret =  esp32_http_update::ESPhttpUpdate.update("http://192.168.1.100/bin/firmware.bin");
-
-        switch(ret) {
-            case esp32_http_update::HTTP_UPDATE_FAILED:
-                platform_debug::PlatformDebug::printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-                break;
-            case esp32_http_update::HTTP_UPDATE_NO_UPDATES:
-               platform_debug::PlatformDebug::println("HTTP_UPDATE_NO_UPDATES");
-                break;
-            case esp32_http_update::HTTP_UPDATE_OK:
-                platform_debug::PlatformDebug::println("HTTP_UPDATE_OK");
-                std::this_thread::sleep_for(chrono::seconds(3));
-                ESP.restart();
-                break;
-        }
-     }
-     
    // RGBcollector.delegateMethodPostMail(MeasEventType::EventSystemMeasure);
     std::this_thread::sleep_for(chrono::seconds(10));
     //ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));
