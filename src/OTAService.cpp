@@ -1,9 +1,14 @@
 #include "OTAService.h"
 
+void OTAService::onMessageMqttCallback(const String& topic,const String& payload)
+{
+
+}
 
 void OTAService::execute(const String url){
       //  url="http://192.168.1.104/bin/firmware.bin";
-        platform_debug::PlatformDebug::println("Start:OTA...");
+        platform_debug::PlatformDebug::println("Start:OTA..."+url);
+        
             ESPhttpUpdate.rebootOnUpdate(false);
             t_httpUpdate_return ret =  ESPhttpUpdate.update(url);
             switch(ret) {

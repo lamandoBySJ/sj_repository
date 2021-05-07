@@ -11,12 +11,15 @@ void LoRaCollector::startup(WirelessTechnologyType type)
 
     
     if(type == WirelessTechnologyType::WiFi){
-        _threadMqttService.start(callback(this,&LoRaCollector::run_mqtt_service));
+       // _threadMqttService.start(callback(this,&LoRaCollector::run_mqtt_service));
+            _threadMqttService = std::thread(&LoRaCollector::run_mqtt_service,this);
     }else{
-       _threadLoraService.start(callback(this,&LoRaCollector::run_lora_service));
+      // _threadLoraService.start(callback(this,&LoRaCollector::run_lora_service));
+        _threadLoraService = std::thread(&LoRaCollector::run_lora_service,this);
     }
   
-   _threadBackgroundService.start(callback(this,&LoRaCollector::run_background_service));
+  // _threadBackgroundService.start(callback(this,&LoRaCollector::run_background_service));
+   _threadBackgroundService= std::thread(&LoRaCollector::run_background_service,this);
 }
 void LoRaCollector::run_mqtt_service()
 {

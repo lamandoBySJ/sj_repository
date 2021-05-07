@@ -18,7 +18,7 @@
 #define RTOS_TYPES_H_
 
 #if MBED_CONF_RTOS_PRESENT || defined(DOXYGEN_ONLY) || defined(UNITTEST)
-#include "cmsis_os2.h"
+#include "rtos/cmsis_os2.h"
 #else
 #include "rtos/cmsis_os2.h"
 

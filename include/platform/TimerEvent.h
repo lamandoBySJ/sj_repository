@@ -20,7 +20,7 @@
 //#include "hal/ticker_api.h"
 #include "platform/mbed_toolchain.h"
 #include "platform/NonCopyable.h"
-#include "platform/TickerDataClock.h"
+#include "drivers/TickerDataClock.h"
 
 namespace mbed {
 

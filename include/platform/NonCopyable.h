@@ -17,6 +17,7 @@
 #ifndef MBED_NONCOPYABLE_H_
 #define MBED_NONCOPYABLE_H_
 
+#define MBED_CONF_RTOS_PRESENT 1
 namespace mbed {
 
 /** \addtogroup platform-public-api */

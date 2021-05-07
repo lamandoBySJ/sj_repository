@@ -12,6 +12,7 @@
 #include "MQTTNetwork.h"
 #include <LoRaNetwork.h>
 #include "StringHelper.h"
+#include <thread>
 using namespace platform_debug;
 enum class WirelessTechnologyType
 {
@@ -31,16 +32,10 @@ class LoRaCollector
 {
 public:
     LoRaCollector()=delete;
-    LoRaCollector(MQTTNetwork& mqttNetwork):
-        _mqttNetwork(mqttNetwork),
-        _threadMqttService("mqttService",1024*4,1),
-        _threadLoraService("loraService",1024*4,1),
-        _threadBackgroundService("backgroundService",1024*2,1)
+    LoRaCollector(MQTTNetwork& mqttNetwork): _mqttNetwork(mqttNetwork)
     {
-        
         _mapSetupBeacons[String("9F8C")] = String("A001");
        // _mapSetupBeacons[String("A18C")] = String("A002");
-
     }
     void startup(WirelessTechnologyType type=WirelessTechnologyType::WiFi);
     void run_mqtt_service();
@@ -57,9 +52,9 @@ public:
     }
 private:
     MQTTNetwork& _mqttNetwork;
-    Thread _threadMqttService;
-    Thread _threadLoraService;
-    Thread _threadBackgroundService;
+    std::thread _threadMqttService;
+    std::thread _threadLoraService;
+    std::thread _threadBackgroundService;
     IPSProtocol _IPSProtocol;
     Mail<mqtt::mail_t,16> _mail_box_mqtt;
     Mail<lora::mail_t,16> _mail_box_lora;

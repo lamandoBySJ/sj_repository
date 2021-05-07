@@ -24,7 +24,12 @@
 #define MBED_RTX_CONF_H
 
 //#include "mbed_rtx.h"
-
+#ifndef MBED_CONF_RTOS_THREAD_STACK_SIZE
+#define MBED_CONF_RTOS_THREAD_STACK_SIZE 1024
+#endif
+#ifndef MBED_CONF_RTOS_TIMER_THREAD_STACK_SIZE
+#define MBED_CONF_RTOS_TIMER_THREAD_STACK_SIZE 1024
+#endif
 /** Any access to RTX5 specific data structures used in common code should be wrapped in ifdef MBED_OS_BACKEND_RTX5 */
 #define MBED_OS_BACKEND_RTX5
 
@@ -130,9 +135,12 @@
 #define OS_STACK_WATERMARK          1
 #endif
 
-
+#ifndef define OS_IDLE_THREAD_TZ_MOD_ID
 #define OS_IDLE_THREAD_TZ_MOD_ID     1
+#endif
+#ifndef OS_TIMER_THREAD_TZ_MOD_ID 
 #define OS_TIMER_THREAD_TZ_MOD_ID    1
+#endif
 
 
 // Don't adopt default multi-thread support for ARM/ARMC6 toolchains from RTX code base.

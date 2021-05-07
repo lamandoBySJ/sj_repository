@@ -20,14 +20,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#ifndef SEMAPHORE_H
-#define SEMAPHORE_H
+#ifndef __SEMAPHORE_H
+#define __SEMAPHORE_H
 
 #include <stdint.h>
 #include <chrono>
 #include "rtos/mbed_rtos_types.h"
 #include "rtos/internal/mbed_rtos1_types.h"
 #include "rtos/internal/mbed_rtos_storage.h"
+#include "rtos/internal/mbed_rtx_storage.h"
 #include "rtos/Kernel.h"
 #include "platform/mbed_toolchain.h"
 #include "platform/NonCopyable.h"
@@ -51,6 +52,7 @@ class Semaphore : private mbed::NonCopyable<Semaphore> {
 public:
     /** Create and Initialize a Semaphore object used for managing resources.
       @param count      number of available resources; maximum index value is (count-1). (default: 0).
+
       @note You cannot call this function from ISR context.
     */
     Semaphore(int32_t count = 0);
@@ -58,11 +60,13 @@ public:
     /** Create and Initialize a Semaphore object used for managing resources.
       @param  count     number of available resources
       @param  max_count maximum number of available resources
+
       @note You cannot call this function from ISR context.
     */
     Semaphore(int32_t count, uint16_t max_count);
 
     /** Wait until a Semaphore resource becomes available.
+
       @note You cannot call this function from ISR context.
     */
     void acquire();
@@ -70,6 +74,7 @@ public:
     /** Try to acquire a Semaphore resource, and return immediately
       @return true if a resource was acquired, false otherwise.
       @note equivalent to try_acquire_for(0)
+
     @note You may call this function from ISR context.
     */
     bool try_acquire();
@@ -77,6 +82,7 @@ public:
     /** Wait until a Semaphore resource becomes available.
       @param   millisec  timeout value.
       @return true if a resource was acquired, false otherwise.
+
       @note You may call this function from ISR context if the millisec parameter is set to 0.
       @deprecated Pass a chrono duration, not an integer millisecond count. For example use `5s` rather than `5000`.
     */
@@ -86,6 +92,7 @@ public:
     /** Wait until a Semaphore resource becomes available.
        @param   rel_time  timeout value.
        @return true if a resource was acquired, false otherwise.
+
        @note You may call this function from ISR context if the rel_time parameter is set to 0.
      */
     bool try_acquire_for(Kernel::Clock::duration_u32 rel_time);
@@ -97,6 +104,7 @@ public:
             due to internal 32-bit computations, but this is guaranteed to work if the
             wait is <= 0x7fffffff milliseconds (~24 days). If the limit is exceeded,
             the acquire attempt will time out earlier than specified.
+
       @note You cannot call this function from ISR context.
       @deprecated Pass a chrono time_point, not an integer millisecond count. For example use
                   `Kernel::Clock::now() + 5s` rather than `Kernel::get_ms_count() + 5000`.
@@ -111,6 +119,7 @@ public:
             due to internal 32-bit computations, but this is guaranteed to work if the
             wait is <= 0x7fffffff milliseconds (~24 days). If the limit is exceeded,
             the acquire attempt will time out earlier than specified.
+
       @note You cannot call this function from ISR context.
     */
     bool try_acquire_until(Kernel::Clock::time_point abs_time);
@@ -120,6 +129,7 @@ public:
               @a osOK the token has been correctly released.
               @a osErrorResource the maximum token count has been reached.
               @a osErrorParameter internal error.
+
       @note You may call this function from ISR context.
     */
     osStatus release(void);

@@ -7,7 +7,6 @@
 #include "MQTTNetwork.h"
 #include <ArduinoJson.h>
 #include <heltec.h>
-#include <DelegateClass.h>
 #include <set>
 #include <iostream>
 #include <sstream>

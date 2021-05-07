@@ -1,17 +1,13 @@
 #include <heltec.h>
-#include <rtos/rtos.h>
 #include <app/TimeMachine/TimeMachine.h>
 #include <app/ColorSensor/ColorSensor.h>
 #include <ColorSensorBase.h>
 #include <SPI.h>
 #include <MFRC522.h>
 #include <chrono>
-#include <DelegateClass.h>
-
 #include <esp_event_legacy.h>
 #include <WiFiType.h>
 #include <WiFi.h>
-
 #include "platform_debug.h"
 #include "app/OLEDScreen/OLEDScreen.h"
 #include "rtos/cmsis_os2.h"
@@ -45,6 +41,7 @@ extern "C" {
 #include "ESPwebServer.h"
 #include "RGBCollector.h"
 #include "OTAService.h"
+#include "CmdParser.h"
 using namespace std;
 using namespace mstd;
 using namespace rtos;
@@ -99,7 +96,8 @@ ESPWebServer ESPwebServer;
 
 RGBCollector<BH1749NUC> RGBcollector(MQTTnetwork,colorSensor);
 OLEDScreen<12> oled(Heltec.display);
-
+OTAService OTAservice;
+CmdParser cmdParser;
 //#define OLEDSCREEN 
 void setup() {
  // put your setup code here, to run once:
@@ -238,10 +236,13 @@ void setup() {
   }
   
   timeMachine.startup(true,__DATE__,__TIME__);
-  //timeMachine.setEpoch(1614764209+8*60*60);
+  timeMachine.setEpoch(1614764209+8*60*60);
   colorSensor.startup();
-  // MQTTnetwork.addTopic("web");
-  // MQTTnetwork.addOnMessageCallback(callback(&loRaCollector,&LoRaCollector::onMessageMqttCallback));
+  //MQTTnetwork.addTopic("SmartBox/TimeSync");
+  MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerTime");
+  MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerReq");
+
+  MQTTnetwork.addOnMessageCallback(callback(&cmdParser,&CmdParser::onMessageCallback));
   // MQTTnetwork.addOnMqttConnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttConnectCallback));
   // MQTTnetwork.addOnMqttDisonnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttDisconnectCallback));
   

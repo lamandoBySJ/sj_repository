@@ -25,7 +25,9 @@ extern "C" {
 
 #include <stdbool.h>
 #include <stdint.h>
-
+#define __MBED__
+#define MBED_CONF_RTOS_PRESENT 1
+#define MBED_CONF_RTOS_API_PRESENT 1
 // Currently supported platforms
 //
 // Uncomment to select a supported platform or reimplement this file
@@ -49,8 +51,8 @@ extern "C" {
 #if defined(EQUEUE_PLATFORM_POSIX)
 #include <pthread.h>
 #elif defined(EQUEUE_PLATFORM_MBED) && defined(MBED_CONF_RTOS_PRESENT)
-#include "cmsis_os2.h"
-#include "mbed_rtos_storage.h"
+#include "rtos/cmsis_os2.h"
+#include "rtos/internal/mbed_rtos_storage.h"
 #endif
 
 

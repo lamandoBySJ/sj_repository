@@ -29,7 +29,7 @@
 #include "rtos/mbed_rtos_types.h"
 #include "rtos/Kernel.h"
 #include "FreeRTOS.h"
-
+#include "rtos/internal/mbed_rtx_storage.h"
 namespace rtos {
 /** \addtogroup rtos-public-api */
 /** @{*/
@@ -167,7 +167,6 @@ private:
  SemaphoreHandle_t _semaphore = NULL;
 };
 
-#define MBED_CONF_RTOS_PRESENT 1
 
 #if !MBED_CONF_RTOS_PRESENT
 inline Mutex::Mutex()

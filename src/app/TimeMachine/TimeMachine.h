@@ -5,7 +5,6 @@
 #include "DS1307.h"
 #include "rtos/rtos.h"
 #include "RTCBase.h"
-#include "DelegateClass.h"
 #include "platform_debug.h"
 #include <mutex>
 using namespace rtos;

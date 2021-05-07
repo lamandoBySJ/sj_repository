@@ -24,12 +24,16 @@
 #define THREAD_H
 
 #include <stdint.h>
-#include "rtos/internal/mbed_rtos1_types.h"
+#include "rtos/RTX_Config.h"
 #include "rtos/mbed_rtos_types.h"
+//#include "rtos/internal/mbed_rtos1_types.h"
+#include "rtos/internal/mbed_rtos_storage.h"
 #include "platform/Callback.h"
 #include "platform/mbed_toolchain.h"
 #include "platform/NonCopyable.h"
+#include "rtos/Semaphore.h"
 #include "rtos/Mutex.h"
+#include "rtos/cmsis_os2.h"
 
 #if MBED_CONF_RTOS_PRESENT || defined(DOXYGEN_ONLY) || defined(UNITTEST)
 
@@ -94,18 +98,18 @@ public:
       @param   stack_size     stack size (in bytes) requirements for the thread function. (default: OS_STACK_SIZE).
       @param   stack_mem      pointer to the stack area to be used by this thread (default: nullptr).
       @param   name           name to be used for this thread. It has to stay allocated for the lifetime of the thread (default: nullptr)
+
       @note Default value of tz_module will be MBED_TZ_DEFAULT_ACCESS
       @note You cannot call this function from ISR context.
     */
- 
-    Thread(const char *pcName="default",
-            const uint32_t usStackDepth = 1024*2,
-          	UBaseType_t uxPriority = 1
-            ):_pcName(pcName),_usStackDepth(usStackDepth),_uxPriority(uxPriority)
+
+    Thread(osPriority priority = osPriorityNormal,
+           uint32_t stack_size = OS_STACK_SIZE,
+           unsigned char *stack_mem = nullptr, const char *name = nullptr)
     {
-        //constructor( pcName, usStackDepth ,uxPriority);
+        constructor(priority, stack_size, stack_mem, name);
     }
-  
+
     /** Allocate a new thread without starting execution
       @param   tz_module      trustzone thread identifier (osThreadAttr_t::tz_module)
                               Context of RTOS threads in non-secure state must be saved when calling secure functions.
@@ -115,33 +119,37 @@ public:
       @param   stack_size     stack size (in bytes) requirements for the thread function. (default: OS_STACK_SIZE).
       @param   stack_mem      pointer to the stack area to be used by this thread (default: nullptr).
       @param   name           name to be used for this thread. It has to stay allocated for the lifetime of the thread (default: nullptr)
+
       @note You cannot call this function from ISR context.
-   
-    Thread(TaskFunction_t pvTaskCode=NULL,
-										const char * const pcName,
-										const uint32_t usStackDepth,
-										void * const pvParameters,
-										UBaseType_t uxPriority,
-										TaskHandle_t* const pvCreatedTask,
-										const BaseType_t xCoreID)
+    */
+
+    Thread(uint32_t tz_module, osPriority priority = osPriorityNormal,
+           uint32_t stack_size = OS_STACK_SIZE,
+           unsigned char *stack_mem = nullptr, const char *name = nullptr)
     {
-        constructor( pcName, usStackDepth,uxPriority);
-    } */
+        constructor(tz_module, priority, stack_size, stack_mem, name);
+    }
+
+
     /** Starts a thread executing the specified function.
       @param   task           function to be executed by this thread.
       @return  status code that indicates the execution status of the function.
       @note a thread can only be started once
+
       @note You cannot call this function ISR context.
     */
     osStatus start(mbed::Callback<void()> task);
+
     /** Wait for thread to terminate
       @return  status code that indicates the execution status of the function.
+
       @note You cannot call this function from ISR context.
     */
     osStatus join();
 
     /** Terminate execution of a thread and remove it from Active Threads
       @return  status code that indicates the execution status of the function.
+
       @note You cannot call this function from ISR context.
     */
     osStatus terminate();
@@ -149,12 +157,14 @@ public:
     /** Set priority of an active thread
       @param   priority  new priority value for the thread function.
       @return  status code that indicates the execution status of the function.
+
       @note You cannot call this function from ISR context.
     */
     osStatus set_priority(osPriority priority);
 
     /** Get priority of an active thread
       @return  current priority value of the thread function.
+
       @note You cannot call this function from ISR context.
     */
     osPriority get_priority() const;
@@ -162,6 +172,7 @@ public:
     /** Set the specified Thread Flags for the thread.
       @param   flags  specifies the flags of the thread that should be set.
       @return  thread flags after setting or osFlagsError in case of incorrect parameters.
+
       @note You may call this function from ISR context.
     */
     uint32_t flags_set(uint32_t flags);
@@ -191,42 +202,49 @@ public:
 
     /** State of this Thread
       @return  the State of this Thread
+
       @note You cannot call this function from ISR context.
     */
     State get_state() const;
 
     /** Get the total stack memory size for this Thread
       @return  the total stack memory size in bytes
+
       @note You cannot call this function from ISR context.
     */
     uint32_t stack_size() const;
 
     /** Get the currently unused stack memory for this Thread
       @return  the currently unused stack memory in bytes
+
       @note You cannot call this function from ISR context.
     */
     uint32_t free_stack() const;
 
     /** Get the currently used stack memory for this Thread
       @return  the currently used stack memory in bytes
+
       @note You cannot call this function from ISR context.
     */
     uint32_t used_stack() const;
 
     /** Get the maximum stack memory usage to date for this Thread
       @return  the maximum stack memory usage to date in bytes
+
       @note You cannot call this function from ISR context.
     */
     uint32_t max_stack() const;
 
     /** Get thread name
       @return  thread name or nullptr if the name was not set.
+
       @note You may call this function from ISR context.
      */
     const char *get_name() const;
 
     /** Get thread id
       @return  thread ID for reference by other functions.
+
       @note You may call this function from ISR context.
      */
     osThreadId_t get_id() const;
@@ -240,33 +258,25 @@ public:
 private:
     // Required to share definitions without
     // delegated constructors
-    /*void constructor(const char *pcName,
-										const uint32_t usStackDepth,
-										UBaseType_t uxPriority
-									//	TaskHandle_t* const pvCreatedTask,
-									//	const BaseType_t xCoreID
-                    );
-    */
-    void constructor(const char * pcName,const uint32_t usStackDepth,const UBaseType_t uxPriority);
-    
+    void constructor(osPriority priority = osPriorityNormal,
+                     uint32_t stack_size = OS_STACK_SIZE,
+                     unsigned char *stack_mem = nullptr,
+                     const char *name = nullptr);
+    void constructor(uint32_t tz_module,
+                     osPriority priority = osPriorityNormal,
+                     uint32_t stack_size = OS_STACK_SIZE,
+                     unsigned char *stack_mem = nullptr,
+                     const char *name = nullptr);
     static void _thunk(void *thread_ptr);
 
     mbed::Callback<void()>     _task;
     osThreadId_t               _tid;
-   // osThreadAttr_t             _attr;
+    osThreadAttr_t             _attr;
     bool                       _dynamic_stack;
     bool                       _finished;
-  //  Semaphore                  _join_sem;
-    //mutable Mutex              _mutex;
-    //mbed_rtos_storage_thread_t _obj_mem;
-   // TaskFunction_t _pvTaskCode;
-    const char *  _pcName;
-	  uint32_t _usStackDepth;
-		//void *  _pvParameters;
-		UBaseType_t _uxPriority;
-    TaskHandle_t  _pvCreatedTask = NULL;
-		const BaseType_t  _xCoreID =1;
-	
+    Semaphore                  _join_sem;
+    mutable Mutex              _mutex;
+    mbed_rtos_storage_thread_t _obj_mem;
 };
 /** @}*/
 /** @}*/

@@ -6,6 +6,7 @@
 #include "platform/Callback.h"
 #include <stddef.h>
 #include <mutex>
+#include <thread>
 #include <stdarg.h>
 //#define NDEBUG
 
@@ -224,7 +225,8 @@ public:
         #if !defined(NDEBUG)
         if(_tracePrinter==NULL){
             _tracePrinter=new TracePrinter();
-            _thread.start(callback( _tracePrinter,&TracePrinter::run_debug_trace));
+           // _thread.start(callback( _tracePrinter,&TracePrinter::run_debug_trace));
+           _thread = std::thread(&TracePrinter::run_debug_trace,_tracePrinter);
         } 
          #endif
     }
@@ -290,7 +292,7 @@ private:
     #if !defined(NDEBUG)
     static TracePrinter* _tracePrinter;
     rtos::Mail<mail_trace_t, 64> _mail_box;
-    Thread _thread;
+    std::thread _thread;
     static std::mutex _mtx;
     #endif
 };

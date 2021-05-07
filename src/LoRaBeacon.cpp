@@ -6,8 +6,10 @@ void LoRaBeacon::startup()
     
     _topicCommand = DeviceInfo::Family+ String("/command/request/BCN");
     _topics.push_back(_topicCommand);
-    _threadMqttService.start(callback(this,&LoRaBeacon::run_mqtt_service));
-    _threadLoraService.start(callback(this,&LoRaBeacon::run_lora_service));
+    //_threadMqttService.start(callback(this,&LoRaBeacon::run_mqtt_service));
+   // _threadLoraService.start(callback(this,&LoRaBeacon::run_lora_service));
+   _threadMqttService = std::thread(&LoRaBeacon::run_mqtt_service,this);
+   _threadLoraService = std::thread(&LoRaBeacon::run_lora_service,this);
 }
 void LoRaBeacon::run_mqtt_service()
 {

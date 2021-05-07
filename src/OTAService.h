@@ -7,6 +7,7 @@
 #include <functional>
 #include <HTTPClient.h>
 #include <Esp32httpUpdate.h>
+#include <functional>
 class OTAService
 {
 public:
@@ -16,6 +17,7 @@ public:
     ~OTAService(){
 
     }
+    void onMessageMqttCallback(const String& topic,const String& payload);
     void  execute(const String url);
 private:
    

@@ -19,7 +19,7 @@
 
 #include <chrono>
 #include <platform/internal/SysTimer.h>
-
+#include <rtos/RTX_Config.h>
 #if MBED_CONF_RTOS_PRESENT
 extern "C" {
 //#include "rtx_lib.h"

@@ -13,6 +13,7 @@
 #include <vector>
 #include <algorithm>
 #include "StringHelper.h"
+#include <thread>
 using namespace platform_debug;
 class LoRaGateway
 {
@@ -20,9 +21,7 @@ public:
     LoRaGateway()=delete;
     LoRaGateway(MQTTNetwork& mqttNetwork,LoRaNetwork& loRaNetwork):
         _mqttNetwork(mqttNetwork),
-        _loRaNetwork(loRaNetwork),
-        _threadMqttService("mqttService",1024*4,1),
-        _threadLoraService("loraService",1024*4,1)
+        _loRaNetwork(loRaNetwork)
     {
          _mapSetupBeacons[String("9F8C")] = String("A001");
          _mode="learn";
@@ -41,8 +40,8 @@ public:
 private:
     MQTTNetwork& _mqttNetwork;
     LoRaNetwork& _loRaNetwork;
-    Thread _threadMqttService;
-    Thread _threadLoraService;
+    std::thread _threadMqttService;
+    std::thread _threadLoraService;
     IPSProtocol _IPSProtocol;
     String _topicSubServerRequest;
     String _topicPubgatewayResponse;

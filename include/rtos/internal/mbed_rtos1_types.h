@@ -1,5 +1,5 @@
-/* mbed Microcontroller Library
- * Copyright (c) 2006-2019 ARM Limited
+/*
+ * Copyright (c) 2017, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,20 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef MBED_RTOS_RTX1_TYPES_H
-#define MBED_RTOS_RTX1_TYPES_H
 
-#if MBED_CONF_RTOS_PRESENT || defined(UNITTEST)
+#ifndef MBED_RTOS1_TYPES_H
+#define MBED_RTOS1_TYPES_H
 
-#include "cmsis_os.h"
-typedef int32_t osStatus;
-typedef int32_t osPriority;
-#else
-#include "rtos/cmsis_os2.h"
-//typedef int32_t osStatus;
-//typedef int32_t osPriority;
 #include "rtos/cmsis_os.h"
 #include "mbed_rtos_storage.h"
-#endif
 
-#endif
+#endif // MBED_RTOS1_TYPES_H

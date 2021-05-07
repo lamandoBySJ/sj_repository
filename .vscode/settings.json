@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "us_ticker_api.h": "c",
+        "lp_ticker_api.h": "c"
+    }
+}

@@ -11,17 +11,14 @@
 #include <set>
 #include <vector>
 #include <algorithm>
-
+#include <thread>
 using namespace lora;
 using namespace platform_debug;
 class LoRaBeacon
 {
 public:
     LoRaBeacon()=delete;
-    LoRaBeacon(MQTTNetwork& mqttNetwork):
-        _mqttNetwork(mqttNetwork),
-        _threadMqttService("mqttService",1024*4,1),
-        _threadLoraService("loraService",1024*6,1)
+    LoRaBeacon(MQTTNetwork& mqttNetwork):_mqttNetwork(mqttNetwork)
     {
        
     }
@@ -39,8 +36,8 @@ public:
 private:
     //LoRaNetwork& _loRaNetwork;
     MQTTNetwork& _mqttNetwork;
-    Thread _threadMqttService;
-    Thread _threadLoraService;
+    std::thread _threadMqttService;
+    std::thread _threadLoraService;
     
     String _topicSubServerRequest;
     String _topicPubgatewayResponse;

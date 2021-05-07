@@ -8,8 +8,10 @@ void LoRaGateway::startup()
 
     _topics.push_back(_topicCommandRequest);
     _topics.push_back(_topicTimeout);
-    _threadMqttService.start(callback(this,&LoRaGateway::run_mqtt_service));
-    _threadLoraService.start(callback(this,&LoRaGateway::run_lora_service));
+    //_threadMqttService.start(callback(this,&LoRaGateway::run_mqtt_service));
+    //_threadLoraService.start(callback(this,&LoRaGateway::run_lora_service));
+    _threadMqttService =std::thread(&LoRaGateway::run_mqtt_service,this);
+    _threadLoraService=std::thread(&LoRaGateway::run_lora_service,this);
 }
 void LoRaGateway::run_mqtt_service()
 {
