@@ -44,15 +44,13 @@ void LoRaBeacon::onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reason
 }
 void LoRaBeacon::onMessageMqttCallback(const String& topic,const String& payload)
 {
-    if (std::find(_topics.begin(), _topics.end(), topic)!=_topics.end())
-    {
+
         mqtt::mail_t *mail =  _mail_box_mqtt.alloc();
         if(mail!=NULL){
             mail->topic = topic;
             mail->payload = payload;
             _mail_box_mqtt.put(mail) ;
         }
-    }
 }
 
 

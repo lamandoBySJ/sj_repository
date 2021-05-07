@@ -98,22 +98,11 @@ void LoRaGateway::onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reaso
 }
 void LoRaGateway::onMessageMqttCallback(const String& topic,const String& payload)
 {
-    _topicMatch.clear();
-    StringHelper::split(_topicMatch,topic.c_str(),"/");
-    if(_topicMatch.size() == 4 && _topicMatch[3]=="GW"){
-        mqtt::mail_t *mail =  _mail_box_mqtt.alloc();
-        if(mail!=NULL){
+    mqtt::mail_t *mail =  _mail_box_mqtt.alloc();
+    if(mail!=NULL){
             mail->topic = topic;
             mail->payload = payload;
             _mail_box_mqtt.put(mail) ;
-        }
-    }else if(_topicMatch.size() == 3 && _topicMatch[1]=="send_timeout"){
-        mqtt::mail_t *mail =  _mail_box_mqtt.alloc();
-        if(mail!=NULL){
-            mail->topic = topic;
-            mail->payload = payload;
-            _mail_box_mqtt.put(mail) ;
-        }
     }
 }
 

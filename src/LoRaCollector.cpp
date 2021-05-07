@@ -179,15 +179,6 @@ void LoRaCollector::onMqttDisconnectCallback(AsyncMqttClientDisconnectReason rea
 }
 void LoRaCollector::onMessageMqttCallback(const String& topic,const String& payload)
 {   
-    
-    _topicMatch.clear();
-     StringHelper::split(_topicMatch,topic.c_str(),"/");
-    if(_topicMatch.size() == 3 && _topicMatch[1]!="send_rssi"){
-        return;
-    }else if(_topicMatch.size() == 4 && _topicMatch[3]!="DC"){
-        return;
-    }
-    
     mqtt::mail_t *mail =  _mail_box_mqtt.alloc();
     if(mail!=NULL){
         mail->topic = topic;
