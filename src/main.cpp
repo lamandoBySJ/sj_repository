@@ -101,19 +101,8 @@ RGBCollector<BH1749NUC> RGBcollector(MQTTnetwork,colorSensor);
 OLEDScreen<12> oled(Heltec.display);
 //OTAService OTAservice;
 //CmdParser cmdParser;
-  Mutex _std_mutex;
-  class Test
-  {
-public:
-      Test()=default;
-      void run(){
-        while(1){
-           platform_debug::PlatformDebug::println(" 111111111111 ");
-           std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
-       
-      }
-  };
+// Mutex _std_mutex;
+
 #define OLEDSCREEN 
 /*
 switch(cause){
@@ -141,30 +130,22 @@ void setup() {
       Heltec.begin(true, true , true , true, BAND);
      // PlatformDebug::init(Serial,oled);
       PlatformDebug::init(Serial,OLEDScreen<12>(Heltec.display));
-     //PlatformDebug::init(Serial,std::move(oled));
-     // PlatformDebug::printLogo();
+      PlatformDebug::init(Serial,std::move(oled));
+      PlatformDebug::printLogo();
+      TracePrinter::startup();
     #else
       Heltec.begin(false, false , true , true, BAND);
       PlatformDebug::init(Serial);
     #endif
   #endif
-  
+  //LoRa.dumpRegisters(Serial);
  //   SemaphoreHandle_t hMutex;
  // vQueueAddToRegistry(hMutex,"");
- 
-  //LoRa.dumpRegisters(Serial);
-  //ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+  
+  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
   platform_debug::PlatformDebug::println(" ************ STLB ************ ");
-  Test test;
-  Thread thread(osPriorityNormal,8199);
-
-  thread.start(callback(&test,&Test::run));
-  //std::thread thd= std::thread(&Test::run,&test);
-  //TracePrinter::startup();
-  platform_debug::PlatformDebug::pause();
-  //platform_debug::PlatformDebug::println(" TracePrinter::startup() ");
- // std::this_thread::sleep_for(std::chrono::seconds(3));
-  /* switch(cause){
+  
+   switch(cause){
     case ESP_SLEEP_WAKEUP_UNDEFINED:
     platform_debug::TracePrinter::printTrace("ESP_SLEEP_WAKEUP_UNDEFINED");
     break;    //!< In case of deep sleep, reset was not caused by exit from deep sleep
@@ -194,11 +175,10 @@ void setup() {
     break; 
     default:break;
   }
-*/
-  for(;;){
-    //platform_debug::TracePrinter::printTrace("1111111111111111111111111");
 
-std::this_thread::sleep_for(std::chrono::seconds(1));
+  for(;;){
+    platform_debug::TracePrinter::printTrace("1111111111111111111111111");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
   
 

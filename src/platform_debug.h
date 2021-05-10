@@ -222,7 +222,7 @@ typedef struct {
 class TracePrinter
 {
 public:
-    explicit TracePrinter()
+    explicit TracePrinter():_thread(osPriorityNormal,1024*6)
     {
         //platform_debug::PlatformDebug::println("TracePrinter");
     }
@@ -233,7 +233,8 @@ public:
         #if !defined(NDEBUG)
         if(TracePrinter::_tracePrinter==nullptr){
             _tracePrinter=new TracePrinter();
-            _tracePrinter->_thread = std::thread(&TracePrinter::run_trace_back,TracePrinter::_tracePrinter);
+           _tracePrinter->_thread.start(callback(TracePrinter::_tracePrinter,&TracePrinter::run_trace_back));
+           // _tracePrinter->_thread = std::thread(&TracePrinter::run_trace_back,TracePrinter::_tracePrinter);
         }else{
             return;
         }
@@ -245,16 +246,13 @@ public:
    void run_trace_back(){
         #if !defined(NDEBUG)
         while(true){
-            /*
+           
             osEvent evt=  TracePrinter::_tracePrinter->_mail_box.get();
             if (evt.status == osEventMail) {
                 mail_trace_t *mail = (mail_trace_t *)evt.value.p;
                  platform_debug::PlatformDebug::println(mail->log);
                  TracePrinter::_tracePrinter->_mail_box.free(mail); 
-            }*/
-            
-             std::this_thread::sleep_for(std::chrono::seconds(3));
-              platform_debug::PlatformDebug::println(" ************ STLB ************ ");
+            }
         }
         #endif
     }
@@ -296,7 +294,7 @@ public:
         lck.lock();
         mail_trace_t *mail =  TracePrinter::_tracePrinter->_mail_box.alloc();
         mail->log = e;
-         TracePrinter::_tracePrinter->_mail_box.put(mail);
+        TracePrinter::_tracePrinter->_mail_box.put(mail);
     }
  private:   
    
@@ -305,8 +303,7 @@ public:
     static TracePrinter* _tracePrinter;
     static std::mutex _mtx;
     rtos::Mail<mail_trace_t, 64> _mail_box;
-    std::thread _thread;
-    
+    Thread _thread; 
     #endif
 };
 

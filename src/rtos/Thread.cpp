@@ -101,7 +101,7 @@ osStatus Thread::start(mbed::Callback<void()> task)
     if (_tid == nullptr) {
         if (_dynamic_stack) {
             // Cast before deallocation as delete[] does not accept void*
-           // delete[] static_cast<uint32_t *>(_attr.stack_mem);
+          //  delete[] static_cast<uint32_t *>(_attr.stack_mem);
           // _attr.stack_mem = nullptr;
         }
         _mutex.unlock();

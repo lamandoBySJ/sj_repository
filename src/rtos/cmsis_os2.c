@@ -507,11 +507,10 @@ osThreadId_t osThreadNew (osThreadFunc_t func, void *argument, const osThreadAtt
     else {
       mem = 0;
     }
-     debug("-------------------------attr->cb_size-%d\n",attr->cb_size);
-    debug("--------------------------stack-%d\n",stack);
 
     if (mem == 1) {
-        //sizeof(StaticTask_t)-364
+      //attr->cb_size-68
+      //sizeof(StaticTask_t)-364
       // hTask =   xTaskCreateStaticPinnedToCore((TaskFunction_t)func, name, stack, argument, prio, (StackType_t  *)attr->stack_mem,(StaticTask_t *)attr->cb_mem,0);
       #if (configSUPPORT_STATIC_ALLOCATION == 1)
       xTaskCreatePinnedToCore((TaskFunction_t)func, name,stack, argument, prio, NULL, 1);   
