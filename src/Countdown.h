@@ -14,6 +14,7 @@ public:
     Countdown()=delete;
     Countdown(int ms):interval_end_ms(0),_ms(0),_mtx(),_expired(false),_timer(NULL)
     {
+        /*
         _timer = timerBegin(0,80,true);//设置定时器0，80分频，向上计数
 
         timerAttachInterrupt(_timer,[]()->void{
@@ -23,6 +24,7 @@ public:
         timerAlarmWrite(_timer,1000000,true);
         timerAlarmEnable(_timer);
        countdown_ms(ms);
+       */
     }
     
     ~Countdown(){

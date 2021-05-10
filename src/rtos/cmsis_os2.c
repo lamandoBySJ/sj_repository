@@ -20,21 +20,21 @@
  *
  *---------------------------------------------------------------------------*/
 
+#include "rtos/cmsis_os2.h"                  // ::CMSIS:RTOS2
+#include "Arduino.h"
 #include <string.h>
 #include "platform/mbed_assert.h" 
-#include "rtos/cmsis_os2.h"                  // ::CMSIS:RTOS2
 #include "rtos/cmsis_compiler.h"             // Compiler agnostic definitions
-
+#include "freertos/queue.h"    
 #include "freertos/FreeRTOS.h"                   // ARM.FreeRTOS::RTOS:Core
 #include "freertos/task.h"                       // ARM.FreeRTOS::RTOS:Core
 #include "freertos/event_groups.h"               // ARM.FreeRTOS::RTOS:Event Groups
 #include "freertos/semphr.h"                     // ARM.FreeRTOS::RTOS:Core
-
+#include "freertos/FreeRTOSConfig.h"   
 #include "freertos/portmacro.h"
 #include "rtos/freertos_mpool.h"             // osMemoryPool definitions
 #include "rtos/freertos_os2.h"               // Configuration check and setup
 #include "platform/mbed_debug.h" 
-
 /*---------------------------------------------------------------------------*/
 //extern void vQueueAddToRegistry( QueueHandle_t xQueue, const char *pcName );
 //extern void vQueueUnregisterQueue( QueueHandle_t xQueue );
@@ -451,6 +451,11 @@ uint32_t osKernelGetSysTimerFreq (void) {
   return 0;
 }
 
+void fun(){
+  while(1){
+    debug("a\n");
+  }
+}
 /*---------------------------------------------------------------------------*/
 
 osThreadId_t osThreadNew (osThreadFunc_t func, void *argument, const osThreadAttr_t *attr) {
@@ -480,13 +485,13 @@ osThreadId_t osThreadNew (osThreadFunc_t func, void *argument, const osThreadAtt
       if ((prio < osPriorityIdle) || (prio > osPriorityISR) || ((attr->attr_bits & osThreadJoinable) == osThreadJoinable)) {
         return (NULL);
       }
-
       if (attr->stack_size > 0U) {
         /* In FreeRTOS stack is not in bytes, but in sizeof(StackType_t) which is 4 on ARM ports.       */
         /* Stack size should be therefore 4 byte aligned in order to avoid division caused side effects */
-        stack = attr->stack_size / sizeof(StackType_t);
+       // stack = attr->stack_size / sizeof(StackType_t);
+       stack = attr->stack_size ;
       }
-
+     
       if ((attr->cb_mem    != NULL) && (attr->cb_size    >= sizeof(StaticTask_t)) &&
           (attr->stack_mem != NULL) && (attr->stack_size >  0U)) {
         mem = 1;
@@ -494,24 +499,32 @@ osThreadId_t osThreadNew (osThreadFunc_t func, void *argument, const osThreadAtt
       else {
         if ((attr->cb_mem == NULL) && (attr->cb_size == 0U) && (attr->stack_mem == NULL)) {
           mem = 0;
+        }else{
+          mem = 0;
         }
       }
     }
     else {
       mem = 0;
     }
+     debug("-------------------------attr->cb_size-%d\n",attr->cb_size);
+    debug("--------------------------stack-%d\n",stack);
 
     if (mem == 1) {
+        //sizeof(StaticTask_t)-364
+      // hTask =   xTaskCreateStaticPinnedToCore((TaskFunction_t)func, name, stack, argument, prio, (StackType_t  *)attr->stack_mem,(StaticTask_t *)attr->cb_mem,0);
       #if (configSUPPORT_STATIC_ALLOCATION == 1)
-        hTask = xTaskCreateStatic ((TaskFunction_t)func, name, stack, argument, prio, (StackType_t  *)attr->stack_mem,                                                                          (StaticTask_t *)attr->cb_mem);
+      xTaskCreatePinnedToCore((TaskFunction_t)func, name,stack, argument, prio, NULL, 1);   
+      //hTask = xTaskCreateStatic ((TaskFunction_t)func, name, stack, argument, prio, (StackType_t  *)attr->stack_mem,(StaticTask_t *)attr->cb_mem);
       #endif
     }
     else {
       if (mem == 0) {
         #if (configSUPPORT_DYNAMIC_ALLOCATION == 1)
-          if (xTaskCreate ((TaskFunction_t)func, name, (uint16_t)stack, argument, prio, &hTask) != pdPASS) {
-            hTask = NULL;
-          }
+        xTaskCreatePinnedToCore((TaskFunction_t)func, name,stack, argument, prio, NULL, 1);   
+        // if (xTaskCreate ((TaskFunction_t)func, name, (uint16_t)stack, argument, prio, &hTask) != pdPASS) {
+        //    hTask = NULL;
+        //  }
         #endif
       }
     }
@@ -1383,7 +1396,7 @@ osMutexId_t osMutexNew (const osMutexAttr_t *attr) {
         } else {
           name = NULL;
         }
-        vQueueAddToRegistry (hMutex, name);
+       // vQueueAddToRegistry (hMutex, name);
        
       }
       #endif
@@ -1505,7 +1518,7 @@ osStatus_t osMutexDelete (osMutexId_t mutex_id) {
   }
   else {
     #if (configQUEUE_REGISTRY_SIZE > 0)
-    vQueueUnregisterQueue (hMutex);
+   // vQueueUnregisterQueue (hMutex);
     #endif
     stat = osOK;
     vSemaphoreDelete (hMutex);
@@ -1531,13 +1544,15 @@ osSemaphoreId_t osSemaphoreNew (uint32_t max_count, uint32_t initial_count, cons
 
   if (!IS_IRQ() && (max_count > 0U) && (initial_count <= max_count)) {
     mem = -1;
-
+   
     if (attr != NULL) {
       if ((attr->cb_mem != NULL) && (attr->cb_size >= sizeof(StaticSemaphore_t))) {
         mem = 1;
       }
       else {
         if ((attr->cb_mem == NULL) && (attr->cb_size == 0U)) {
+          mem = 0;
+        }else {
           mem = 0;
         }
       }
@@ -1546,6 +1561,7 @@ osSemaphoreId_t osSemaphoreNew (uint32_t max_count, uint32_t initial_count, cons
       mem = 0;
     }
 
+   
     if (mem != -1) {
       if (max_count == 1U) {
         if (mem == 1) {
@@ -1586,7 +1602,7 @@ osSemaphoreId_t osSemaphoreNew (uint32_t max_count, uint32_t initial_count, cons
         } else {
           name = NULL;
         }
-        vQueueAddToRegistry (hSemaphore, name);
+      //  vQueueAddToRegistry (hSemaphore, name);
       }
       #endif
     }
@@ -1691,7 +1707,7 @@ osStatus_t osSemaphoreDelete (osSemaphoreId_t semaphore_id) {
   }
   else {
     #if (configQUEUE_REGISTRY_SIZE > 0)
-    vQueueUnregisterQueue (hSemaphore);
+  //  vQueueUnregisterQueue (hSemaphore);
     #endif
 
     stat = osOK;
@@ -1755,7 +1771,7 @@ osMessageQueueId_t osMessageQueueNew (uint32_t msg_count, uint32_t msg_size, con
       } else {
         name = NULL;
       }
-      vQueueAddToRegistry (hQueue, name);
+    //  vQueueAddToRegistry (hQueue, name);
     }
     #endif
 
@@ -1920,7 +1936,7 @@ uint32_t osMessageQueueGetCount (osMessageQueueId_t mq_id) {
 uint32_t osMessageQueueGetSpace (osMessageQueueId_t mq_id) {
   StaticQueue_t *mq = (StaticQueue_t *)mq_id;
   uint32_t space;
-  uint32_t isrm;
+ // uint32_t isrm;
 
   if (mq == NULL) {
     space = 0U;
@@ -1972,7 +1988,7 @@ osStatus_t osMessageQueueDelete (osMessageQueueId_t mq_id) {
   }
   else {
     #if (configQUEUE_REGISTRY_SIZE > 0)
-    vQueueUnregisterQueue (hQueue);
+   // vQueueUnregisterQueue (hQueue);
     #endif
 
     stat = osOK;
@@ -2131,7 +2147,7 @@ const char *osMemoryPoolGetName (osMemoryPoolId_t mp_id) {
 void *osMemoryPoolAlloc (osMemoryPoolId_t mp_id, uint32_t timeout) {
   MemPool_t *mp;
   void *block;
-  uint32_t isrm;
+  //uint32_t isrm;
  
   if (mp_id == NULL) {
     /* Invalid input parameters */
@@ -2190,7 +2206,7 @@ void *osMemoryPoolAlloc (osMemoryPoolId_t mp_id, uint32_t timeout) {
 osStatus_t osMemoryPoolFree (osMemoryPoolId_t mp_id, void *block) {
   MemPool_t *mp;
   osStatus_t stat;
-  uint32_t isrm;
+ // uint32_t isrm;
   BaseType_t yield;
 
   if ((mp_id == NULL) || (block == NULL)) {
@@ -2457,28 +2473,32 @@ extern void vApplicationStackOverflowHook (TaskHandle_t xTask, signed char *pcTa
   Dummy implementation of the callback function vApplicationIdleHook().
 */
 #if (configUSE_IDLE_HOOK == 1)
-__WEAK void vApplicationIdleHook (void){}
+__WEAK 
+void vApplicationIdleHook (void){}
 #endif
 
 /**
   Dummy implementation of the callback function vApplicationTickHook().
 */
 #if (configUSE_TICK_HOOK == 1)
- __WEAK void vApplicationTickHook (void){}
+ __WEAK 
+ void vApplicationTickHook (void){}
 #endif
 
 /**
   Dummy implementation of the callback function vApplicationMallocFailedHook().
 */
 #if (configUSE_MALLOC_FAILED_HOOK == 1)
-__WEAK void vApplicationMallocFailedHook (void){}
+__WEAK
+ void vApplicationMallocFailedHook (void){}
 #endif
 
 /**
   Dummy implementation of the callback function vApplicationDaemonTaskStartupHook().
 */
 #if (configUSE_DAEMON_TASK_STARTUP_HOOK == 1)
-__WEAK void vApplicationDaemonTaskStartupHook (void){}
+__WEAK 
+void vApplicationDaemonTaskStartupHook (void){}
 #endif
 
 /**

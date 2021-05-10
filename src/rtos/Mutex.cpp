@@ -59,11 +59,12 @@ void Mutex::constructor(const char *name)
     // To permit certain cases where a device may get constructed in
     // by the attempt to print an error in a fatal shutdown, let a
     // mutex construction error pass.
-    MBED_ASSERT(_id || mbed_get_error_in_progress());
+  //  MBED_ASSERT(_id || mbed_get_error_in_progress());
 }
 
 void Mutex::lock(void)
-{
+{   
+    /*
     osStatus status = osMutexAcquire(_id, osWaitForever);
     if (osOK == status) {
         _count++;
@@ -71,7 +72,7 @@ void Mutex::lock(void)
 
     if (status != osOK && !mbed_get_error_in_progress()) {
         MBED_ERROR1(MBED_MAKE_ERROR(MBED_MODULE_KERNEL, MBED_ERROR_CODE_MUTEX_LOCK_FAILED), "Mutex lock failed", status);
-    }
+    }*/
 }
 
 bool Mutex::trylock()
@@ -127,13 +128,13 @@ void Mutex::unlock()
     // Count must be adjusted inside the lock. This would leave it incorrect
     // on failure, but it only is used for an assert in ConditionVariable,
     // and a mutex release failure means MBED_ERROR anyway.
-    _count--;
+   /* _count--;
 
     osStatus status = osMutexRelease(_id);
 
     if (status != osOK && !mbed_get_error_in_progress()) {
         MBED_ERROR1(MBED_MAKE_ERROR(MBED_MODULE_KERNEL, MBED_ERROR_CODE_MUTEX_UNLOCK_FAILED), "Mutex unlock failed", status);
-    }
+    }*/
 }
 
 osThreadId Mutex::get_owner()

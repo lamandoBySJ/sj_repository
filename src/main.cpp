@@ -42,6 +42,10 @@ extern "C" {
 #include "RGBCollector.h"
 #include "OTAService.h"
 #include "CmdParser.h"
+#include "rtos/Mutex.h"
+#include "rtos/cmsis_os2.h"
+#include "freertos/queue.h"
+
 using namespace std;
 using namespace mstd;
 using namespace rtos;
@@ -86,24 +90,33 @@ ColorSensor<BH1749NUC> colorSensor(bh1749nuc,mtx,2);
 String DeviceInfo::BoardID="";
 String DeviceInfo::Family="k49a";
 //OLEDScreen<12> oled(Heltec.display);
-TracePrinter tracePrinter;
+
 MQTTNetwork MQTTnetwork;
 
 bool update = false;
-bool  web_update= false;
-DynamicJsonDocument  docProperties(1024);
-ESPWebServer ESPwebServer;
+bool web_update= false;
 
+ESPWebServer ESPwebServer;
 RGBCollector<BH1749NUC> RGBcollector(MQTTnetwork,colorSensor);
 OLEDScreen<12> oled(Heltec.display);
-OTAService OTAservice;
-CmdParser cmdParser;
-//#define OLEDSCREEN 
-void setup() {
- // put your setup code here, to run once:
-  //WIFI Kit series V1 not support Vext control
-  esp_sleep_wakeup_cause_t cause =  esp_sleep_get_wakeup_cause();
-  switch(cause){
+//OTAService OTAservice;
+//CmdParser cmdParser;
+  Mutex _std_mutex;
+  class Test
+  {
+public:
+      Test()=default;
+      void run(){
+        while(1){
+           platform_debug::PlatformDebug::println(" 111111111111 ");
+           std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+       
+      }
+  };
+#define OLEDSCREEN 
+/*
+switch(cause){
     case ESP_SLEEP_WAKEUP_UNDEFINED:break;    //!< In case of deep sleep, reset was not caused by exit from deep sleep
     case ESP_SLEEP_WAKEUP_ALL:break;           //!< Not a wakeup cause, used to disable all wakeup sources with esp_sleep_disable_wakeup_source
     case ESP_SLEEP_WAKEUP_EXT0:break;          //!< Wakeup caused by external signal using RTC_IO
@@ -114,41 +127,96 @@ void setup() {
     case ESP_SLEEP_WAKEUP_GPIO:break;         //!< Wakeup caused by GPIO (light sleep only)
     case ESP_SLEEP_WAKEUP_UART:break; 
   }
-  //esp_sleep_enable_ext0_wakeup(GPIO_NUM_26,0);
-  //uint64_t mask = 1|1<<26;
-  //esp_sleep_enable_ext1_wakeup(mask,ESP_EXT1_WAKEUP_ANY_HIGH);
+  */
+
+void setup() {
+ // put your setup code here, to run once:
+  //WIFI Kit series V1 not support Vext control
+  esp_sleep_wakeup_cause_t cause =  esp_sleep_get_wakeup_cause();
+  #ifdef NDEBUG
+    Heltec.begin(false, true , false , true, BAND);
+    Serial.setDebugOutput(false);
+  #else
+    #ifdef OLEDSCREEN
+      Heltec.begin(true, true , true , true, BAND);
+     // PlatformDebug::init(Serial,oled);
+      PlatformDebug::init(Serial,OLEDScreen<12>(Heltec.display));
+     //PlatformDebug::init(Serial,std::move(oled));
+     // PlatformDebug::printLogo();
+    #else
+      Heltec.begin(false, false , true , true, BAND);
+      PlatformDebug::init(Serial);
+    #endif
+  #endif
+  
+ //   SemaphoreHandle_t hMutex;
+ // vQueueAddToRegistry(hMutex,"");
  
-  //gpio_wakeup_enable(GPIO_NUM_0,GPIO_INTR_LOW_LEVEL);
-  //gpio_wakeup_enable(GPIO_NUM_26,GPIO_INTR_HIGH_LEVEL);
-  //esp_sleep_enable_gpio_wakeup();
+  //LoRa.dumpRegisters(Serial);
+  //ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+  platform_debug::PlatformDebug::println(" ************ STLB ************ ");
+  Test test;
+  Thread thread(osPriorityNormal,8199);
+
+  thread.start(callback(&test,&Test::run));
+  //std::thread thd= std::thread(&Test::run,&test);
+  //TracePrinter::startup();
+  platform_debug::PlatformDebug::pause();
+  //platform_debug::PlatformDebug::println(" TracePrinter::startup() ");
+ // std::this_thread::sleep_for(std::chrono::seconds(3));
+  /* switch(cause){
+    case ESP_SLEEP_WAKEUP_UNDEFINED:
+    platform_debug::TracePrinter::printTrace("ESP_SLEEP_WAKEUP_UNDEFINED");
+    break;    //!< In case of deep sleep, reset was not caused by exit from deep sleep
+    case ESP_SLEEP_WAKEUP_ALL:
+    platform_debug::TracePrinter::printTrace("ESP_SLEEP_WAKEUP_ALL");
+    break;           //!< Not a wakeup cause, used to disable all wakeup sources with esp_sleep_disable_wakeup_source
+    case ESP_SLEEP_WAKEUP_EXT0:
+    platform_debug::TracePrinter::printTrace("ESP_SLEEP_WAKEUP_EXT0");
+    break;          //!< Wakeup caused by external signal using RTC_IO
+    case ESP_SLEEP_WAKEUP_EXT1:
+    platform_debug::TracePrinter::printTrace("ESP_SLEEP_WAKEUP_EXT1");
+    break;         //!< Wakeup caused by external signal using RTC_CNTL
+    case ESP_SLEEP_WAKEUP_TIMER:
+    platform_debug::TracePrinter::printTrace("ESP_SLEEP_WAKEUP_TIMER");
+    break;         //!< Wakeup caused by timer
+    case ESP_SLEEP_WAKEUP_TOUCHPAD:
+    platform_debug::TracePrinter::printTrace("ESP_SLEEP_WAKEUP_TOUCHPAD");
+    break;      //!< Wakeup caused by touchpad
+    case ESP_SLEEP_WAKEUP_ULP:
+    platform_debug::TracePrinter::printTrace("ESP_SLEEP_WAKEUP_ULP");
+    break;           //!< Wakeup caused by ULP program
+    case ESP_SLEEP_WAKEUP_GPIO:
+    platform_debug::TracePrinter::printTrace("ESP_SLEEP_WAKEUP_GPIO");
+    break;         //!< Wakeup caused by GPIO (light sleep only)
+    case ESP_SLEEP_WAKEUP_UART:
+    platform_debug::TracePrinter::printTrace("ESP_SLEEP_WAKEUP_UART");
+    break; 
+    default:break;
+  }
+*/
+  for(;;){
+    //platform_debug::TracePrinter::printTrace("1111111111111111111111111");
+
+std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
+  
+
 
   pinMode(18,OUTPUT);
   pinMode(23,OUTPUT);
   pinMode(5,OUTPUT);
   pinMode(19,OUTPUT);
   pinMode(22,PULLUP);
+  //esp_sleep_enable_ext0_wakeup(GPIO_NUM_26,0);
+  //uint64_t mask = 1|1<<26;
+  //esp_sleep_enable_ext1_wakeup(mask,ESP_EXT1_WAKEUP_ANY_HIGH);
+  //gpio_wakeup_enable(GPIO_NUM_0,GPIO_INTR_LOW_LEVEL);
+  //gpio_wakeup_enable(GPIO_NUM_26,GPIO_INTR_HIGH_LEVEL);
+  //esp_sleep_enable_gpio_wakeup();
 
-  #ifdef NDEBUG
-    Heltec.begin(false, true , false , true, BAND);
-  #else
-    #ifdef OLEDSCREEN
-      Heltec.begin(true, true , true , true, BAND);
-      PlatformDebug::init(Serial,OLEDScreen<12>(Heltec.display));
-      PlatformDebug::printLogo();
-    #else
-      Heltec.begin(false, false , true , true, BAND);
-      PlatformDebug::init(Serial);
-    #endif
-  #endif
-  //LoRa.dumpRegisters(Serial);
-  //PlatformDebug::init(Serial);
-  //PlatformDebug::init(Serial,oled);
-  //PlatformDebug::init(oled);
-  //PlatformDebug::init(std::move(oled));
-  //PlatformDebug::init(OLEDScreen<12>(Heltec.display));
-  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-  platform_debug::PlatformDebug::println(" ************ STLB ************ ");
 
+ /*
   //int Maxint = numeric_limits<int32_t>::max();
   //int Minint = numeric_limits<int32_t>::min();
   //platform_debug::PlatformDebug::println(" ************ Max ************ "+String(Maxint,DEC));
@@ -157,9 +225,8 @@ void setup() {
   attachInterrupt(0,[]()->void{
      
   },FALLING);
-  
-  tracePrinter.startup();
-  
+  */
+/*
   std::string mac_address=WiFi.macAddress().c_str();
   std::string mark=":";
   unsigned int nSize = mark.size();
@@ -193,6 +260,8 @@ void setup() {
       FFatHelper::createDir(FFat,"/data");
       platform_debug::PlatformDebug::println("Dir created:/data");
   }
+
+  DynamicJsonDocument  docProperties(1024);
   String text;
   if(FFatHelper::readFile(FFat,user_properties::path,text)){
       platform_debug::PlatformDebug::println(text); 
@@ -234,15 +303,15 @@ void setup() {
       docProperties["b_offset"] = rgb_properties::b_offset;
       FFatHelper::writeFile(FFat,rgb_properties::path,docProperties.as<String>());
   }
-  
+ 
   timeMachine.startup(true,__DATE__,__TIME__);
-  timeMachine.setEpoch(1614764209+8*60*60);
+//timeMachine.setEpoch(1614764209+8*60*60);
   colorSensor.startup();
   //MQTTnetwork.addTopic("SmartBox/TimeSync");
   MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerTime");
   MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerReq");
 
-  MQTTnetwork.addOnMessageCallback(callback(&cmdParser,&CmdParser::onMessageCallback));
+  //MQTTnetwork.addOnMessageCallback(callback(&cmdParser,&CmdParser::onMessageCallback));
   // MQTTnetwork.addOnMqttConnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttConnectCallback));
   // MQTTnetwork.addOnMqttDisonnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttDisconnectCallback));
   
@@ -253,7 +322,8 @@ void setup() {
   RGBcollector.setWebSocketClientTextCallback(callback(&ESPwebServer,&ESPWebServer::delegateMethodWebSocketClientText));
   RGBcollector.startup();
   ESPwebServer.startup();
- // while(1){  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));};
+  */
+
   platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
 }
 
@@ -263,24 +333,19 @@ static String currentTime="";
 void loop() {
 
   while (true) {
+   // _std_mutex.lock();
     if( timeMachine.getDateTime(currentTime)){
         platform_debug::PlatformDebug::println(currentTime);
     }else{
         platform_debug::PlatformDebug::println("ERROR:currentTime");
     }
-    
+   // _std_mutex.unlock();
    // RGBcollector.delegateMethodPostMail(MeasEventType::EventSystemMeasure);
     std::this_thread::sleep_for(chrono::seconds(10));
     //ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));
     
   }
 }
-/*
-if(web_update){
-       web_update =false;
-       if(!ESPwebServer.isRunning()) {
-         ESPwebServer.startup();
-       }
-     }*/
+
 
 

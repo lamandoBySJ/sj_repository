@@ -6,23 +6,41 @@
 #include "oled/SSD1306Wire.h"
 #include "oled/OLEDDisplayFonts.h"
 #include "rtos/rtos.h"
-
+#include <thread>
+#include <mutex>
 using namespace std;
-
+/*
+使用一个私有函数初始化成员变量
+使用带有默认参数的构造函数
+使用placement new运算符调用重载构造函数
+使用C++11的委托构造函数（在初始化列表位置调用）
+*/
 template<int N=12>
 class OLEDScreen 
 {
 public:
-    OLEDScreen()=default;
-    OLEDScreen(SSD1306Wire* ssd1306);
-    ~OLEDScreen();
+    OLEDScreen():_head(0),_tail(0),_display(nullptr)
+    {
+      Serial.printf("default construct:this:%p\n",this);
+    }
+    OLEDScreen(SSD1306Wire* ssd1306):_head(0),_tail(0),_display(ssd1306)
+    {
+      Serial.printf("overload construct:this:%p\n",this);
+    }
+    ~OLEDScreen()
+    {
+        if(_display){
+          delete _display;
+          _display=nullptr;
+        }
+    }
     OLEDScreen(const OLEDScreen& other)
     {
-      Serial.println("copy construct");
+      Serial.printf("copy construct:this:%p\n",this);
       if (this != &other) {
-        if (other.display != nullptr){
+        if (other._display != nullptr){
             this->~OLEDScreen();
-            this->display = other.display;
+            this->_display = other._display;
             _head=other._head;
             _tail=other._tail;
           // textVector.clear();
@@ -31,30 +49,31 @@ public:
         }   
       }
     }
-    OLEDScreen(OLEDScreen&& other)
-    {
-      Serial.println("move construct");
+    OLEDScreen(OLEDScreen&& other):OLEDScreen()
+    {   
+     //new (this)OLEDScreen();
+      Serial.printf("move construct:this:%p\n",this);
       if (this != &other) {
-          if (other.display != nullptr){
+          if (other._display != nullptr){
               this->~OLEDScreen();
-              this->display = other.display;
-              other.display = nullptr;
-              _head=other._head;
-              _tail=other._tail;
-             // textVector.clear();
+              this->_display = other._display;
+              other._display = nullptr;
+              this->_head=other._head;
+              this->_tail=other._tail;
+
           }else{
-               generate();
+              generate();
           }
       }
     }
 
-    OLEDScreen& operator=(const OLEDScreen& other)
+  OLEDScreen&  operator=(const OLEDScreen& other)
     {
       Serial.println("assign=&");
       if (this != &other) {
         this->~OLEDScreen();
-        if(other.display!=nullptr){
-             display = other.display;
+        if(other._display!=nullptr){
+             this->_display = other._display;
              _head=other._head;
               _tail=other._tail;
         }else{
@@ -64,14 +83,14 @@ public:
       return *this;
     }
 
-  OLEDScreen& operator=(OLEDScreen&& other)
+ OLEDScreen&  operator=(OLEDScreen&& other)
   {
       Serial.println("move=&&");
       if (this != &other){
             this->~OLEDScreen();
-            if(other.display!=nullptr){
-              this->display  = other.display ;
-              other.display  = nullptr;
+            if(other._display!=nullptr){
+              this->_display  = other._display ;
+              other._display  = nullptr;
               _head=other._head;
               _tail=other._tail;
             }else{
@@ -85,25 +104,24 @@ public:
    bool init();
 
   size_t println(const String &s);
-  size_t printf(const char *format, ...);
+ // size_t printf(const char *format, ...);
+
 protected:
   void generate(){
-      this-> display = new SSD1306Wire(0x3c, SDA_OLED, SCL_OLED, RST_OLED, GEOMETRY_128_64);
+      this-> _display = new SSD1306Wire(0x3c, SDA_OLED, SCL_OLED, RST_OLED, GEOMETRY_128_64);
       _head=0;
       _tail=0;
   }
-private:
-  SSD1306Wire* display=nullptr;
-
-  void print(const String& data);
+ // void print(const String& data);
   void printScreen(const char* data);
-  void screenPrint(const char* data);
+  //void screenPrint(const char* data);
+  
+private:
   String _pool[N];
+  std::vector<String> textVector;
   int _head;
   int _tail;
-
-  static rtos::Mutex _mutex;
-  std::vector<String> textVector;
+  SSD1306Wire* _display;
 };
 
 #endif

@@ -1169,7 +1169,7 @@ mbed_error_status_t mbed_get_error_hist_info(int index, mbed_error_ctx *error_in
  *
  */
 mbed_error_status_t mbed_save_error_hist(const char *path);
-
+int mbed_error_printf(const char* format,...);
 #ifdef __cplusplus
 }
 #endif

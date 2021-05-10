@@ -2,10 +2,12 @@
 
 using namespace platform_debug;
 
-PlatformDebug* PlatformDebug::_platformDebug=nullptr;
-rtos::Mutex  PlatformDebug::std_mutex;
-bool PlatformDebug::_finished=false;
+
 #if !defined(NDEBUG)
-TracePrinter* TracePrinter::_tracePrinter;
+PlatformDebug* PlatformDebug::_platformDebug=nullptr;
+std::mutex  PlatformDebug::_mtx;
+bool PlatformDebug::_finished=false;
+OLEDScreen<12>* PlatformDebug::_oled=nullptr;
+TracePrinter* TracePrinter::_tracePrinter=nullptr;
 std::mutex TracePrinter::_mtx;
 #endif

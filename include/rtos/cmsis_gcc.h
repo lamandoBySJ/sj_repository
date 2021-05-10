@@ -142,7 +142,7 @@ __STATIC_FORCEINLINE __NO_RETURN void __cmsis_start(void)
     uint32_t* dest;
     uint32_t  wlen;
   } __zero_table_t;
-  
+  /*
   extern const __copy_table_t __copy_table_start__;
   extern const __copy_table_t __copy_table_end__;
   extern const __zero_table_t __zero_table_start__;
@@ -159,7 +159,7 @@ __STATIC_FORCEINLINE __NO_RETURN void __cmsis_start(void)
       pTable->dest[i] = 0u;
     }
   }
- 
+ */
   _start();
 }
   
@@ -447,10 +447,10 @@ __STATIC_FORCEINLINE void __TZ_set_SP_NS(uint32_t topOfStack)
  */
 __STATIC_FORCEINLINE uint32_t __get_PRIMASK(void)
 {
-  uint32_t result;
-
+ // uint32_t result;
   //__ASM volatile ("MRS %0, primask" : "=r" (result) );
-  return(result);
+//  return(result);
+ return 0;
 }
 
 
@@ -1231,13 +1231,14 @@ __STATIC_FORCEINLINE void __CLREX(void)
   \param [in]  ARG1  Value to be saturated
   \param [in]  ARG2  Bit position to saturate to (1..32)
   \return             Saturated value
+    //int32_t __RES, __ARG1 = (ARG1); \
+  //__ASM volatile ("ssat %0, %1, %2" : "=r" (__RES) :  "I" (ARG2), "r" (__ARG1) : "cc" ); \
+  __RES; \
  */
 #define __SSAT(ARG1, ARG2) \
 __extension__ \
 ({                          \
-  int32_t __RES, __ARG1 = (ARG1); \
-  //__ASM volatile ("ssat %0, %1, %2" : "=r" (__RES) :  "I" (ARG2), "r" (__ARG1) : "cc" ); \
-  __RES; \
+
  })
 
 
@@ -1247,13 +1248,14 @@ __extension__ \
   \param [in]  ARG1  Value to be saturated
   \param [in]  ARG2  Bit position to saturate to (0..31)
   \return             Saturated value
+   // uint32_t __RES, __ARG1 = (ARG1); \
+  //__ASM volatile ("usat %0, %1, %2" : "=r" (__RES) :  "I" (ARG2), "r" (__ARG1) : "cc" ); \
+  __RES; \
  */
 #define __USAT(ARG1, ARG2) \
  __extension__ \
 ({                          \
-  uint32_t __RES, __ARG1 = (ARG1); \
-  //__ASM volatile ("usat %0, %1, %2" : "=r" (__RES) :  "I" (ARG2), "r" (__ARG1) : "cc" ); \
-  __RES; \
+
  })
 
 
@@ -1925,16 +1927,16 @@ __STATIC_FORCEINLINE uint32_t __USADA8(uint32_t op1, uint32_t op2, uint32_t op3)
 
 #define __SSAT16(ARG1, ARG2) \
 ({                          \
-  int32_t __RES, __ARG1 = (ARG1); \
-  //__ASM volatile ("ssat16 %0, %1, %2" : "=r" (__RES) :  "I" (ARG2), "r" (__ARG1) : "cc" ); \
- // __RES; \
+  //int32_t __RES, __ARG1 = (ARG1);
+  //__ASM volatile ("ssat16 %0, %1, %2" : "=r" (__RES) :  "I" (ARG2), "r" (__ARG1) : "cc" ); 
+ // __RES; 
  })
 
 #define __USAT16(ARG1, ARG2) \
 ({                          \
-  uint32_t __RES, __ARG1 = (ARG1); \
- // __ASM volatile ("usat16 %0, %1, %2" : "=r" (__RES) :  "I" (ARG2), "r" (__ARG1) : "cc" ); \
-  //__RES; \
+  //uint32_t __RES, __ARG1 = (ARG1); 
+ // __ASM volatile ("usat16 %0, %1, %2" : "=r" (__RES) :  "I" (ARG2), "r" (__ARG1) : "cc" ); 
+  //__RES; 
  })
 
 __STATIC_FORCEINLINE uint32_t __UXTB16(uint32_t op1)

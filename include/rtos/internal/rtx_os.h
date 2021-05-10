@@ -126,6 +126,7 @@ typedef struct osRtxThread_s {
 #ifdef RTX_TF_M_EXTENSION
   uint32_t                  tz_module;  ///< TrustZone Module Identifier
 #endif
+  //uint32_t		uxDummy[300];
 } osRtxThread_t;
  
  

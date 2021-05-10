@@ -25,18 +25,20 @@
  * -----------------------------------------------------------------------------
  */
  
-#include "cmsis_compiler.h"
-#include "rtx_os.h"
- 
+//#include "cmsis_compiler.h"
+#include "rtos/internal/rtx_os.h"
+ #include "rtos/cmsis_os2.h"
 // OS Idle Thread
-__WEAK __NO_RETURN void osRtxIdleThread (void *argument) {
+//__WEAK
+ __NO_RETURN void osRtxIdleThread (void *argument) {
   (void)argument;
 
   for (;;) {}
 }
  
 // OS Error Callback function
-__WEAK uint32_t osRtxErrorNotify (uint32_t code, void *object_id) {
+//__WEAK 
+uint32_t osRtxErrorNotify (uint32_t code, void *object_id) {
   (void)object_id;
 
   switch (code) {

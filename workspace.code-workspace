@@ -7,7 +7,17 @@
     "settings": {
         "files.associations": {
             "critical_section_api.h": "c",
-            "ticker_api.h": "c"
+            "ticker_api.h": "c",
+            "rtx_os.h": "c",
+            "task.h": "c",
+            "freertos.h": "c",
+            "cmsis_compiler.h": "c",
+            "portmacro.h": "c",
+            "semphr.h": "c",
+            "croutine.h": "c",
+            "queue.h": "c",
+            "event_groups.h": "c",
+            "freertosconfig.h": "c"
         }
     }
 }

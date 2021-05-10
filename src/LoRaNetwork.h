@@ -30,11 +30,11 @@ public:
 private:
     static LoRaNetwork* _loraNetwork;
     static void _thunkOnReceice(int packetSize);
-    Thread _thread;
+    std::thread _thread;
     Mail<lora::mail_t,16> _mail_box;
     std::set<String> _beaconSet;
     std::vector<Callback<void(const lora::mail_t&)>>  _onMessageCallbacks;
-    static rtos::Mutex _mutex;
+    std::mutex _mtx;
     static long _lastSendTime;
 };
 

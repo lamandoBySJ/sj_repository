@@ -24,27 +24,28 @@
 #define MBED_RTX_CONF_H
 
 //#include "mbed_rtx.h"
-#ifndef MBED_CONF_RTOS_THREAD_STACK_SIZE
-#define MBED_CONF_RTOS_THREAD_STACK_SIZE 1024
-#endif
-#ifndef MBED_CONF_RTOS_TIMER_THREAD_STACK_SIZE
-#define MBED_CONF_RTOS_TIMER_THREAD_STACK_SIZE 1024
-#endif
+#include "rtos/RTX_Config.h"
+
 /** Any access to RTX5 specific data structures used in common code should be wrapped in ifdef MBED_OS_BACKEND_RTX5 */
 #define MBED_OS_BACKEND_RTX5
 
-#if defined(MBED_CONF_APP_THREAD_STACK_SIZE)
+#ifdef MBED_CONF_APP_THREAD_STACK_SIZE
 #define OS_STACK_SIZE               MBED_CONF_APP_THREAD_STACK_SIZE
 #else
-#define OS_STACK_SIZE               MBED_CONF_RTOS_THREAD_STACK_SIZE
+#ifndef OS_STACK_SIZE
+#define MBED_CONF_RTOS_THREAD_STACK_SIZE   1024
+//#define OS_STACK_SIZE               MBED_CONF_RTOS_THREAD_STACK_SIZE
+#endif
 #endif
 
 #ifdef MBED_CONF_APP_TIMER_THREAD_STACK_SIZE
 #define OS_TIMER_THREAD_STACK_SIZE  MBED_CONF_APP_TIMER_THREAD_STACK_SIZE
 #else
+#ifndef OS_TIMER_THREAD_STACK_SIZE
+#define MBED_CONF_RTOS_TIMER_THREAD_STACK_SIZE   1024
 #define OS_TIMER_THREAD_STACK_SIZE  MBED_CONF_RTOS_TIMER_THREAD_STACK_SIZE
 #endif
-
+#endif
 // Increase the idle thread stack size when tickless is enabled
 #if defined(EXTRA_IDLE_STACK_REQUIRED) || (defined(MBED_TICKLESS) && defined(LPTICKER_DELAY_TICKS) && (LPTICKER_DELAY_TICKS > 0))
 #define EXTRA_IDLE_STACK MBED_CONF_RTOS_IDLE_THREAD_STACK_SIZE_TICKLESS_EXTRA
@@ -62,7 +63,9 @@
 #ifdef MBED_CONF_APP_IDLE_THREAD_STACK_SIZE
 #define OS_IDLE_THREAD_STACK_SIZE   MBED_CONF_APP_IDLE_THREAD_STACK_SIZE
 #else
+#ifndef OS_IDLE_THREAD_STACK_SIZE
 #define OS_IDLE_THREAD_STACK_SIZE   (MBED_CONF_RTOS_IDLE_THREAD_STACK_SIZE + EXTRA_IDLE_STACK + EXTRA_IDLE_STACK_DEBUG)
+#endif
 #endif
 
 // The number of threads available to applications that need to use
@@ -121,7 +124,9 @@
 #define OS_MSGQUEUE_DATA_SIZE MBED_CONF_RTOS_MSGQUEUE_DATA_SIZE
 #endif
 
+#ifndef OS_DYNAMIC_MEM_SIZE
 #define OS_DYNAMIC_MEM_SIZE         0
+#endif
 
 #if defined(OS_TICK_FREQ) && (OS_TICK_FREQ != 1000)
 #error "OS Tickrate must be 1000 for system timing"
@@ -135,7 +140,7 @@
 #define OS_STACK_WATERMARK          1
 #endif
 
-#ifndef define OS_IDLE_THREAD_TZ_MOD_ID
+#ifndef OS_IDLE_THREAD_TZ_MOD_ID
 #define OS_IDLE_THREAD_TZ_MOD_ID     1
 #endif
 #ifndef OS_TIMER_THREAD_TZ_MOD_ID 

@@ -3,7 +3,7 @@
 
 using namespace platform_debug;
 
-rtos::Mutex LoRaNetwork::_mutex;
+
 LoRaNetwork* LoRaNetwork::_loraNetwork;
 long LoRaNetwork::_lastSendTime = 0;
 void LoRaNetwork::_thunkOnReceice(int packetSize)
@@ -45,7 +45,8 @@ void LoRaNetwork::startup()
     LoRa.setTxPower(14,RF_PACONFIG_PASELECT_PABOOST);
     LoRa.onReceive(&LoRaNetwork::_thunkOnReceice);
     LoRa.receive();
-    _thread.start(callback(this,&LoRaNetwork::run));
+   // _thread.start(callback(this,&LoRaNetwork::run));
+   _thread=std::thread(&LoRaNetwork::run,this);
     
 }
 void LoRaNetwork::run()
@@ -71,7 +72,8 @@ void LoRaNetwork::addOnMessageCallback(Callback<void(const lora::mail_t&)> func)
 
 void LoRaNetwork::sendMessage(const String& receiver,const String& sender,const String& packet)
 {   
-    LoRaNetwork::_mutex.lock();
+    std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
+    lck.lock();
     char retry=60;
     while( (millis()-LoRaNetwork::_lastSendTime) < 600 && --retry>0){
         platform_debug::TracePrinter::printTrace("       < delay >      ("+String(retry,DEC)+")");
@@ -91,5 +93,5 @@ void LoRaNetwork::sendMessage(const String& receiver,const String& sender,const 
     LoRa.print(packet);           
     LoRa.endPacket();            
     LoRa.receive();  
-    LoRaNetwork::_mutex.unlock();                       
+                   
 }
