@@ -28,7 +28,7 @@
 #include "rtos/rtos_handlers.h"
 #include "platform/mbed_assert.h"
 #include "platform/mbed_error.h"
-
+#include "platform_debug.h"
 
 #if MBED_CONF_RTOS_PRESENT
 
@@ -82,31 +82,32 @@ osStatus Thread::start(mbed::Callback<void()> task)
         return osErrorParameter;
     }
 
-    if (_attr.stack_mem == nullptr) {
-        _attr.stack_mem = new uint32_t[_attr.stack_size / sizeof(uint32_t)];
-        MBED_ASSERT(_attr.stack_mem != nullptr);
+    if (!_dynamic_stack) {
+        if (_attr.stack_mem == nullptr) {
+            _attr.stack_mem = new uint32_t[_attr.stack_size / sizeof(uint32_t)];
+             MBED_ASSERT(_attr.stack_mem != nullptr);
+        }
+        //Fill the stack with a magic word for maximum usage checking
+        for (uint32_t i = 0; i < (_attr.stack_size / sizeof(uint32_t)); i++) {
+             ((uint32_t *)_attr.stack_mem)[i] = osRtxStackMagicWord;
+        }
     }
-
-    //Fill the stack with a magic word for maximum usage checking
-    for (uint32_t i = 0; i < (_attr.stack_size / sizeof(uint32_t)); i++) {
-        ((uint32_t *)_attr.stack_mem)[i] = osRtxStackMagicWord;
-    }
-
     _attr.cb_size = sizeof(_obj_mem);
     _attr.cb_mem = &_obj_mem;
     _task = task;
-    _tid = osThreadNew(Thread::_thunk, this, &_attr);
+  
+    _tid = osThreadNew(&Thread::_thunk, this, &_attr);
+    
     if (_tid == nullptr) {
         if (_dynamic_stack) {
             // Cast before deallocation as delete[] does not accept void*
-            delete[] static_cast<uint32_t *>(_attr.stack_mem);
-            _attr.stack_mem = nullptr;
+           // delete[] static_cast<uint32_t *>(_attr.stack_mem);
+          // _attr.stack_mem = nullptr;
         }
         _mutex.unlock();
         _join_sem.release();
         return osErrorResource;
     }
-
     _mutex.unlock();
     return osOK;
 }
@@ -335,13 +336,16 @@ Thread::~Thread()
 
 void Thread::_thunk(void *thread_ptr)
 {
-    Thread *t = (Thread *)thread_ptr;
+
+     Thread *t =(static_cast< Thread * > (thread_ptr));
+   // Thread *t = (Thread *)thread_ptr;
     t->_task();
     t->_mutex.lock();
     t->_tid = nullptr;
     t->_finished = true;
     t->_join_sem.release();
     // rtos will release the mutex automatically
+ 
 }
 
 }
