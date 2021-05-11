@@ -88,11 +88,8 @@ ColorSensor<BH1749NUC> colorSensor(bh1749nuc,mtx,2);
 
 //OLEDScreen<12> oled(Heltec.display);
 ESPWebServer ESPwebServer;
-//RGBCollector<BH1749NUC> RGBcollector(MQTTnetwork,colorSensor);
+RGBCollector<BH1749NUC> RGBcollector(MQTTnetwork,colorSensor);
 OLEDScreen<12> oled(Heltec.display);
-//OTAService OTAservice;
-//CmdParser cmdParser;
-// Mutex _std_mutex;
 class Test
 {
 public:
@@ -101,7 +98,6 @@ public:
       platform_debug::PlatformDebug::println(" ************ STLB ************ ");
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-   
   }
 };
 CmdParser cmdParser;
@@ -273,17 +269,16 @@ void setup() {
  // colorSensor.startup();
   //MQTTnetwork.addTopic("SmartBox/TimeSync");
   MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerTime");
- MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerReq");
-
+  MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerReq");
   MQTTnetwork.addOnMessageCallback(callback(&cmdParser,&CmdParser::onMessageCallback));
 
-  /*
+  
   ESPwebServer.setCallbackPostMailToCollector(callback(&RGBcollector,&RGBCollector<BH1749NUC>::delegateMethodPostMail));
   RGBcollector.setWebSocketClientEventCallback(callback(&ESPwebServer,&ESPWebServer::delegateMethodWebSocketClientPostEvent));
   RGBcollector.setWebSocketClientTextCallback(callback(&ESPwebServer,&ESPWebServer::delegateMethodWebSocketClientText));
   RGBcollector.startup();
   ESPwebServer.startup();
-  */
+ 
   MQTTnetwork.startup();
   platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
   platform_debug::PlatformDebug::pause();
