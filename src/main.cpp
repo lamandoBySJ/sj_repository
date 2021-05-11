@@ -81,20 +81,15 @@ std::mutex mtx;
 DS1307 ds1307(Wire1,21,22); //stlb
 //DS1307 ds1307(Wire1,32,33); //ips
 TimeMachine<DS1307> timeMachine(ds1307,mtx,13);  
-//TimeMachine<RTCBase> timeMachine(&RTC,std_mutex);
 
 BH1749NUC bh1749nuc(Wire,4,15);
 ColorSensor<BH1749NUC> colorSensor(bh1749nuc,mtx,2);
-//ColorSensor<ColorSensorBase> colorSensor2(&bh1749nuc,mutex);
 
 String DeviceInfo::BoardID="";
 String DeviceInfo::Family="k49a";
 //OLEDScreen<12> oled(Heltec.display);
 
 MQTTNetwork MQTTnetwork;
-
-bool update = false;
-bool web_update= false;
 
 ESPWebServer ESPwebServer;
 RGBCollector<BH1749NUC> RGBcollector(MQTTnetwork,colorSensor);
@@ -111,20 +106,6 @@ public:
   }
 };
 #define OLEDSCREEN 
-/*
-switch(cause){
-    case ESP_SLEEP_WAKEUP_UNDEFINED:break;    //!< In case of deep sleep, reset was not caused by exit from deep sleep
-    case ESP_SLEEP_WAKEUP_ALL:break;           //!< Not a wakeup cause, used to disable all wakeup sources with esp_sleep_disable_wakeup_source
-    case ESP_SLEEP_WAKEUP_EXT0:break;          //!< Wakeup caused by external signal using RTC_IO
-    case ESP_SLEEP_WAKEUP_EXT1:break;         //!< Wakeup caused by external signal using RTC_CNTL
-    case ESP_SLEEP_WAKEUP_TIMER:break;         //!< Wakeup caused by timer
-    case ESP_SLEEP_WAKEUP_TOUCHPAD:break;      //!< Wakeup caused by touchpad
-    case ESP_SLEEP_WAKEUP_ULP:break;           //!< Wakeup caused by ULP program
-    case ESP_SLEEP_WAKEUP_GPIO:break;         //!< Wakeup caused by GPIO (light sleep only)
-    case ESP_SLEEP_WAKEUP_UART:break; 
-  }
-  */
-
 void setup() {
  // put your setup code here, to run once:
   //WIFI Kit series V1 not support Vext control
@@ -137,7 +118,7 @@ void setup() {
       Heltec.begin(true, true , true , true, BAND);
      // PlatformDebug::init(Serial,oled);
       PlatformDebug::init(Serial,OLEDScreen<12>(Heltec.display));
-      PlatformDebug::init(Serial,std::move(oled));
+     // PlatformDebug::init(Serial,std::move(oled));
       PlatformDebug::printLogo();
       TracePrinter::startup();
     #else
@@ -182,12 +163,14 @@ void setup() {
     break; 
     default:break;
   }
-  Test test;
- std::thread thd= std::thread(&Test::run,&test);
-  for(;;){
+
+ //Test test;
+ //std::thread thd= std::thread(&Test::run,&test);
+
+ // for(;;){
   //  platform_debug::TracePrinter::printTrace("1111111111111111111111111");
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  }
+   // std::this_thread::sleep_for(std::chrono::milliseconds(100));
+ // }
   
   pinMode(18,OUTPUT);
   pinMode(23,OUTPUT);
@@ -212,7 +195,7 @@ void setup() {
      
   },FALLING);
   */
-/*
+
   std::string mac_address=WiFi.macAddress().c_str();
   std::string mark=":";
   unsigned int nSize = mark.size();
@@ -263,13 +246,6 @@ void setup() {
           platform_debug::PlatformDebug::println("user_properties::host:"+user_properties::host);
           platform_debug::PlatformDebug::println("user_properties::port:"+String(user_properties::port,DEC));
       }
-  }else{
-    docProperties.clear();
-    docProperties["ssid"] = user_properties::ssid;
-    docProperties["pass"] = user_properties::pass;
-    docProperties["host"] = user_properties::host;
-    docProperties["port"] = user_properties::port;
-    FFatHelper::writeFile(FFat,user_properties::path,docProperties.as<String>());
   }
 
   if(FFatHelper::readFile(FFat,rgb_properties::path,text)){
@@ -282,12 +258,6 @@ void setup() {
           platform_debug::PlatformDebug::println("rgb_properties::g_offset:"+String(rgb_properties::g_offset));
           platform_debug::PlatformDebug::println("rgb_properties::b_offset:"+String(rgb_properties::b_offset));
       }
-  }else{
-      docProperties.clear();
-      docProperties["r_offset"] = rgb_properties::r_offset;
-      docProperties["g_offset"] = rgb_properties::g_offset;
-      docProperties["b_offset"] = rgb_properties::b_offset;
-      FFatHelper::writeFile(FFat,rgb_properties::path,docProperties.as<String>());
   }
  
   timeMachine.startup(true,__DATE__,__TIME__);
@@ -308,7 +278,7 @@ void setup() {
   RGBcollector.setWebSocketClientTextCallback(callback(&ESPwebServer,&ESPWebServer::delegateMethodWebSocketClientText));
   RGBcollector.startup();
   ESPwebServer.startup();
-  */
+
 
   platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
 }
