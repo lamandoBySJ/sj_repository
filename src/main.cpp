@@ -85,7 +85,8 @@ TimeMachine<DS1307> timeMachine(ds1307,mtx,13);
 BH1749NUC bh1749nuc(Wire,4,15);
 ColorSensor<BH1749NUC> colorSensor(bh1749nuc,mtx,2);
 
-
+CmdParser cmdParser;
+MQTTNetwork MQTTnetwork;
 //OLEDScreen<12> oled(Heltec.display);
 ESPWebServer ESPwebServer;
 RGBCollector<BH1749NUC> RGBcollector(MQTTnetwork,colorSensor);
@@ -100,8 +101,7 @@ public:
     }
   }
 };
-CmdParser cmdParser;
-MQTTNetwork MQTTnetwork;
+
 //Thread threads[2];
 #define OLEDSCREEN 
 void setup() {
