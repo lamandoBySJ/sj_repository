@@ -48,7 +48,6 @@ public:
     {
         Serial.println("T is OLEDScreen");
         if( std::is_lvalue_reference<decltype(t)>::value){
-        //if( std::is_lvalue_reference<decltype(std::forward<T>(t))>::value){
             Serial.println("OLEDScreen--------------->LLLLLLLLLLLLLL");
             PlatformDebug::_platformDebug->_onPrintlnCallbacks.push_back( Callback<size_t(const String&)>(&t,&std::remove_reference_t<T>::println));
             PlatformDebug::_platformDebug->_onPrintLogoCallbacks.push_back(Callback<void()>(&t,&std::remove_reference_t<T>::logo));

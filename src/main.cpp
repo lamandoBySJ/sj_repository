@@ -102,7 +102,14 @@ OLEDScreen<12> oled(Heltec.display);
 //OTAService OTAservice;
 //CmdParser cmdParser;
 // Mutex _std_mutex;
-
+class Test
+{
+public:
+  void run(){
+     platform_debug::PlatformDebug::println(" ************ STLB ************ ");
+     std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
+};
 #define OLEDSCREEN 
 /*
 switch(cause){
@@ -175,14 +182,13 @@ void setup() {
     break; 
     default:break;
   }
-
+  Test test;
+ std::thread thd= std::thread(&Test::run,&test);
   for(;;){
-    platform_debug::TracePrinter::printTrace("1111111111111111111111111");
+  //  platform_debug::TracePrinter::printTrace("1111111111111111111111111");
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
   
-
-
   pinMode(18,OUTPUT);
   pinMode(23,OUTPUT);
   pinMode(5,OUTPUT);
