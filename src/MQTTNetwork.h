@@ -60,19 +60,13 @@ public:
     MQTTNetwork& operator = (MQTTNetwork&& that)=default;
 
     void onMqttConnect(bool sessionPresent);
-
     void onMqttDisconnect(AsyncMqttClientDisconnectReason reason);
-
     void onMqttSubscribe(uint16_t packetId, uint8_t qos);
-
     void onMqttUnsubscribe(uint16_t packetId);
     void onMqttMessage(char* topic,char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) ;
     //void onMqttMessage(const String& topic,const String& payload, AsyncMqttClientMessageProperties properties, size_t index, size_t total);
     void onMqttPublish(uint16_t packetId);
-
-   // void setMqttReconnectTimer(bool start);
-   // void setWifiReconnectTimer(bool start);
-
+    
     void startup();
     void runWiFiEventService();
     void run_mail_box_message();
@@ -80,6 +74,8 @@ public:
     bool connected();
     //void _connectToMqtt();
     //void _connectToWifi();
+    // void setMqttReconnectTimer(bool start);
+    // void setWifiReconnectTimer(bool start);
     // static void _thunkConnectToWifi(void* pvTimerID);
     // static void _thunkConnectToMqtt(void* pvTimerID);
     void disconnect(bool autoConnect=false);
