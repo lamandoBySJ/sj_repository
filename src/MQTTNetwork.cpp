@@ -166,13 +166,10 @@ void MQTTNetwork::onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
       for(auto& v : _onMqttDisconnectCallbacks){
         v.call(reason);
       }
-
-      std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
-      lck.lock();
       if (_autoConnect&&WiFi.isConnected()) {
-        lck.unlock();
-       // setMqttReconnectTimer(true);
-        platform_debug::TracePrinter::printTrace("[ setMqttReconnectTimer(true) ]");
+          mail_wifi_event_t* evt=_mailBoxWiFiEvent.alloc();
+          evt->id=SYSTEM_EVENT_STA_GOT_IP;
+          _mailBoxWiFiEvent.put(evt);
       }
 }
     
@@ -246,7 +243,7 @@ void MQTTNetwork::startup(){
     
       mqttClient.setWill("STLB_WILL",0,false,platform_debug::DeviceInfo::BoardID.c_str(),platform_debug::DeviceInfo::BoardID.length());
       mqttClient.setCleanSession(true);
-      mqttClient.setKeepAlive(120);
+      mqttClient.setKeepAlive(6);
       mqttClient.setClientId(platform_debug::DeviceInfo::BoardID);
       WiFi.onEvent(std::bind(&MQTTNetwork::WiFiEvent,this,std::placeholders::_1,std::placeholders::_2));
      // _wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)this, reinterpret_cast<TimerCallbackFunction_t>(&MQTTNetwork::_thunkConnectToWifi));

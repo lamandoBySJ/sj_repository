@@ -80,8 +80,9 @@ public:
     bool connected();
     //void _connectToMqtt();
     //void _connectToWifi();
+    // static void _thunkConnectToWifi(void* pvTimerID);
+    // static void _thunkConnectToMqtt(void* pvTimerID);
     void disconnect(bool autoConnect=false);
-    //bool publish(const char* topic,String& payload, uint8_t qos=0, bool retain=false,bool dup=true, uint16_t message_id=0);
     bool publish(const String& topic,const String& payload, uint8_t qos=0, bool retain=false,bool dup=true, uint16_t message_id=0);
     bool subscribe(const String& topic, uint8_t qos=0);
     bool unsubscribe(const String& topic);
@@ -92,11 +93,6 @@ public:
     void addSubscribeTopics(std::vector<String>& vec);
     void addOnMqttConnectCallback(Callback<void(bool)> func);
     void addOnMqttDisonnectCallback(Callback<void(AsyncMqttClientDisconnectReason)> func);
-
-    static void _thunkConnectToWifi(void* pvTimerID);
-    static void _thunkConnectToMqtt(void* pvTimerID);
-    inline void printTrace(const String& e);
-    inline void printTrace(const char* e);
 private:
     static const char* MQTT_HOST;
     static const char* WIFI_SSID;

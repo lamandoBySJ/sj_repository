@@ -286,8 +286,7 @@ void setup() {
   */
   MQTTnetwork.startup();
   platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
- 
-   platform_debug::PlatformDebug::pause();
+  platform_debug::PlatformDebug::pause();
 }
 
 RGB rgb;
