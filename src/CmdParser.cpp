@@ -2,6 +2,9 @@
 
 void CmdParser::onMessageCallback(const String& topic,const String& payload)
 {
+    platform_debug::TracePrinter::printTrace(topic);
+    platform_debug::TracePrinter::printTrace(payload);
+    return;
     _topics.clear();
     _StringHelper.split(_topics,topic.c_str(),"/");
     DynamicJsonDocument  doc(payload.length()+1024);

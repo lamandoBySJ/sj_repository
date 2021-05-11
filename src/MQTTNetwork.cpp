@@ -263,8 +263,8 @@ void MQTTNetwork::startup(){
       mqttClient.setServer(MQTT_HOST, MQTT_PORT);
       
      // _threadOnMessage = std::thread(&MQTTNetwork::run_mail_box,this);
-    // _threadOnMessage.start(callback(this,&MQTTNetwork::run_mail_box));
-    // _threadSubscribe.start(callback(this,&MQTTNetwork::run_mail_box_subscribe));
+     _threadOnMessage.start(callback(this,&MQTTNetwork::run_mail_box));
+     _threadSubscribe.start(callback(this,&MQTTNetwork::run_mail_box_subscribe));
      _threadWiFiEvent.start(callback(this,&MQTTNetwork::runWiFiEventService));
 
     mail_wifi_event_t* evt=_mailBoxWiFiEvent.alloc();

@@ -104,7 +104,7 @@ public:
    
   }
 };
-
+CmdParser cmdParser;
 MQTTNetwork MQTTnetwork;
 //Thread threads[2];
 #define OLEDSCREEN 
@@ -272,14 +272,11 @@ void setup() {
 //timeMachine.setEpoch(1614764209+8*60*60);
  // colorSensor.startup();
   //MQTTnetwork.addTopic("SmartBox/TimeSync");
-//MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerTime");
- // MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerReq");
+  MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerTime");
+ MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerReq");
 
-  //MQTTnetwork.addOnMessageCallback(callback(&cmdParser,&CmdParser::onMessageCallback));
-  // MQTTnetwork.addOnMqttConnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttConnectCallback));
-  // MQTTnetwork.addOnMqttDisonnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttDisconnectCallback));
- 
-  
+  MQTTnetwork.addOnMessageCallback(callback(&cmdParser,&CmdParser::onMessageCallback));
+
   /*
   ESPwebServer.setCallbackPostMailToCollector(callback(&RGBcollector,&RGBCollector<BH1749NUC>::delegateMethodPostMail));
   RGBcollector.setWebSocketClientEventCallback(callback(&ESPwebServer,&ESPWebServer::delegateMethodWebSocketClientPostEvent));
@@ -287,7 +284,6 @@ void setup() {
   RGBcollector.startup();
   ESPwebServer.startup();
   */
- 
   MQTTnetwork.startup();
   platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
  
