@@ -29,7 +29,10 @@ void TimeMachine<RTC>::startup(bool pwrEnable,const char* date,const  char* time
      if(_rtc.isRunning()){
        _rtc.stopClock();
      }
-      _rtc.setDateTime(date,time);
+
+     if(data!=nullptr&&time!=nullptr){
+         _rtc.setDateTime(date,time);
+     }
      //_rtc.setEpoch(1610000000);
      _rtc.setHourMode(CLOCK_H24);
      _rtc.startClock();

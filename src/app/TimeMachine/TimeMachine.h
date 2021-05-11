@@ -17,7 +17,7 @@ public:
     TimeMachine(RTC& rtc,std::mutex& mutex);
     TimeMachine(RTC& rtc,std::mutex& mutex,uint8_t rst);
     ~TimeMachine()=default;
-    void startup(bool pwrEnable,const char* date,const  char* time);
+    void startup(bool pwrEnable=true,const char* date=nullptr,const  char* timee=nullptr);
     time_t getEpoch();
     bool getDateTime(String&);
     void setDateTime(const char* date,const  char* time);

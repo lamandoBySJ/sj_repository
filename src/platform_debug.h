@@ -204,7 +204,7 @@ private:
     std::vector<Callback<void()>> _onPrintLogoCallbacks;
     static std::mutex _mtx;
     static bool _finished;
-    static OLEDScreen<12>* _oled;
+   
 };
 
 struct DeviceInfo

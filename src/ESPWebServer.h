@@ -76,8 +76,6 @@ public:
 
     void delegateMethodWebSocketClientText(uint32_t id,const String& text){
         _wss.client(id)->text(text);
-        platform_debug::TracePrinter::printTrace("-------------------------------"+String(id,DEC));
-        platform_debug::TracePrinter::printTrace(text);
     }
 private:
     
