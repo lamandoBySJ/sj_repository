@@ -2,14 +2,10 @@
 
 void MQTTNetwork::runWiFiEventService(){
     for(;;){
-       platform_debug::PlatformDebug::println("runWiFiEventService: ");
       osEvent evt = _mailBoxWiFiEvent.get();
-      platform_debug::PlatformDebug::println("evt.status: "+String(evt.status,DEC));
       if (evt.status == osEventMail) {
-    
         mail_wifi_event_t* event = ( mail_wifi_event_t *)evt.value.p;
         platform_debug::TracePrinter::printTrace("[WiFi-event] event: "+String(event->id,DEC));
-     
         switch(event->id) {
           case SYSTEM_EVENT_STA_STOP:
               WiFi.mode(WIFI_STA);
@@ -30,7 +26,7 @@ void MQTTNetwork::runWiFiEventService(){
               //std::this_thread::sleep_for(std::chrono::seconds(1));
               break;
             case SYSTEM_EVENT_STA_CONNECTED:
-                  platform_debug::TracePrinter::printTrace("WiFi connected:SYSTEM_EVENT_STA_CONNECTED"); 
+              platform_debug::TracePrinter::printTrace("WiFi connected:SYSTEM_EVENT_STA_CONNECTED"); 
               break;
           default:
             platform_debug::TracePrinter::printTrace("WiFi Event Unknow"); 
@@ -68,7 +64,9 @@ const char* MQTTNetwork::MQTT_HOST("192.168.1.133");
 uint16_t MQTTNetwork::MQTT_PORT =1883;
 const char* MQTTNetwork::WIFI_SSID="IPS";
 const char* MQTTNetwork::WIFI_PASSWORD="Aa000000";
-//
+//*/
+
+/*
 void MQTTNetwork::_thunkConnectToWifi(void* pvTimerID)
 {
     static_cast<MQTTNetwork*>(pvTimerID)->_connectToWifi();
@@ -262,8 +260,8 @@ void MQTTNetwork::startup(){
       mqttClient.onPublish(callback(this,&MQTTNetwork::onMqttPublish));
       mqttClient.setServer(MQTT_HOST, MQTT_PORT);
       
-     // _threadOnMessage = std::thread(&MQTTNetwork::run_mail_box,this);
-     _threadOnMessage.start(callback(this,&MQTTNetwork::run_mail_box));
+      _threadOnMessage = std::thread(&MQTTNetwork::run_mail_box_message,this);
+     //_threadOnMessage.start(callback(this,&MQTTNetwork::run_mail_box));
      _threadSubscribe.start(callback(this,&MQTTNetwork::run_mail_box_subscribe));
      _threadWiFiEvent.start(callback(this,&MQTTNetwork::runWiFiEventService));
 
@@ -279,7 +277,7 @@ void MQTTNetwork::disconnect(bool autoConnect)
   mqttClient.disconnect();
 }
 
-void MQTTNetwork::run_mail_box(){
+void MQTTNetwork::run_mail_box_message(){
   while(true){
    
     osEvent evt= _mail_box.get();

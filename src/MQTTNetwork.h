@@ -47,7 +47,7 @@ class MQTTNetwork
 public:
     MQTTNetwork():_threadWiFiEvent(osPriorityNormal,1024*2),
     _threadSubscribe(osPriorityNormal,1024*2),
-    _threadOnMessage(osPriorityNormal,1024*4),
+    //_threadOnMessage(osPriorityNormal,1024*4),
     _mtx(),_autoConnect(true)
     {
         
@@ -75,12 +75,11 @@ public:
 
     void startup();
     void runWiFiEventService();
-    void run_mail_box();
+    void run_mail_box_message();
     void run_mail_box_subscribe();
-    void run_debug_trace();
     bool connected();
-    void _connectToMqtt();
-    void _connectToWifi();
+    //void _connectToMqtt();
+    //void _connectToWifi();
     void disconnect(bool autoConnect=false);
     //bool publish(const char* topic,String& payload, uint8_t qos=0, bool retain=false,bool dup=true, uint16_t message_id=0);
     bool publish(const String& topic,const String& payload, uint8_t qos=0, bool retain=false,bool dup=true, uint16_t message_id=0);
@@ -108,7 +107,8 @@ private:
    // void onMessageCallback(const String& topic,const String& payload);
     Thread _threadWiFiEvent;
     Thread _threadSubscribe;
-    Thread _threadOnMessage;
+    //Thread _threadOnMessage;
+   std::thread _threadOnMessage;
     std::mutex _mtx;
     bool _autoConnect;
     TimerHandle_t _mqttReconnectTimer;
