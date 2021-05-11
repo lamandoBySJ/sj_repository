@@ -20,6 +20,10 @@ typedef struct {
     bool sessionPresent;  
 } mail_on_connect_t;
 typedef struct {
+    uint32_t counter=0;  
+    system_event_id_t id;
+} mail_wifi_event_t;
+typedef struct {
     uint32_t counter=0;   
     AsyncMqttClientMessageProperties properties;
     size_t index;
@@ -41,7 +45,10 @@ using namespace platform_debug;
 class MQTTNetwork
 {
 public:
-    MQTTNetwork():_mtx(),_autoConnect(true)
+    MQTTNetwork():_threadWiFiEvent(osPriorityNormal,1024*2),
+    _threadSubscribe(osPriorityNormal,1024*2),
+    _threadOnMessage(osPriorityNormal,1024*4),
+    _mtx(),_autoConnect(true)
     {
         
     }
@@ -63,8 +70,8 @@ public:
     //void onMqttMessage(const String& topic,const String& payload, AsyncMqttClientMessageProperties properties, size_t index, size_t total);
     void onMqttPublish(uint16_t packetId);
 
-    void setMqttReconnectTimer(bool start);
-    void setWifiReconnectTimer(bool start);
+   // void setMqttReconnectTimer(bool start);
+   // void setWifiReconnectTimer(bool start);
 
     void startup();
     void runWiFiEventService();
@@ -86,32 +93,28 @@ public:
     void addSubscribeTopics(std::vector<String>& vec);
     void addOnMqttConnectCallback(Callback<void(bool)> func);
     void addOnMqttDisonnectCallback(Callback<void(AsyncMqttClientDisconnectReason)> func);
-private:
-   // void onMessageCallback(const String& topic,const String& payload);
-    std::thread _threadOnMessage;
-    std::thread _threadWiFiEvent;
-    std::thread _threadSubscribe;
-    std::mutex _mtx;
 
     static void _thunkConnectToWifi(void* pvTimerID);
     static void _thunkConnectToMqtt(void* pvTimerID);
     inline void printTrace(const String& e);
     inline void printTrace(const char* e);
-    
-    TimerHandle_t _mqttReconnectTimer;
-    TimerHandle_t _wifiReconnectTimer;
+private:
     static const char* MQTT_HOST;
     static const char* WIFI_SSID;
     static const char* WIFI_PASSWORD;
     //static IPAddress MQTT_HOST ;
-
     static uint16_t MQTT_PORT ;
     static AsyncMqttClient mqttClient;
+   // void onMessageCallback(const String& topic,const String& payload);
+    Thread _threadWiFiEvent;
+    Thread _threadSubscribe;
+    Thread _threadOnMessage;
+    std::mutex _mtx;
+    bool _autoConnect;
+    TimerHandle_t _mqttReconnectTimer;
+    TimerHandle_t _wifiReconnectTimer;
     
-    
-    system_event_id_t _event=SYSTEM_EVENT_WIFI_READY;
-    //system_event_info_t _info;
-    rtos::Mail<system_event_id_t, 16> _mailBoxWiFiEvent;
+    rtos::Mail<mail_wifi_event_t, 8> _mailBoxWiFiEvent;
     rtos::Mail<mqtt::mail_t, 16> _mail_box;
     rtos::Mail<mqtt::mail_on_connect_t, 2> _mail_box_subscribe;
     std::vector<Callback<void(const String&,const String&)>>  _onMessageCallbacks;
@@ -119,7 +122,7 @@ private:
     std::vector<Callback<void(AsyncMqttClientDisconnectReason)>>  _onMqttDisconnectCallbacks;
 
     std::set<String>  _topics;
-    bool _autoConnect;
+    
     
 };
 #endif

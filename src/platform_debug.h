@@ -8,8 +8,12 @@
 #include <mutex>
 #include <thread>
 #include <stdarg.h>
-//#define NDEBUG
 #include "heltec.h"
+
+//git clone -b 分支名 网址.git 
+//git clone -b lesson-2 https://github.com/hemiahwu/vue-basic-playlist.git
+
+//#define NDEBUG
 namespace platform_debug
 {
 struct Builder {
@@ -221,7 +225,7 @@ typedef struct {
 class TracePrinter
 {
 public:
-    explicit TracePrinter():_thread(osPriorityNormal,1024*6)
+    explicit TracePrinter():_thread(osPriorityNormal,1024*6),_mail_box()
     {
         //platform_debug::PlatformDebug::println("TracePrinter");
     }
@@ -230,15 +234,8 @@ public:
     
     static inline void  startup(){
         #if !defined(NDEBUG)
-        if(TracePrinter::_tracePrinter==nullptr){
-            _tracePrinter=new TracePrinter();
            _tracePrinter->_thread.start(callback(TracePrinter::_tracePrinter,&TracePrinter::run_trace_back));
            // _tracePrinter->_thread = std::thread(&TracePrinter::run_trace_back,TracePrinter::_tracePrinter);
-        }else{
-            return;
-        }
-        
-        platform_debug::PlatformDebug::println(" ************ STLB ************ ");
         #endif
     }
  
@@ -283,17 +280,24 @@ public:
         }
         va_end(arg);
        // len = write((uint8_t*)temp, len);
-        printTrace(temp);
+        TracePrinter:: _tracePrinter->println(temp);
         #endif
     }
-    
     static inline void printTrace(const String& e)
     {
-        std::unique_lock<std::mutex>  lck(_mtx, std::defer_lock);
-        lck.lock();
-        mail_trace_t *mail =  TracePrinter::_tracePrinter->_mail_box.alloc();
-        mail->log = e;
-        TracePrinter::_tracePrinter->_mail_box.put(mail);
+        #if !defined(NDEBUG)
+       TracePrinter:: _tracePrinter->println(e);
+       #endif
+    }
+protected:
+    // std::unique_lock<std::mutex>  lck(_mtx, std::defer_lock);
+      //  lck.lock();
+    void println(const String& e){
+    mail_trace_t *mail =  TracePrinter::_tracePrinter->_mail_box.alloc();
+       if(mail){
+           mail->log = e;
+            TracePrinter::_tracePrinter->_mail_box.put(mail);
+        }
     }
  private:   
    
@@ -301,8 +305,8 @@ public:
     #if !defined(NDEBUG)
     static TracePrinter* _tracePrinter;
     static std::mutex _mtx;
-    rtos::Mail<mail_trace_t, 64> _mail_box;
     Thread _thread; 
+    rtos::Mail<mail_trace_t, 16> _mail_box;
     #endif
 };
 

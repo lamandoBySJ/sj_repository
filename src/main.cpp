@@ -85,14 +85,10 @@ TimeMachine<DS1307> timeMachine(ds1307,mtx,13);
 BH1749NUC bh1749nuc(Wire,4,15);
 ColorSensor<BH1749NUC> colorSensor(bh1749nuc,mtx,2);
 
-String DeviceInfo::BoardID="";
-String DeviceInfo::Family="k49a";
+
 //OLEDScreen<12> oled(Heltec.display);
-
-MQTTNetwork MQTTnetwork;
-
 ESPWebServer ESPwebServer;
-RGBCollector<BH1749NUC> RGBcollector(MQTTnetwork,colorSensor);
+//RGBCollector<BH1749NUC> RGBcollector(MQTTnetwork,colorSensor);
 OLEDScreen<12> oled(Heltec.display);
 //OTAService OTAservice;
 //CmdParser cmdParser;
@@ -101,10 +97,16 @@ class Test
 {
 public:
   void run(){
-     platform_debug::PlatformDebug::println(" ************ STLB ************ ");
-     std::this_thread::sleep_for(std::chrono::seconds(1));
+    while(1){
+      platform_debug::PlatformDebug::println(" ************ STLB ************ ");
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+   
   }
 };
+
+MQTTNetwork MQTTnetwork;
+//Thread threads[2];
 #define OLEDSCREEN 
 void setup() {
  // put your setup code here, to run once:
@@ -120,7 +122,7 @@ void setup() {
       PlatformDebug::init(Serial,OLEDScreen<12>(Heltec.display));
      // PlatformDebug::init(Serial,std::move(oled));
       PlatformDebug::printLogo();
-      TracePrinter::startup();
+     
     #else
       Heltec.begin(false, false , true , true, BAND);
       PlatformDebug::init(Serial);
@@ -129,7 +131,8 @@ void setup() {
   //LoRa.dumpRegisters(Serial);
  //   SemaphoreHandle_t hMutex;
  // vQueueAddToRegistry(hMutex,"");
-  
+   TracePrinter::startup();
+
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
   platform_debug::PlatformDebug::println(" ************ STLB ************ ");
   
@@ -167,10 +170,13 @@ void setup() {
  //Test test;
  //std::thread thd= std::thread(&Test::run,&test);
 
+  //threads[0].start(callback(&test,&Test::run));
+ // threads[1].start(callback(&test,&Test::run));
  // for(;;){
-  //  platform_debug::TracePrinter::printTrace("1111111111111111111111111");
-   // std::this_thread::sleep_for(std::chrono::milliseconds(100));
- // }
+ //   static int i=0;
+ //   platform_debug::TracePrinter::printTrace("1111111111111111111111111"+String(++i,DEC));
+  //  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  //}
   
   pinMode(18,OUTPUT);
   pinMode(23,OUTPUT);
@@ -207,11 +213,13 @@ void setup() {
         pos= mac_address.find(mark);
     }
   }
-  web_properties::ap_ssid = String(WiFi.macAddress().c_str());
-  platform_debug::DeviceInfo::BoardID = String(mac_address.c_str());
+
+  web_properties::ap_ssid = WiFi.macAddress();
+  platform_debug::DeviceInfo::BoardID = mac_address.c_str();
   //platform_debug::DeviceInfo::BoardID = String(mac_address.substr(mac_address.length()-4,4).c_str());
   platform_debug::PlatformDebug::println("DeviceInfo::BoardID:"+platform_debug::DeviceInfo::BoardID);
-  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+  
+
 
   if(FFatHelper::init()){
       platform_debug::PlatformDebug::println("OK:File system mounted");
@@ -260,27 +268,30 @@ void setup() {
       }
   }
  
-  timeMachine.startup(true,__DATE__,__TIME__);
+//  timeMachine.startup(true,__DATE__,__TIME__);
 //timeMachine.setEpoch(1614764209+8*60*60);
-  colorSensor.startup();
+ // colorSensor.startup();
   //MQTTnetwork.addTopic("SmartBox/TimeSync");
-  MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerTime");
-  MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerReq");
+//MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerTime");
+ // MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerReq");
 
   //MQTTnetwork.addOnMessageCallback(callback(&cmdParser,&CmdParser::onMessageCallback));
   // MQTTnetwork.addOnMqttConnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttConnectCallback));
   // MQTTnetwork.addOnMqttDisonnectCallback(callback(&loRaCollector,&LoRaCollector::onMqttDisconnectCallback));
+ 
   
-  MQTTnetwork.startup();
-
+  /*
   ESPwebServer.setCallbackPostMailToCollector(callback(&RGBcollector,&RGBCollector<BH1749NUC>::delegateMethodPostMail));
   RGBcollector.setWebSocketClientEventCallback(callback(&ESPwebServer,&ESPWebServer::delegateMethodWebSocketClientPostEvent));
   RGBcollector.setWebSocketClientTextCallback(callback(&ESPwebServer,&ESPWebServer::delegateMethodWebSocketClientText));
   RGBcollector.startup();
   ESPwebServer.startup();
-
-
+  */
+ 
+  MQTTnetwork.startup();
   platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
+ 
+   platform_debug::PlatformDebug::pause();
 }
 
 RGB rgb;
@@ -290,11 +301,11 @@ void loop() {
 
   while (true) {
    // _std_mutex.lock();
-    if( timeMachine.getDateTime(currentTime)){
-        platform_debug::PlatformDebug::println(currentTime);
-    }else{
-        platform_debug::PlatformDebug::println("ERROR:currentTime");
-    }
+   // if( timeMachine.getDateTime(currentTime)){
+   //     platform_debug::PlatformDebug::println(currentTime);
+   // }else{
+   //     platform_debug::PlatformDebug::println("ERROR:currentTime");
+   // }
    // _std_mutex.unlock();
    // RGBcollector.delegateMethodPostMail(MeasEventType::EventSystemMeasure);
     std::this_thread::sleep_for(chrono::seconds(10));

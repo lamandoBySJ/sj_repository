@@ -46,7 +46,7 @@ void ColorSensor<T>::startup(bool pwrEnable)
     }else{
       digitalWrite(5,LOW);
     }
-    platform_debug::TracePrinter::printTrace(String("ColorSensor:")+String(cuccess ? "OK":"ERROR:"+String(__FILE__)+String(":")+String(__LINE__)));
+    platform_debug::TracePrinter::printTrace(String(cuccess ? "OK":"ERROR:"+String(__FILE__)+String(":")+String(__LINE__)));
 }
 
 template<typename T>

@@ -105,7 +105,7 @@ osStatus Thread::start(mbed::Callback<void()> task)
           // _attr.stack_mem = nullptr;
         }
         _mutex.unlock();
-        _join_sem.release();
+       // _join_sem.release();
         return osErrorResource;
     }
     _mutex.unlock();

@@ -175,10 +175,11 @@ AsyncMqttClient& AsyncMqttClient::onMessage(mbed::Callback<void(char*, char*, As
   _onMessageUserCallbacks.push_back(callback);
   return *this;
 }
+/*
 AsyncMqttClient& AsyncMqttClient::onMessage(mbed::Callback<void(const String&,const String&, AsyncMqttClientMessageProperties, size_t, size_t)> callback) {
   _onRefMessageUserCallbacks.push_back(callback);
   return *this;
-}
+}*/
 AsyncMqttClient& AsyncMqttClient::onPublish(mbed::Callback<void(uint16_t)> callback) {
   _onPublishUserCallbacks.push_back(callback);
   return *this;
@@ -555,7 +556,7 @@ void AsyncMqttClient::_onMessage(char* topic, char* payload, uint8_t qos, bool d
     
     for (auto callback : _onMessageUserCallbacks) callback(topic, payload, properties, len, index, total);
 
-    for (auto callback : _onRefMessageUserCallbacks) callback(String(topic),String(payload,len), properties,index, total);
+    //for (auto callback : _onRefMessageUserCallbacks) callback(String(topic),String(payload).substring(0,len), properties,index, total);
   }
 }
 

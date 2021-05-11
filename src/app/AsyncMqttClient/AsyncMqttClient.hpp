@@ -124,7 +124,7 @@ class AsyncMqttClient {
   AsyncMqttClient& onUnsubscribe(mbed::Callback<void(uint16_t)> callback);
   AsyncMqttClient& onMessage(mbed::Callback<void(char*, char*, AsyncMqttClientMessageProperties, size_t, size_t, size_t)> callback);
   AsyncMqttClient& onPublish(mbed::Callback<void(uint16_t)> callback);
-  AsyncMqttClient& onMessage(mbed::Callback<void(const String&,const String&, AsyncMqttClientMessageProperties,size_t, size_t)> callback);
+ // AsyncMqttClient& onMessage(mbed::Callback<void(const String&,const String&, AsyncMqttClientMessageProperties,size_t, size_t)> callback);
   bool connected() const;
   void connect();
   void disconnect(bool force = false);
