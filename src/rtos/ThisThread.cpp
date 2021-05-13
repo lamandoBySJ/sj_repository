@@ -115,9 +115,7 @@ static uint32_t flags_wait_for(uint32_t flags, Clock::duration_u32 rel_time, boo
     if (flags & osFlagsError) {
         MBED_ASSERT((flags == osFlagsErrorTimeout && rel_time != wait_for_u32_forever) ||
                     (flags == osFlagsErrorResource && rel_time == rel_time.zero()));
-                    Serial.println("2........................:"+String(flags,DEC));
         flags = ThisThread::flags_get();
-        Serial.println("3...................:"+String(flags,DEC));
     }
 #else
     rtos::internal::flags_check_capture check;
