@@ -36,6 +36,7 @@
 #include "rtos/freertos_os2.h"               // Configuration check and setup
 #include "platform/mbed_debug.h" 
 #include "rtos/tasks.h"
+#include "freertos/timers.h"
 /*---------------------------------------------------------------------------*/
 //extern void vQueueAddToRegistry( QueueHandle_t xQueue, const char *pcName );
 //extern void vQueueUnregisterQueue( QueueHandle_t xQueue );
@@ -818,7 +819,6 @@ uint32_t osThreadFlagsGet (void) {
       rflags = (uint32_t)osError;
     }
   }
-
   return (rflags);
 }
 
@@ -847,7 +847,6 @@ uint32_t osThreadFlagsWait (uint32_t flags, uint32_t options, uint32_t timeout) 
     t0 = xTaskGetTickCount();
     do {
       rval = xTaskNotifyWait (0, clear, &nval, tout);
-
       if (rval == pdPASS) {
         rflags &= flags;
         rflags |= nval;
@@ -872,10 +871,9 @@ uint32_t osThreadFlagsWait (uint32_t flags, uint32_t options, uint32_t timeout) 
             }
           }
         }
-
-        /* Update timeout */
+        
+ 
         td = xTaskGetTickCount() - t0;
-
         if (td > tout) {
           tout  = 0;
         } else {
@@ -889,10 +887,8 @@ uint32_t osThreadFlagsWait (uint32_t flags, uint32_t options, uint32_t timeout) 
           rflags = (uint32_t)osErrorTimeout;
         }
       }
-    }
-    while (rval != pdFAIL);
+    }while (rval != pdFAIL);
   }
-
   /* Return flags before clearing */
   return (rflags);
 }

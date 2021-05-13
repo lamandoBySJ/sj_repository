@@ -22,22 +22,24 @@
  */
 
 #define __STDC_LIMIT_MACROS
+#include "Arduino.h"
 #include "rtos/ThisThread.h"
-
 #include "platform/mbed_toolchain.h"
 #include "rtos/Kernel.h"
 #include "platform/CriticalSectionLock.h"
 #include "platform/mbed_assert.h"
 #include "platform/mbed_critical.h"
 #include "platform/internal/mbed_os_timer.h"
-
+#include "platform/mbed_debug.h"
 using std::milli;
 using std::chrono::duration;
 using rtos::Kernel::Clock;
 using rtos::Kernel::wait_for_u32_max;
 using rtos::Kernel::wait_for_u32_forever;
 
+
 #if !MBED_CONF_RTOS_PRESENT
+
 /* If the RTOS is not present, we call mbed_thread.cpp to do the work */
 /* If the RTOS is present, mbed_thread.cpp calls us to do the work */
 #include "platform/mbed_thread.h"
@@ -48,11 +50,13 @@ static uint32_t thread_flags;
  * thread, and that has no Thread object, so Thread class is not provided. Implement
  * one CMSIS-RTOS function to provide access.
  */
+/*
 extern "C"
-uint32_t osThreadFlagsSet(osThreadId_t /*thread_id*/, uint32_t flags)
+uint32_t osThreadFlagsSet(osThreadId_t thread_id, uint32_t flags)
 {
     return core_util_atomic_fetch_or_u32(&thread_flags, flags) | flags;
 }
+*/
 #endif
 
 namespace rtos {
@@ -111,7 +115,9 @@ static uint32_t flags_wait_for(uint32_t flags, Clock::duration_u32 rel_time, boo
     if (flags & osFlagsError) {
         MBED_ASSERT((flags == osFlagsErrorTimeout && rel_time != wait_for_u32_forever) ||
                     (flags == osFlagsErrorResource && rel_time == rel_time.zero()));
+                    Serial.println("2........................:"+String(flags,DEC));
         flags = ThisThread::flags_get();
+        Serial.println("3...................:"+String(flags,DEC));
     }
 #else
     rtos::internal::flags_check_capture check;

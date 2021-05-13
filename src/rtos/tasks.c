@@ -1,12 +1,13 @@
 /* FreeRTOS includes. */
 #include "rtos/tasks.h"
-#include "rtos/list.h"
+#include "freertos/list.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/timers.h"
 #include "rtos/stack_macros.h"
 #include "freertos/portmacro.h"
 #include "freertos/projdefs.h"
+#include "platform/mbed_debug.h"
 
 /* Values that can be assigned to the ucNotifyState member of the TCB. */
 #define taskNOT_WAITING_NOTIFICATION	( ( uint8_t ) 0 )
@@ -18,9 +19,11 @@
 #define portRESET_READY_PRIORITY( uxPriority, uxReadyPriorities ) ( uxReadyPriorities ) &= ~( 1UL << ( uxPriority ) )
 #define taskRECORD_READY_PRIORITY( uxPriority )	portRECORD_READY_PRIORITY( uxPriority, uxTopReadyPriority )
 
-#ifndef tracePOST_MOVED_TASK_TO_READY_STATE
-	#define tracePOST_MOVED_TASK_TO_READY_STATE( pxTCB )
-#endif
+#define prvGetTCBFromHandle( pxHandle ) ( ( ( pxHandle ) == NULL ) ? pxCurrentTCB : ( pxHandle ) )
+
+#define traceMOVED_TASK_TO_READY_STATE( pxTCB )
+#define tracePOST_MOVED_TASK_TO_READY_STATE( pxTCB ) 
+
 #if( configUSE_PREEMPTION == 0 )
 	/* If the cooperative scheduler is being used then a yield should not be
 	performed just because a higher priority task has been woken. */
@@ -36,95 +39,12 @@
 	tracePOST_MOVED_TASK_TO_READY_STATE( pxTCB )
 
 static portMUX_TYPE mux = {.owner = portMUX_FREE_VAL,.count = 0,};
-/*
- * Task control block.  A task control block (TCB) is allocated for each task,
- * and stores task state information, including a pointer to the task's context
- * (the task's run time environment, including register values)
- */
-typedef struct tskTaskControlBlock 			/* The old naming convention is used to prevent breaking kernel aware debuggers. */
-{
-	volatile StackType_t	*pxTopOfStack;	/*< Points to the location of the last item placed on the tasks stack.  THIS MUST BE THE FIRST MEMBER OF THE TCB STRUCT. */
-
-	#if ( portUSING_MPU_WRAPPERS == 1 )
-		xMPU_SETTINGS	xMPUSettings;		/*< The MPU settings are defined as part of the port layer.  THIS MUST BE THE SECOND MEMBER OF THE TCB STRUCT. */
-	#endif
-
-	ListItem_t			xStateListItem;	/*< The list that the state list item of a task is reference from denotes the state of that task (Ready, Blocked, Suspended ). */
-	ListItem_t			xEventListItem;		/*< Used to reference a task from an event list. */
-	UBaseType_t			uxPriority;			/*< The priority of the task.  0 is the lowest priority. */
-	StackType_t			*pxStack;			/*< Points to the start of the stack. */
-	char				pcTaskName[ configMAX_TASK_NAME_LEN ];/*< Descriptive name given to the task when created.  Facilitates debugging only. */ /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
-
-	#if ( ( portSTACK_GROWTH > 0 ) || ( configRECORD_STACK_HIGH_ADDRESS == 1 ) )
-		StackType_t		*pxEndOfStack;		/*< Points to the highest valid address for the stack. */
-	#endif
-
-	#if ( portCRITICAL_NESTING_IN_TCB == 1 )
-		UBaseType_t		uxCriticalNesting;	/*< Holds the critical section nesting depth for ports that do not maintain their own count in the port layer. */
-	#endif
-
-	#if ( configUSE_TRACE_FACILITY == 1 )
-		UBaseType_t		uxTCBNumber;		/*< Stores a number that increments each time a TCB is created.  It allows debuggers to determine when a task has been deleted and then recreated. */
-		UBaseType_t		uxTaskNumber;		/*< Stores a number specifically for use by third party trace code. */
-	#endif
-
-	#if ( configUSE_MUTEXES == 1 )
-		UBaseType_t		uxBasePriority;		/*< The priority last assigned to the task - used by the priority inheritance mechanism. */
-		UBaseType_t		uxMutexesHeld;
-	#endif
-
-	#if ( configUSE_APPLICATION_TASK_TAG == 1 )
-		TaskHookFunction_t pxTaskTag;
-	#endif
-
-	#if( configNUM_THREAD_LOCAL_STORAGE_POINTERS > 0 )
-		void			*pvThreadLocalStoragePointers[ configNUM_THREAD_LOCAL_STORAGE_POINTERS ];
-	#endif
-
-	#if( configGENERATE_RUN_TIME_STATS == 1 )
-		uint32_t		ulRunTimeCounter;	/*< Stores the amount of time the task has spent in the Running state. */
-	#endif
-
-	#if ( configUSE_NEWLIB_REENTRANT == 1 )
-		/* Allocate a Newlib reent structure that is specific to this task.
-		Note Newlib support has been included by popular demand, but is not
-		used by the FreeRTOS maintainers themselves.  FreeRTOS is not
-		responsible for resulting newlib operation.  User must be familiar with
-		newlib and must provide system-wide implementations of the necessary
-		stubs. Be warned that (at the time of writing) the current newlib design
-		implements a system-wide malloc() that must be provided with locks.
-
-		See the third party link http://www.nadler.com/embedded/newlibAndFreeRTOS.html
-		for additional information. */
-		struct	_reent xNewLib_reent;
-	#endif
-
-	#if( configUSE_TASK_NOTIFICATIONS == 1 )
-		volatile uint32_t ulNotifiedValue;
-		volatile uint8_t ucNotifyState;
-	#endif
-
-	/* See the comments in FreeRTOS.h with the definition of
-	tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE. */
-	#if( tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE != 0 ) /*lint !e731 !e9029 Macro has been consolidated for readability reasons. */
-		uint8_t	ucStaticallyAllocated; 		/*< Set to pdTRUE if the task is a statically allocated to ensure no attempt is made to free the memory. */
-	#endif
-
-	#if( INCLUDE_xTaskAbortDelay == 1 )
-		uint8_t ucDelayAborted;
-	#endif
-
-	#if( configUSE_POSIX_ERRNO == 1 )
-		int iTaskErrno;
-	#endif
-
-} tskTCB;
 
 typedef tskTCB TCB_t;
 /*lint -save -e956 A manual analysis and inspection has been used to determine
 which static variables must be declared volatile. */
 extern PRIVILEGED_DATA TCB_t *  pxCurrentTCB;
-
+PRIVILEGED_DATA static volatile UBaseType_t uxSchedulerSuspended	= ( UBaseType_t ) pdFALSE;
 /* Lists for ready and blocked tasks. --------------------
 xDelayedTaskList1 and xDelayedTaskList2 could be move to function scople but
 doing so breaks some kernel aware debuggers and debuggers that rely on removing
@@ -134,7 +54,7 @@ PRIVILEGED_DATA static List_t pxReadyTasksLists[ configMAX_PRIORITIES ];/*< Prio
 //PRIVILEGED_DATA static List_t xDelayedTaskList2;						/*< Delayed tasks (two lists are used - one for delays that have overflowed the current tick count. */
 PRIVILEGED_DATA static List_t * volatile pxDelayedTaskList;				/*< Points to the delayed task list currently being used. */
 PRIVILEGED_DATA static List_t * volatile pxOverflowDelayedTaskList;		/*< Points to the delayed task list currently being used to hold tasks that have overflowed the current tick count. */
-//PRIVILEGED_DATA static List_t xPendingReadyList;	
+PRIVILEGED_DATA static List_t xPendingReadyList;	
 
 #if( INCLUDE_vTaskDelete == 1 )
 	//PRIVILEGED_DATA static List_t xTasksWaitingTermination;				/*< Tasks that have been deleted - but their memory not yet freed. */
@@ -187,6 +107,7 @@ static void prvResetNextTaskUnblockTime( void )
 	}
 }
 #endif
+struct tskTaskControlBlock; /* The old naming convention is used to prevent breaking kernel aware debuggers. */
 
 #if( configUSE_TASK_NOTIFICATIONS == 1 )
 	BaseType_t xTaskGenericNotify( TaskHandle_t xTaskToNotify, uint32_t ulValue, eNotifyAction eAction, uint32_t *pulPreviousNotificationValue )
@@ -207,7 +128,9 @@ static void prvResetNextTaskUnblockTime( void )
 			switch( eAction )
 			{
 				case eSetBits	:
-					pxTCB->ulNotifiedValue |= ulValue;
+					//pxTCB->ulNotifiedValue |= ulValue;
+					pxTCB->ulNotifiedValue = ulValue;
+					xTaskNotify(xTaskToNotify,ulValue,eSetBits);
 					break;
 
 				case eIncrement	:
@@ -249,11 +172,12 @@ static void prvResetNextTaskUnblockTime( void )
 			if( ucOriginalNotifyState == taskWAITING_NOTIFICATION )
 			{
 				( void ) uxListRemove( &( pxTCB->xStateListItem ) );
-				//prvAddTaskToReadyList( pxTCB );
-				traceMOVED_TASK_TO_READY_STATE( pxTCB );														
+				prvAddTaskToReadyList( pxTCB );
+			/*	traceMOVED_TASK_TO_READY_STATE( pxTCB );														
 				taskRECORD_READY_PRIORITY( ( pxTCB )->uxPriority );												
 				vListInsertEnd( &( pxReadyTasksLists[ ( pxTCB )->uxPriority ] ), &( ( pxTCB )->xStateListItem ) );
 				tracePOST_MOVED_TASK_TO_READY_STATE( pxTCB );
+				*/
 				/* The task should not have been on an event list. */
 				configASSERT( listLIST_ITEM_CONTAINER( &( pxTCB->xEventListItem ) ) == NULL );
 
@@ -294,3 +218,141 @@ static void prvResetNextTaskUnblockTime( void )
 	}
 #endif
 
+#if( configUSE_TASK_NOTIFICATIONS == 1 )
+
+	BaseType_t xTaskGenericNotifyFromISR(TaskHandle_t xTaskToNotify, uint32_t ulValue, eNotifyAction eAction, uint32_t *pulPreviousNotificationValue, BaseType_t *pxHigherPriorityTaskWoken )
+	{
+	TCB_t * pxTCB;
+	uint8_t ucOriginalNotifyState;
+	BaseType_t xReturn = pdPASS;
+	UBaseType_t uxSavedInterruptStatus;
+
+		configASSERT( xTaskToNotify );
+
+		/* RTOS ports that support interrupt nesting have the concept of a
+		maximum	system call (or maximum API call) interrupt priority.
+		Interrupts that are	above the maximum system call priority are keep
+		permanently enabled, even when the RTOS kernel is in a critical section,
+		but cannot make any calls to FreeRTOS API functions.  If configASSERT()
+		is defined in FreeRTOSConfig.h then
+		portASSERT_IF_INTERRUPT_PRIORITY_INVALID() will result in an assertion
+		failure if a FreeRTOS API function is called from an interrupt that has
+		been assigned a priority above the configured maximum system call
+		priority.  Only FreeRTOS functions that end in FromISR can be called
+		from interrupts	that have been assigned a priority at or (logically)
+		below the maximum system call interrupt priority.  FreeRTOS maintains a
+		separate interrupt safe API to ensure interrupt entry is as fast and as
+		simple as possible.  More information (albeit Cortex-M specific) is
+		provided on the following link:
+		http://www.freertos.org/RTOS-Cortex-M3-M4.html */
+		portASSERT_IF_INTERRUPT_PRIORITY_INVALID();
+
+		pxTCB = xTaskToNotify;
+
+		uxSavedInterruptStatus = portSET_INTERRUPT_MASK_FROM_ISR();
+		{
+			if( pulPreviousNotificationValue != NULL )
+			{
+				*pulPreviousNotificationValue = pxTCB->ulNotifiedValue;
+			}
+
+			ucOriginalNotifyState = pxTCB->ucNotifyState;
+			pxTCB->ucNotifyState = taskNOTIFICATION_RECEIVED;
+
+			switch( eAction )
+			{
+				case eSetBits	:
+					pxTCB->ulNotifiedValue |= ulValue;
+					break;
+
+				case eIncrement	:
+					( pxTCB->ulNotifiedValue )++;
+					break;
+
+				case eSetValueWithOverwrite	:
+					pxTCB->ulNotifiedValue = ulValue;
+					break;
+
+				case eSetValueWithoutOverwrite :
+					if( ucOriginalNotifyState != taskNOTIFICATION_RECEIVED )
+					{
+						pxTCB->ulNotifiedValue = ulValue;
+					}
+					else
+					{
+						/* The value could not be written to the task. */
+						xReturn = pdFAIL;
+					}
+					break;
+
+				case eNoAction :
+					/* The task is being notified without its notify value being
+					updated. */
+					break;
+
+				default:
+					/* Should not get here if all enums are handled.
+					Artificially force an assert by testing a value the
+					compiler can't assume is const. */
+					configASSERT( pxTCB->ulNotifiedValue == ~0UL );
+					break;
+			}
+
+			traceTASK_NOTIFY_FROM_ISR();
+
+			/* If the task is in the blocked state specifically to wait for a
+			notification then unblock it now. */
+			if( ucOriginalNotifyState == taskWAITING_NOTIFICATION )
+			{
+				/* The task should not have been on an event list. */
+				configASSERT( listLIST_ITEM_CONTAINER( &( pxTCB->xEventListItem ) ) == NULL );
+
+				if( uxSchedulerSuspended == ( UBaseType_t ) pdFALSE )
+				{
+					( void ) uxListRemove( &( pxTCB->xStateListItem ) );
+					prvAddTaskToReadyList( pxTCB );
+				}
+				else
+				{
+					/* The delayed and ready lists cannot be accessed, so hold
+					this task pending until the scheduler is resumed. */
+					vListInsertEnd( &( xPendingReadyList ), &( pxTCB->xEventListItem ) );
+				}
+
+				if( pxTCB->uxPriority > pxCurrentTCB->uxPriority )
+				{
+					/* The notified task has a priority above the currently
+					executing task so a yield is required. */
+					if( pxHigherPriorityTaskWoken != NULL )
+					{
+						*pxHigherPriorityTaskWoken = pdTRUE;
+					}
+
+					/* Mark that a yield is pending in case the user is not
+					using the "xHigherPriorityTaskWoken" parameter to an ISR
+					safe FreeRTOS function. */
+					xYieldPending = pdTRUE;
+				}
+				else
+				{
+					mtCOVERAGE_TEST_MARKER();
+				}
+			}
+		}
+		portCLEAR_INTERRUPT_MASK_FROM_ISR( uxSavedInterruptStatus );
+
+		return xReturn;
+	}
+
+#endif
+
+char *pcTaskGetName( TaskHandle_t xTaskToQuery ) /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+{
+TCB_t *pxTCB;
+
+	/* If null is passed in here then the name of the calling task is being
+	queried. */
+	pxTCB = prvGetTCBFromHandle( xTaskToQuery );
+	configASSERT( pxTCB );
+	return &( pxTCB->pcTaskName[ 0 ] );
+}

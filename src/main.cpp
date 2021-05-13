@@ -80,10 +80,12 @@ RGBCollector<BH1749NUC> RGBcollector(MQTTnetwork,colorSensor);
 
 
 struct mail_control_t{
+  uint32_t counter=0; 
   uint32_t id=0;   
 };
 rtos::Mail<mail_control_t, 16> mail_box;
-Thread threadWeb(osPriorityNormal,1024*6);
+Thread threadWeb(osPriorityNormal,1024*6,NULL,"web");
+Thread threadSignal(osPriorityNormal,1024*6,NULL,"signal");
 
 volatile bool flag=true;
 class Test
@@ -91,15 +93,25 @@ class Test
 public:
   void run(){
     while(flag){
-      
-      
-      Serial.println("Testing......"+String(ThisThread::flags_get(),DEC));
-      //std::this_thread::sleep_for(std::chrono::seconds(1));
-      
+      Serial.println("Testing......"+String(ThisThread::flags_wait_any_for(0x4,std::chrono::seconds(60),true),DEC));
+      //std::this_thread::sleep_for(std::chrono::seconds(3));
     }
   }
-  void terminal(){
-    threadWeb.flags_set(0x01);
+  void siganl(){
+    while(1){
+      osEvent evt=  mail_box.get();
+      if (evt.status == osEventMail) {
+        /*if(!ESPwebServer.isRunning()){
+
+          threadWeb.start(callback(&ESPwebServer,&ESPWebServer::startup));
+          threadWeb.join();
+        }*/
+        mail_control_t* mail= (mail_control_t*)evt.value.p;
+        threadWeb.flags_set(4);
+        Serial.println("set:"+String(mail->id,DEC));
+        mail_box.free(mail);
+      }
+    }
   }
 };
 
@@ -127,22 +139,24 @@ void setup() {
       PlatformDebug::init(Serial);
     #endif
   #endif
-
-  attachInterrupt(0,[]()->void{
-     thd = std::thread(&Test::terminal,&test);
+     //thd = std::thread(&Test::terminal,&test);
     // thd.detach();
+ 
+  attachInterrupt(0,[](){
+    volatile static int id=0;
     mail_control_t* mail=  mail_box.alloc();
+    mail->id = ++id;
     mail_box.put_from_isr(mail);
   },FALLING);
   //thd = std::thread(&Test::run,&test);
   Serial.println("ThreadStart");
   threadWeb.start(callback(&test,&Test::run));
-  Serial.println("join...");
-  threadWeb.join();
-  Serial.println("joined");
+  threadSignal.start(callback(&test,&Test::siganl));
 
-  
- platform_debug::PlatformDebug::pause();
+  threadWeb.join();
+  threadSignal.join();
+
+  platform_debug::PlatformDebug::pause();
   //LoRa.dumpRegisters(Serial);
  //   SemaphoreHandle_t hMutex;
  // vQueueAddToRegistry(hMutex,"");
@@ -320,12 +334,15 @@ void loop() {
     osEvent evt=  mail_box.get();
     
     if (evt.status == osEventMail) {
-      if(!ESPwebServer.isRunning()){
+      /*if(!ESPwebServer.isRunning()){
 
         threadWeb.start(callback(&ESPwebServer,&ESPWebServer::startup));
         threadWeb.join();
-      }
-      mail_box.free((mail_control_t*)evt.value.p);
+      }*/
+      mail_control_t* mail= (mail_control_t*)evt.value.p;
+      threadWeb.flags_set(mail->id);
+      Serial.println("set:"+String(flag,DEC));
+      mail_box.free(mail);
     }
     //std::this_thread::sleep_for(chrono::seconds(10));
   }

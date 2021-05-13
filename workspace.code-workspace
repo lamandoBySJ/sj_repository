@@ -20,7 +20,8 @@
             "freertosconfig.h": "c",
             "list.h": "c",
             "timers.h": "c",
-            "inc_task.h": "c"
+            "inc_task.h": "c",
+            "tasks.h": "c"
         }
     }
 }
