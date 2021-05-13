@@ -105,7 +105,7 @@ osStatus Thread::start(mbed::Callback<void()> task)
           // _attr.stack_mem = nullptr;
         }
         _mutex.unlock();
-       // _join_sem.release();
+        _join_sem.release();
         return osErrorResource;
     }
     _mutex.unlock();
@@ -327,7 +327,7 @@ Thread::~Thread()
 {
     // terminate is thread safe
     terminate();
-    if (_dynamic_stack) {
+    if (!_dynamic_stack) {
         // Cast before deallocation as delete[] does not accept void*
         delete[] static_cast<uint32_t *>(_attr.stack_mem);
         _attr.stack_mem = nullptr;
@@ -338,6 +338,7 @@ void Thread::_thunk(void *thread_ptr)
 {
 
      Thread *t =(static_cast< Thread * > (thread_ptr));
+   
    // Thread *t = (Thread *)thread_ptr;
     t->_task();
     t->_mutex.lock();
@@ -345,7 +346,6 @@ void Thread::_thunk(void *thread_ptr)
     t->_finished = true;
     t->_join_sem.release();
     // rtos will release the mutex automatically
- 
 }
 
 }

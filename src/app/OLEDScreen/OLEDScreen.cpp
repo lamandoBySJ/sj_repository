@@ -12,6 +12,7 @@ bool OLEDScreen<N>::init(){
   //_display->drawString(0, 0, "OLED initial done!");
   _display->clear();
   _display->display();
+  return true;
 }
 
 template<int N>

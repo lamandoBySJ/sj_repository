@@ -17,7 +17,10 @@
             "croutine.h": "c",
             "queue.h": "c",
             "event_groups.h": "c",
-            "freertosconfig.h": "c"
+            "freertosconfig.h": "c",
+            "list.h": "c",
+            "timers.h": "c",
+            "inc_task.h": "c"
         }
     }
 }

@@ -35,6 +35,7 @@
 #include "rtos/freertos_mpool.h"             // osMemoryPool definitions
 #include "rtos/freertos_os2.h"               // Configuration check and setup
 #include "platform/mbed_debug.h" 
+#include "rtos/tasks.h"
 /*---------------------------------------------------------------------------*/
 //extern void vQueueAddToRegistry( QueueHandle_t xQueue, const char *pcName );
 //extern void vQueueUnregisterQueue( QueueHandle_t xQueue );
@@ -451,11 +452,6 @@ uint32_t osKernelGetSysTimerFreq (void) {
   return 0;
 }
 
-void fun(){
-  while(1){
-    debug("a\n");
-  }
-}
 /*---------------------------------------------------------------------------*/
 
 osThreadId_t osThreadNew (osThreadFunc_t func, void *argument, const osThreadAttr_t *attr) {
@@ -520,7 +516,7 @@ osThreadId_t osThreadNew (osThreadFunc_t func, void *argument, const osThreadAtt
     else {
       if (mem == 0) {
         #if (configSUPPORT_DYNAMIC_ALLOCATION == 1)
-        xTaskCreatePinnedToCore((TaskFunction_t)func, name,stack, argument, prio, NULL, 1);   
+        xTaskCreatePinnedToCore((TaskFunction_t)func, name,stack, argument, prio, &hTask, 1);   
         // if (xTaskCreate ((TaskFunction_t)func, name, (uint16_t)stack, argument, prio, &hTask) != pdPASS) {
         //    hTask = NULL;
         //  }
@@ -1403,6 +1399,14 @@ osMutexId_t osMutexNew (const osMutexAttr_t *attr) {
       if ((hMutex != NULL) && (rmtx != 0U)) {
         hMutex = (SemaphoreHandle_t)((uint32_t)hMutex | 1U);
       }
+    }else{
+            if (rmtx != 0U) {
+              #if (configUSE_RECURSIVE_MUTEXES == 1)
+              hMutex = xSemaphoreCreateRecursiveMutex ();
+              #endif
+            } else {
+              hMutex = xSemaphoreCreateMutex ();
+            }
     }
   }
 

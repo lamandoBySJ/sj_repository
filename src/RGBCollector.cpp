@@ -16,7 +16,7 @@ RGBCollector<T>::~RGBCollector()
 template<class T>
 void RGBCollector<T>::startup()
 {
-   _thread = std::thread(&RGBCollector<T>::run_collector,this); 
+   //_thread = std::thread(&RGBCollector<T>::run_collector,this); 
     //_thread.join();
 }
 

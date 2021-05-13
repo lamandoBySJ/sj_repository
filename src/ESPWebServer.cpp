@@ -1,37 +1,47 @@
 #include "ESPWebServer.h"
+//AsyncWebServer ESPWebServer::_server(80);
+//AsyncEventSource ESPWebServer::_events("/events");
+//AsyncWebSocket ESPWebServer::_wss("/ws");
+//AsyncCallbackJsonWebHandler* ESPWebServer::_handler=nullptr;
 
-ESPWebServer::ESPWebServer():_server(80),_events("/events"),_wss("/ws"),running(false),
-                            _mtxMailBox(),_mtxEventSource(),_mtxCallback(),_mail_box(),
+ESPWebServer::ESPWebServer():_mtx(),_mtxEventSource(),
+                            _server(nullptr),_events("/events"),_wss("/ws"),_handler(nullptr),
+                            running(false),
+                            _mail_box(),
                             _callback(nullptr){
        
 }
+
 ESPWebServer::~ESPWebServer(){
 
 }
 
 const char* PARAM_MESSAGE = "message";
 void ESPWebServer::startup(){
-  
-        running =true;
-        WiFi.mode(WIFI_AP_STA);
-        WiFi.softAP(web_properties::ap_ssid.c_str(), web_properties::ap_pass.c_str());
+      //  std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
+      //  lck.lock();
      
-        platform_debug::TracePrinter::printTrace(web_properties::ap_ssid);
-        platform_debug::TracePrinter::printTrace(web_properties::ap_pass);
-      
-       // MDNS.addService("http","tcp",80);
-        _server.addHandler(new SPIFFSEditor(FFat, web_properties::http_user,web_properties::http_pass));
-        _server.on("/heap", HTTP_GET, [](AsyncWebServerRequest *request){
+        if(running){
+            return;
+        }else{
+            running =true;
+        }
+        _server = new AsyncWebServer(80);
+       // WiFi.mode(WIFI_AP_STA);
+        WiFi.softAP(web_properties::ap_ssid.c_str(), web_properties::ap_pass.c_str());
+
+       //MDNS.addService("http","tcp",80);
+        _server->addHandler(new SPIFFSEditor(FFat, web_properties::http_user,web_properties::http_pass));
+        _server->on("/heap", HTTP_GET, [](AsyncWebServerRequest *request){
             request->send(200, "text/plain", String(ESP.getFreeHeap()));
         });
-        _server.serveStatic("/", FFat, "/data").setDefaultFile("index.html");
-        _server.onNotFound(std::bind(&ESPWebServer::notFound,this,std::placeholders::_1));
+        _server->serveStatic("/", FFat, "/data").setDefaultFile("index.html");
+        _server->onNotFound(std::bind(&ESPWebServer::notFound,this,std::placeholders::_1));
 
-        /*_server.onNotFound([](AsyncWebServerRequest *request){
+        /*_server->onNotFound([](AsyncWebServerRequest *request){
             
         });*/
-
-        _server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
+        _server->on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
             if(request->method() == HTTP_GET)
                 platform_debug::TracePrinter::printTrace("GET");
             else if(request->method() == HTTP_POST)
@@ -58,28 +68,30 @@ void ESPWebServer::startup(){
             int headers = request->headers();
             int i;
             for(i=0;i<headers;i++){
-            AsyncWebHeader* h = request->getHeader(i);
+                AsyncWebHeader* h = request->getHeader(i);
                 platform_debug::TracePrinter::printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
             }
 
             int params = request->params();
-            for(i=0;i<params;i++){
-            AsyncWebParameter* p = request->getParam(i);
-            if(p->isFile()){
-                platform_debug::TracePrinter::printf("_FILE[%s]: %s, size: %u\n", p->name().c_str(), p->value().c_str(), p->size());
-            } else if(p->isPost()){
-                platform_debug::TracePrinter::printf("_POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
-            } else {
-                platform_debug::TracePrinter::printf("_GET[%s]: %s\n", p->name().c_str(), p->value().c_str());
-            }
+                for(i=0;i<params;i++){
+                AsyncWebParameter* p = request->getParam(i);
+                if(p->isFile()){
+                    platform_debug::TracePrinter::printf("_FILE[%s]: %s, size: %u\n", p->name().c_str(), p->value().c_str(), p->size());
+                } else if(p->isPost()){
+                    platform_debug::TracePrinter::printf("_POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
+                } else {
+                    platform_debug::TracePrinter::printf("_GET[%s]: %s\n", p->name().c_str(), p->value().c_str());
+                }
             }
             request->send(200, "text/plain", "OK");
         },[](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
                 String path = String("/data/")+filename;
+                platform_debug::TracePrinter::printf("Upload:path: %s\n", path.c_str());
                 if(index==0){
-                    platform_debug::TracePrinter::printf("Upload: %s\n", filename.c_str());
+                    platform_debug::TracePrinter::printf("Upload:W: %s\n", filename.c_str());
                     FFatHelper::writeFile(FFat,path,data,len);
                 }else{
+                    platform_debug::TracePrinter::printf("Upload:Append: %s\n", filename.c_str());
                     FFatHelper::appendFile(FFat,path,data,len); 
                 }
                 
@@ -91,21 +103,21 @@ void ESPWebServer::startup(){
                 platform_debug::TracePrinter::printf("BodyEnd: %u\n", total);
         });
 
-        _server.on("/upload", HTTP_GET, [](AsyncWebServerRequest *request) {
-            request->send(200, "text/html",web_properties::server_upload_uri.c_str());
+        _server->on("/upload", HTTP_GET, [](AsyncWebServerRequest *request) {
+            request->send(200, "text/html",web_properties::server_upload_uri);
         });
         
-        _server.on("/getSTLB", HTTP_GET, [&](AsyncWebServerRequest *request) {
+        _server->on("/getSTLB", HTTP_GET, [&](AsyncWebServerRequest *request) {
              DynamicJsonDocument  _docucment(600);
             _docucment["box_mac_id"] = web_properties::ap_ssid;
-            _docucment["ssid"] = mqtt::user_properties::ssid;
-            _docucment["pass"] = mqtt::user_properties::pass;
-            _docucment["host"] = mqtt::user_properties::host;
-            _docucment["port"] = mqtt::user_properties::port;
+            _docucment["ssid"] = user_properties::ssid;
+            _docucment["pass"] = user_properties::pass;
+            _docucment["host"] = user_properties::host;
+            _docucment["port"] = user_properties::port;
             request->send(200, "application/json", _docucment.as<String>());
         });   
      
-        _server.on("/reboot", HTTP_POST, [] (AsyncWebServerRequest *request) {
+        _server->on("/reboot", HTTP_POST, [] (AsyncWebServerRequest *request) {
             if (request->hasParam("reboot")) {
                 platform_debug::TracePrinter::printTrace(request->getParam("reboot")->value());
             }
@@ -114,15 +126,15 @@ void ESPWebServer::startup(){
             esp_restart();
         });
     
-        _server.on("/als", HTTP_GET, [] (AsyncWebServerRequest *request) {
+        _server->on("/als", HTTP_GET, [] (AsyncWebServerRequest *request) {
         request->send(FFat, "/data/als.html", "text/html");
         });
         
-        _server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request) {
+        _server->on("/update", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(200, "text/html", "<form method='POST' action='/update' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>");
         });
 
-        _server.on("/update", HTTP_POST, [](AsyncWebServerRequest *request) {
+        _server->on("/update", HTTP_POST, [](AsyncWebServerRequest *request) {
             bool result = Update.hasError();
             AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", result ? "OK" : "FAIL");
             response->addHeader("Connection", "close");
@@ -149,7 +161,9 @@ void ESPWebServer::startup(){
                 }
             }
         });
-        AsyncCallbackJsonWebHandler* handler = new AsyncCallbackJsonWebHandler("/postSTLB", [](AsyncWebServerRequest * request, JsonVariant & json) {
+     
+       
+        _handler = new AsyncCallbackJsonWebHandler("/postSTLB", [](AsyncWebServerRequest * request, JsonVariant & json) {
             JsonObject jsonObj = json.as<JsonObject>();
             platform_debug::TracePrinter::printf( "check jsonObj:%s\n", json.as<String>().c_str());
         
@@ -172,9 +186,9 @@ void ESPWebServer::startup(){
             request->send(200, "application/json",text.c_str());
         });
         
-        _server.addHandler(handler);
+        _server->addHandler(_handler);
         _wss.onEvent(std::bind(&ESPWebServer::onWsEvent,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3,std::placeholders::_4,std::placeholders::_5,std::placeholders::_6) );
-        _server.addHandler(&_wss);
+        _server->addHandler(&_wss);
        
         _events.onConnect([](AsyncEventSourceClient* client) {
             if (client->lastId()) {
@@ -190,11 +204,12 @@ void ESPWebServer::startup(){
         });
      
         _events.setAuthentication(web_properties::http_user.c_str(), web_properties::http_pass.c_str());
-        _server.addHandler(&_events);
-
-        _server.begin();
-
-        _thread = std::thread(&ESPWebServer::run_web_server,this);    
+        _server->addHandler(&_events);
+     
+        _server->begin();
+        
+        _thread = std::thread(&ESPWebServer::run_web_server,this);   
+        platform_debug::TracePrinter::printTrace("WEB Server is running...\n"); 
 }
 
 
@@ -211,8 +226,7 @@ void ESPWebServer::run_web_server(){
 }
 
 void ESPWebServer::post_mail(int message){
-   std::unique_lock<std::mutex> _lock(_mtxMailBox, std::defer_lock);
-   _lock.lock();
+
     web_server::mail_t *mail = _mail_box.alloc();
     if(mail!=NULL){
         mail->message = message;
@@ -221,8 +235,8 @@ void ESPWebServer::post_mail(int message){
 }
 
 void ESPWebServer::delegateMethodWebSocketClientPostEvent(const String& message, const String& event, uint32_t id, uint32_t reconnect){
-   std::unique_lock<std::mutex> _lock(_mtxEventSource, std::defer_lock);
-   _lock.lock();
+  // std::unique_lock<std::mutex> _lock(_mtxEventSource, std::defer_lock);
+  // _lock.lock();
     _events.send(message.c_str(),event.c_str(),id, reconnect);
 }
 

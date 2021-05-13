@@ -31,13 +31,7 @@ typedef struct {
     String topic;
     String payload;
 } mail_t;
-struct user_properties{
-static String path ;
-static String ssid ;
-static String pass ;
-static String host ;
-static int    port ;
-};
+
 }
 
 using namespace mqtt;

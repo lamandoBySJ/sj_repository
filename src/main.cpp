@@ -61,21 +61,7 @@ using namespace platform_debug;
 #endif
 //python3 esptool.py --port COM20 --baud 115200 write_flash -fm dio -fs 16MB  0x410000 partitions.bin
 //C:\Users\Administrator\.platformio\packages\framework-arduinoespressif32\tools\partitions
-String rgb_properties::path ="/als_constant";
-uint16_t rgb_properties::r_offset = 0;
-uint16_t rgb_properties::g_offset = 0;
-uint16_t rgb_properties::b_offset = 0;
-String user_properties::path = "/user_constant";
-String user_properties::ssid = "IoTwlan";
-String user_properties::pass = "mitac1993";
-String user_properties::host = "mslmqtt.mic.com.cn";
-int    user_properties::port = 1883;
 
-String web_properties::ap_ssid="STLB_SSID";
-String web_properties::ap_pass="Aa000000";
-String web_properties::http_user="admin";
-String web_properties::http_pass="admin";
-String web_properties::server_upload_uri = "<form method='POST' action='/upload' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>";
 // mutex for critical section
 std::mutex mtx; 
 DS1307 ds1307(Wire1,21,22); //stlb
@@ -90,20 +76,37 @@ MQTTNetwork MQTTnetwork;
 //OLEDScreen<12> oled(Heltec.display);
 ESPWebServer ESPwebServer;
 RGBCollector<BH1749NUC> RGBcollector(MQTTnetwork,colorSensor);
-OLEDScreen<12> oled(Heltec.display);
+//OLEDScreen<12> oled(Heltec.display);
+
+
+struct mail_control_t{
+  uint32_t id=0;   
+};
+rtos::Mail<mail_control_t, 16> mail_box;
+Thread threadWeb(osPriorityNormal,1024*6);
+
+volatile bool flag=true;
 class Test
 {
 public:
   void run(){
-    while(1){
-      platform_debug::PlatformDebug::println(" ************ STLB ************ ");
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+    while(flag){
+      
+      
+      Serial.println("Testing......"+String(ThisThread::flags_get(),DEC));
+      //std::this_thread::sleep_for(std::chrono::seconds(1));
+      
     }
+  }
+  void terminal(){
+    threadWeb.flags_set(0x01);
   }
 };
 
+Test test;
+std::thread thd;
 //Thread threads[2];
-#define OLEDSCREEN 
+//#define OLEDSCREEN 
 void setup() {
  // put your setup code here, to run once:
   //WIFI Kit series V1 not support Vext control
@@ -124,6 +127,22 @@ void setup() {
       PlatformDebug::init(Serial);
     #endif
   #endif
+
+  attachInterrupt(0,[]()->void{
+     thd = std::thread(&Test::terminal,&test);
+    // thd.detach();
+    mail_control_t* mail=  mail_box.alloc();
+    mail_box.put_from_isr(mail);
+  },FALLING);
+  //thd = std::thread(&Test::run,&test);
+  Serial.println("ThreadStart");
+  threadWeb.start(callback(&test,&Test::run));
+  Serial.println("join...");
+  threadWeb.join();
+  Serial.println("joined");
+
+  
+ platform_debug::PlatformDebug::pause();
   //LoRa.dumpRegisters(Serial);
  //   SemaphoreHandle_t hMutex;
  // vQueueAddToRegistry(hMutex,"");
@@ -162,10 +181,6 @@ void setup() {
     break; 
     default:break;
   }
-
- //Test test;
- //std::thread thd= std::thread(&Test::run,&test);
-
   //threads[0].start(callback(&test,&Test::run));
  // threads[1].start(callback(&test,&Test::run));
  // for(;;){
@@ -185,18 +200,15 @@ void setup() {
   //gpio_wakeup_enable(GPIO_NUM_0,GPIO_INTR_LOW_LEVEL);
   //gpio_wakeup_enable(GPIO_NUM_26,GPIO_INTR_HIGH_LEVEL);
   //esp_sleep_enable_gpio_wakeup();
-
-
  /*
   //int Maxint = numeric_limits<int32_t>::max();
   //int Minint = numeric_limits<int32_t>::min();
   //platform_debug::PlatformDebug::println(" ************ Max ************ "+String(Maxint,DEC));
   //platform_debug::PlatformDebug::println(" ************ Min ************ "+String(Minint,DEC));
   pinMode(0, PULLUP);
-  attachInterrupt(0,[]()->void{
-     
-  },FALLING);
   */
+ 
+  
 
   std::string mac_address=WiFi.macAddress().c_str();
   std::string mark=":";
@@ -277,18 +289,22 @@ void setup() {
   RGBcollector.setWebSocketClientEventCallback(callback(&ESPwebServer,&ESPWebServer::delegateMethodWebSocketClientPostEvent));
   RGBcollector.setWebSocketClientTextCallback(callback(&ESPwebServer,&ESPWebServer::delegateMethodWebSocketClientText));
   RGBcollector.startup();
-  ESPwebServer.startup();
- 
+
   MQTTnetwork.startup();
   platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
-  platform_debug::PlatformDebug::pause();
+ //platform_debug::PlatformDebug::pause();
 }
 
 RGB rgb;
 static String currentTime="";
 
 void loop() {
+  pinMode(21,OUTPUT);
+  pinMode(23,OUTPUT);
+//  digitalWrite(21,HIGH);
+//  digitalWrite(23,HIGH);
 
+ 
   while (true) {
    // _std_mutex.lock();
    // if( timeMachine.getDateTime(currentTime)){
@@ -298,9 +314,20 @@ void loop() {
    // }
    // _std_mutex.unlock();
    // RGBcollector.delegateMethodPostMail(MeasEventType::EventSystemMeasure);
-    std::this_thread::sleep_for(chrono::seconds(10));
+    
     //ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));
     
+    osEvent evt=  mail_box.get();
+    
+    if (evt.status == osEventMail) {
+      if(!ESPwebServer.isRunning()){
+
+        threadWeb.start(callback(&ESPwebServer,&ESPWebServer::startup));
+        threadWeb.join();
+      }
+      mail_box.free((mail_control_t*)evt.value.p);
+    }
+    //std::this_thread::sleep_for(chrono::seconds(10));
   }
 }
 

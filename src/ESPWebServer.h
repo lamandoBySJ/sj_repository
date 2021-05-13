@@ -36,14 +36,7 @@ namespace web_server
     };
 }
 
-struct web_properties
-{
-    static String ap_ssid;
-    static String ap_pass;
-    static String http_user;
-    static String http_pass;
-    static String server_upload_uri;
-};
+
 
 class ESPWebServer //: private mbed::NonCopyable<ESPWebServer>
 {
@@ -58,19 +51,17 @@ public:
 
     void delegateMethodWebSocketClientPostEvent(const String& message, const String& event, uint32_t id=0, uint32_t reconnect=0);
     bool isRunning(){
+       // std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
+       // lck.lock();
         return running;
     }
     //using CallbackFun = std::function<void()>;
     void runCallbackPostMailToCollector(MeasEventType measEventType,uint32_t id){
-        std::unique_lock<std::mutex> lck(_mtxCallback, std::defer_lock);
-	    lck.lock();
         if(this->_callback!=nullptr){
             this->_callback(measEventType,id);
         }
     }
     void setCallbackPostMailToCollector(mbed::Callback<void(MeasEventType,uint32_t)> callback){
-         std::unique_lock<std::mutex> lck(_mtxCallback, std::defer_lock);
-	    lck.lock();
         this->_callback=callback;
     }
 
@@ -78,12 +69,15 @@ public:
         _wss.client(id)->text(text);
     }
 private:
-    
-    AsyncWebServer _server;
+    std::mutex _mtx;
+    std::mutex _mtxEventSource;
+
+    AsyncWebServer* _server;
     AsyncEventSource _events;
     AsyncWebSocket _wss;
+    AsyncCallbackJsonWebHandler* _handler;
     bool running;
-    std::mutex _mtxMailBox,_mtxEventSource,_mtxCallback;;
+  
     rtos::Mail<web_server::mail_t, 16> _mail_box;
     mbed::Callback<void(MeasEventType,uint32_t)> _callback;
     std::thread _thread;

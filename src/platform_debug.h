@@ -9,15 +9,50 @@
 #include <thread>
 #include <stdarg.h>
 #include "heltec.h"
-
+#include "BH1749NUC_REG/bh1749nuc_reg.h"
 //git clone -b 分支名 网址.git 
 //git clone -b lesson-2 https://github.com/hemiahwu/vue-basic-playlist.git
 
 //#define NDEBUG
 namespace platform_debug
 {
-struct Builder {
-        
+struct web_properties
+{
+    static String ap_ssid;
+    static String ap_pass;
+    static String http_user;
+    static String http_pass;
+    static String server_upload_uri;
+};
+struct rgb_properties
+{
+    static String path;
+    static uint16_t r_offset;
+    static uint16_t g_offset;
+    static uint16_t b_offset;
+};
+struct RGB
+{
+    RGB(){
+        R.i16bit = 0;
+        G.i16bit = 0;
+        B.i16bit = 0;
+        IR.i16bit = 0;
+    }
+    rgb1bit16_t R;
+    rgb1bit16_t G;
+    rgb1bit16_t B;
+    rgb1bit16_t IR;
+    uint32_t h;
+    uint32_t s;
+    uint32_t l;
+};
+struct user_properties{
+static String path ;
+static String ssid ;
+static String pass ;
+static String host ;
+static int    port ;
 };
 struct IPSProtocol
 {

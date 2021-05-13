@@ -10,6 +10,7 @@ void MQTTNetwork::runWiFiEventService(){
           case SYSTEM_EVENT_STA_STOP:
               WiFi.mode(WIFI_STA);
               WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+              platform_debug::TracePrinter::printTrace("WiFi Connecting...");
           break;
           case SYSTEM_EVENT_STA_START:
             
@@ -243,7 +244,7 @@ void MQTTNetwork::startup(){
     
       mqttClient.setWill("STLB_WILL",0,false,platform_debug::DeviceInfo::BoardID.c_str(),platform_debug::DeviceInfo::BoardID.length());
       mqttClient.setCleanSession(true);
-      mqttClient.setKeepAlive(6);
+      mqttClient.setKeepAlive(120);
       mqttClient.setClientId(platform_debug::DeviceInfo::BoardID);
       WiFi.onEvent(std::bind(&MQTTNetwork::WiFiEvent,this,std::placeholders::_1,std::placeholders::_2));
      // _wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)this, reinterpret_cast<TimerCallbackFunction_t>(&MQTTNetwork::_thunkConnectToWifi));
