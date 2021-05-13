@@ -85,6 +85,7 @@ struct mail_control_t{
 };
 rtos::Mail<mail_control_t, 16> mail_box;
 Thread threadWeb(osPriorityNormal,1024*6,NULL,"web");
+Thread threadTest(osPriorityNormal,1024*6,NULL,"Test");
 Thread threadSignal(osPriorityNormal,1024*6,NULL,"signal");
 
 volatile bool flag=true;
@@ -93,7 +94,13 @@ class Test
 public:
   void run(){
     while(flag){
-      Serial.println("Testing......"+String(ThisThread::flags_wait_any_for(0x4,std::chrono::seconds(60),true),DEC));
+      Serial.println("AAAAAAAAAAAAAAATesting......"+String(ThisThread::flags_wait_any_for(0x1,std::chrono::seconds(60),true),DEC));
+      //std::this_thread::sleep_for(std::chrono::seconds(3));
+    }
+  }
+  void run2(){
+    while(flag){
+      Serial.println("BBBBBBBBBBBBBBTesting......"+String(ThisThread::flags_wait_any_for(0x2,std::chrono::seconds(60),true),DEC));
       //std::this_thread::sleep_for(std::chrono::seconds(3));
     }
   }
@@ -105,8 +112,10 @@ public:
           threadWeb.start(callback(&ESPwebServer,&ESPWebServer::startup));
           threadWeb.join();
         }*/
+
         mail_control_t* mail= (mail_control_t*)evt.value.p;
-        threadWeb.flags_set(4);
+        //threadWeb.flags_set(2);
+       Serial.println(String(threadTest.flags_set(2),DEC)) ;
         Serial.println("set:"+String(mail->id,DEC));
         mail_box.free(mail);
       }
@@ -150,6 +159,7 @@ void setup() {
   //thd = std::thread(&Test::run,&test);
   Serial.println("ThreadStart");
   threadWeb.start(callback(&test,&Test::run));
+  threadTest.start(callback(&test,&Test::run2));
   threadSignal.start(callback(&test,&Test::siganl));
 
   threadWeb.join();

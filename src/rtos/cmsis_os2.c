@@ -848,9 +848,9 @@ uint32_t osThreadFlagsWait (uint32_t flags, uint32_t options, uint32_t timeout) 
     do {
       rval = xTaskNotifyWait (0, clear, &nval, tout);
       if (rval == pdPASS) {
-        rflags &= flags;
+     
+     //  rflags &= flags;
         rflags |= nval;
-
         if ((options & osFlagsWaitAll) == osFlagsWaitAll) {
           if ((flags & rflags) == flags) {
             break;

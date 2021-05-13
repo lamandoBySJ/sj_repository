@@ -128,9 +128,7 @@ struct tskTaskControlBlock; /* The old naming convention is used to prevent brea
 			switch( eAction )
 			{
 				case eSetBits	:
-					//pxTCB->ulNotifiedValue |= ulValue;
-					pxTCB->ulNotifiedValue = ulValue;
-					xTaskNotify(xTaskToNotify,ulValue,eSetBits);
+					pxTCB->ulNotifiedValue |= ulValue;
 					break;
 
 				case eIncrement	:
