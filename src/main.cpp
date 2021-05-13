@@ -102,7 +102,6 @@ public:
       osEvent evt=  mail_box.get();
       if (evt.status == osEventMail) {
         /*if(!ESPwebServer.isRunning()){
-
           threadWeb.start(callback(&ESPwebServer,&ESPWebServer::startup));
           threadWeb.join();
         }*/
