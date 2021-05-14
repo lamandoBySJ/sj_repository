@@ -26,6 +26,8 @@
 #endif
 #include "mbed_toolchain.h"
 
+#define __MBED__
+
 #ifdef __cplusplus
 extern "C" {
 #endif

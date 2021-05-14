@@ -35,8 +35,9 @@
 #include "rtos/freertos_mpool.h"             // osMemoryPool definitions
 #include "rtos/freertos_os2.h"               // Configuration check and setup
 #include "platform/mbed_debug.h" 
-#include "rtos/tasks.h"
 #include "freertos/timers.h"
+#include "rtos/tasks.h"
+#include "rtos/timers.h"
 /*---------------------------------------------------------------------------*/
 //extern void vQueueAddToRegistry( QueueHandle_t xQueue, const char *pcName );
 //extern void vQueueUnregisterQueue( QueueHandle_t xQueue );

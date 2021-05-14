@@ -25,6 +25,7 @@
 #include <stdint.h>
 //#include "cmsis.h"
 //#include "mbed_assert.h"
+#include "platform/mbed_debug.h"
 #include "platform/mbed_toolchain.h"
 
 #ifdef __cplusplus
@@ -46,6 +47,7 @@ extern "C" {
 #define MBED_CHECK_STORE_ORDER(order) (void)0
 #define MBED_CHECK_CAS_ORDER(success, failure) (void)0
 #endif
+
 
 /* This is currently just to silence unit tests, so no better test required */
 #ifdef __MBED__

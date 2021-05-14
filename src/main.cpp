@@ -89,20 +89,42 @@ Thread threadTest(osPriorityNormal,1024*6,NULL,"Test");
 Thread threadSignal(osPriorityNormal,1024*6,NULL,"signal");
 
 volatile bool flag=true;
+
 class Test
 {
 public:
+      std::mutex _mtx;
+      Test(){
+           Serial.println("structor");
+      }
+       ~Test(){
+        Serial.println("destructor");
+      }
   void run(){
     while(flag){
-      Serial.println("AAAAAAAAAAAAAAATesting......"+String(ThisThread::flags_wait_any_for(0x1,std::chrono::seconds(60),true),DEC));
-      //std::this_thread::sleep_for(std::chrono::seconds(3));
+      std::lock_guard<std::mutex> lck(_mtx);
+      Test test;
+      static int ct=6;
+      while(--ct){
+          std::this_thread::sleep_for(std::chrono::seconds(1));
+      }
+       ct=6;
+      Serial.println("AAAAAAAAAAAAAAATesting......");
+      //String(ThisThread::flags_wait_all_for(0x1,std::chrono::seconds(60),true),DEC));
+    
     }
   }
   void run2(){
     while(flag){
-      Serial.println("BBBBBBBBBBBBBBTesting......"+String(ThisThread::flags_wait_any_for(0x2,std::chrono::seconds(60),true),DEC));
+     // Serial.println("BBBBBBBBBBBBBBTesting......");
+      ThisThread::flags_wait_any_for(0x2,std::chrono::seconds(60),true);
       //std::this_thread::sleep_for(std::chrono::seconds(3));
+      dummy();
     }
+  }
+  void dummy(){
+    std::lock_guard<std::mutex> lck(_mtx);
+    Serial.println("......dummy......");
   }
   void siganl(){
     while(1){
@@ -115,7 +137,7 @@ public:
 
         mail_control_t* mail= (mail_control_t*)evt.value.p;
         //threadWeb.flags_set(2);
-       Serial.println(String(threadTest.flags_set(2),DEC)) ;
+        Serial.println(String(threadTest.flags_set(2),DEC)) ;
         Serial.println("set:"+String(mail->id,DEC));
         mail_box.free(mail);
       }
