@@ -95,9 +95,8 @@ typedef union{
 
 typedef union{
   uint8_t u8bit[2];
-  uint16_t i16bit;
-  
-}rgb1bit16_t;
+  uint16_t u16bit;
+}reg_uint16_t;
 /**
   * @}
   *

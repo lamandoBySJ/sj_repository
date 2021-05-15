@@ -110,4 +110,3 @@ private:
 };
 */
 template class ColorSensor<BH1749NUC>;
-

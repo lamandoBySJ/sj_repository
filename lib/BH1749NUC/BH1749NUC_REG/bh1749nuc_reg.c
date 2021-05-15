@@ -271,48 +271,48 @@ int32_t bh1749nuc_mode_control2_set(bh1749nuc_ctx_t *ctx, bh1749nuc_mode_control
 */
 int32_t bh1749nuc_red_data_get(bh1749nuc_ctx_t *ctx, uint16_t *val)
 {
-    rgb1bit16_t data_raw;
+    reg_uint16_t data_raw;
     int32_t ret;
     ret = bh1749nuc_read_reg(ctx, BH1749NUC_RED_DATA_L8BIT_REG_ADDR, (uint8_t*)&data_raw.u8bit[0], 1);
     ret = bh1749nuc_read_reg(ctx, BH1749NUC_RED_DATA_H8BIT_REG_ADDR, (uint8_t*)&data_raw.u8bit[1], 1);
-    *val=data_raw.i16bit;
+    *val=data_raw.u16bit;
     return ret;
 }
 int32_t bh1749nuc_green_data_get(bh1749nuc_ctx_t *ctx, uint16_t *val)
 {
-    rgb1bit16_t data_raw;
+    reg_uint16_t data_raw;
     int32_t ret;
     ret = bh1749nuc_read_reg(ctx, BH1749NUC_GREEN_DATA_L8BIT_REG_ADDR, (uint8_t*)&data_raw.u8bit[0], 1);
     ret = bh1749nuc_read_reg(ctx, BH1749NUC_GREEN_DATA_H8BIT_REG_ADDR, (uint8_t*)&data_raw.u8bit[1], 1);
-    *val=data_raw.i16bit;
+    *val=data_raw.u16bit;
     return ret;
 }
 int32_t bh1749nuc_blue_data_get(bh1749nuc_ctx_t *ctx, uint16_t *val)
 {
-    rgb1bit16_t data_raw;
+    reg_uint16_t data_raw;
     int32_t ret;
     ret = bh1749nuc_read_reg(ctx, BH1749NUC_BLUE_DATA_L8BIT_REG_ADDR, (uint8_t*)&data_raw.u8bit[0], 1);
     ret = bh1749nuc_read_reg(ctx, BH1749NUC_BLUE_DATA_H8BIT_REG_ADDR, (uint8_t*)&data_raw.u8bit[1], 1);
-    *val=data_raw.i16bit;
+    *val=data_raw.u16bit;
     return ret;
 }
 
 int32_t bh1749nuc_ir_data_get(bh1749nuc_ctx_t *ctx, uint16_t *val)
 {
-    rgb1bit16_t data_raw;
+    reg_uint16_t data_raw;
     int32_t ret;
     ret = bh1749nuc_read_reg(ctx, BH1749NUC_IR_DATA_L8BIT_REG_ADDR, (uint8_t*)&data_raw.u8bit[0], 1);
     ret = bh1749nuc_read_reg(ctx, BH1749NUC_IR_DATA_H8BIT_REG_ADDR, (uint8_t*)&data_raw.u8bit[1], 1);
-    *val=data_raw.i16bit;
+    *val=data_raw.u16bit;
     return ret;
 }
 int32_t bh1749nuc_green2_data_get(bh1749nuc_ctx_t *ctx, uint16_t *val)
 {
-    rgb1bit16_t data_raw;
+    reg_uint16_t data_raw;
     int32_t ret;
     ret = bh1749nuc_read_reg(ctx, BH1749NUC_GREEN2_DATA_L8BIT_REG_ADDR, (uint8_t*)&data_raw.u8bit[0], 1);
     ret = bh1749nuc_read_reg(ctx, BH1749NUC_GREEN2_DATA_H8BIT_REG_ADDR, (uint8_t*)&data_raw.u8bit[1], 1);
-    *val=data_raw.i16bit;
+    *val=data_raw.u16bit;
     return ret;
 }
 

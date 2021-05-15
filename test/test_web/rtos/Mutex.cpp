@@ -22,7 +22,7 @@
  */
 #include "rtos/Mutex.h"
 #include "rtos/Kernel.h"
-#include <Arduino.h>
+
 #include <string.h>
 #include "platform/mbed_error.h"
 #include "platform/mbed_assert.h"
@@ -60,26 +60,21 @@ void Mutex::constructor(const char *name)
     // by the attempt to print an error in a fatal shutdown, let a
     // mutex construction error pass.
    // MBED_ASSERT(_id || mbed_get_error_in_progress());
-    MBED_ASSERT(_id);
+    MBED_ASSERT(_id );
     //MBED_ASSERT(mbed_get_error_in_progress());
 }
 
 void Mutex::lock(void)
 {   
-  
-    osStatus status = osMutexAcquire(_id, osWaitForever);
     
+    osStatus status = osMutexAcquire(_id, osWaitForever);
     if (osOK == status) {
         _count++;
     }
-    if (status != osOK ) {
 
-        MBED_ERROR1(MBED_MAKE_ERROR(MBED_MODULE_KERNEL, MBED_ERROR_CODE_MUTEX_LOCK_FAILED), "Mutex lock failed", status);
-    }
-    /*
     if (status != osOK && !mbed_get_error_in_progress()) {
         MBED_ERROR1(MBED_MAKE_ERROR(MBED_MODULE_KERNEL, MBED_ERROR_CODE_MUTEX_LOCK_FAILED), "Mutex lock failed", status);
-    }*/
+    }
 }
 
 bool Mutex::trylock()
@@ -103,13 +98,11 @@ bool Mutex::trylock_for(Kernel::Clock::duration_u32 rel_time)
     bool success = (status == osOK ||
                     (status == osErrorResource && rel_time == rel_time.zero()) ||
                     (status == osErrorTimeout && rel_time <= Kernel::wait_for_u32_max));
-    /*
+
     if (!success && !mbed_get_error_in_progress()) {
         MBED_ERROR1(MBED_MAKE_ERROR(MBED_MODULE_KERNEL, MBED_ERROR_CODE_MUTEX_LOCK_FAILED), "Mutex lock failed", status);
-    }*/
-    if (status != osOK ) {
-        MBED_ERROR1(MBED_MAKE_ERROR(MBED_MODULE_KERNEL, MBED_ERROR_CODE_MUTEX_LOCK_FAILED), "Mutex lock failed", status);
     }
+
     return false;
 }
 
@@ -139,10 +132,7 @@ void Mutex::unlock()
     // and a mutex release failure means MBED_ERROR anyway.
     _count--;
     osStatus status = osMutexRelease(_id);
-   /* if (status != osOK && !mbed_get_error_in_progress()) {
-        MBED_ERROR1(MBED_MAKE_ERROR(MBED_MODULE_KERNEL, MBED_ERROR_CODE_MUTEX_UNLOCK_FAILED), "Mutex unlock failed", status);
-    }*/
-    if (status != osOK ) {
+    if (status != osOK && !mbed_get_error_in_progress()) {
         MBED_ERROR1(MBED_MAKE_ERROR(MBED_MODULE_KERNEL, MBED_ERROR_CODE_MUTEX_UNLOCK_FAILED), "Mutex unlock failed", status);
     }
 }

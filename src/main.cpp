@@ -32,13 +32,11 @@ extern "C" {
 #include <new>
 #include <mutex>
 #include <thread>
-#include <functional>
-#include <HTTPClient.h>
-#include <Esp32httpUpdate.h>
+
 #include "FS.h"
 #include "FFat.h"
 #include "FFatHelper.h"
-#include "ESPwebServer.h"
+//#include "ESPwebService.h"
 #include "RGBCollector.h"
 #include "OTAService.h"
 #include "CmdParser.h"
@@ -63,91 +61,28 @@ using namespace platform_debug;
 //C:\Users\Administrator\.platformio\packages\framework-arduinoespressif32\tools\partitions
 
 // mutex for critical section
-std::mutex mtx; 
+std::mutex std_mtx; 
 DS1307 ds1307(Wire1,21,22); //stlb
 //DS1307 ds1307(Wire1,32,33); //ips
-TimeMachine<DS1307> timeMachine(ds1307,mtx,13);  
+TimeMachine<DS1307> timeMachine(ds1307,std_mtx,13);  
 
 BH1749NUC bh1749nuc(Wire,4,15);
-ColorSensor<BH1749NUC> colorSensor(bh1749nuc,mtx,2);
+ColorSensor<BH1749NUC> colorSensor(bh1749nuc,std_mtx,2);
 
 CmdParser cmdParser;
+
+
 MQTTNetwork MQTTnetwork;
-//OLEDScreen<12> oled(Heltec.display);
-ESPWebServer ESPwebServer;
+ESPWebService webService;
+
 RGBCollector<BH1749NUC> RGBcollector(MQTTnetwork,colorSensor);
+
 //OLEDScreen<12> oled(Heltec.display);
-
-
 struct mail_control_t{
   uint32_t counter=0; 
   uint32_t id=0;   
 };
 rtos::Mail<mail_control_t, 16> mail_box;
-Thread threadWeb(osPriorityNormal,1024*6,NULL,"web");
-Thread threadTest(osPriorityNormal,1024*6,NULL,"Test");
-Thread threadSignal(osPriorityNormal,1024*6,NULL,"signal");
-
-volatile bool flag=true;
-
-class Test
-{
-public:
-      std::mutex _mtx;
-      Test(){
-           Serial.println("structor");
-      }
-       ~Test(){
-        Serial.println("destructor");
-      }
-  void run(){
-    while(flag){
-      std::lock_guard<std::mutex> lck(_mtx);
-      Test test;
-      static int ct=6;
-      while(--ct){
-          std::this_thread::sleep_for(std::chrono::seconds(1));
-      }
-       ct=6;
-      Serial.println("AAAAAAAAAAAAAAATesting......");
-      //String(ThisThread::flags_wait_all_for(0x1,std::chrono::seconds(60),true),DEC));
-    
-    }
-  }
-  void run2(){
-    while(flag){
-     // Serial.println("BBBBBBBBBBBBBBTesting......");
-      ThisThread::flags_wait_any_for(0x2,std::chrono::seconds(60),true);
-      //std::this_thread::sleep_for(std::chrono::seconds(3));
-      dummy();
-    }
-  }
-  void dummy(){
-    std::lock_guard<std::mutex> lck(_mtx);
-    Serial.println("......dummy......");
-  }
-  void siganl(){
-    while(1){
-      osEvent evt=  mail_box.get();
-      if (evt.status == osEventMail) {
-        /*if(!ESPwebServer.isRunning()){
-          threadWeb.start(callback(&ESPwebServer,&ESPWebServer::startup));
-          threadWeb.join();
-        }*/
-
-        mail_control_t* mail= (mail_control_t*)evt.value.p;
-        //threadWeb.flags_set(2);
-        Serial.println(String(threadTest.flags_set(2),DEC)) ;
-        Serial.println("set:"+String(mail->id,DEC));
-        mail_box.free(mail);
-      }
-    }
-  }
-};
-
-Test test;
-std::thread thd;
-//Thread threads[2];
 //#define OLEDSCREEN 
 void setup() {
  // put your setup code here, to run once:
@@ -178,16 +113,9 @@ void setup() {
     mail->id = ++id;
     mail_box.put_from_isr(mail);
   },FALLING);
-  //thd = std::thread(&Test::run,&test);
-  Serial.println("ThreadStart");
-  threadWeb.start(callback(&test,&Test::run));
-  threadTest.start(callback(&test,&Test::run2));
-  threadSignal.start(callback(&test,&Test::siganl));
+  
 
-  threadWeb.join();
-  threadSignal.join();
 
-  platform_debug::PlatformDebug::pause();
   //LoRa.dumpRegisters(Serial);
  //   SemaphoreHandle_t hMutex;
  // vQueueAddToRegistry(hMutex,"");
@@ -252,8 +180,6 @@ void setup() {
   //platform_debug::PlatformDebug::println(" ************ Min ************ "+String(Minint,DEC));
   pinMode(0, PULLUP);
   */
- 
-  
 
   std::string mac_address=WiFi.macAddress().c_str();
   std::string mark=":";
@@ -272,8 +198,6 @@ void setup() {
   //platform_debug::DeviceInfo::BoardID = String(mac_address.substr(mac_address.length()-4,4).c_str());
   platform_debug::PlatformDebug::println("DeviceInfo::BoardID:"+platform_debug::DeviceInfo::BoardID);
   
-
-
   if(FFatHelper::init()){
       platform_debug::PlatformDebug::println("OK:File system mounted");
   }else{
@@ -330,52 +254,50 @@ void setup() {
   MQTTnetwork.addOnMessageCallback(callback(&cmdParser,&CmdParser::onMessageCallback));
 
   
-  ESPwebServer.setCallbackPostMailToCollector(callback(&RGBcollector,&RGBCollector<BH1749NUC>::delegateMethodPostMail));
-  RGBcollector.setWebSocketClientEventCallback(callback(&ESPwebServer,&ESPWebServer::delegateMethodWebSocketClientPostEvent));
-  RGBcollector.setWebSocketClientTextCallback(callback(&ESPwebServer,&ESPWebServer::delegateMethodWebSocketClientText));
-  RGBcollector.startup();
-
-  MQTTnetwork.startup();
+  //webServer.setCallbackPostMailToCollector(callback(&RGBcollector,&RGBCollector<BH1749NUC>::delegateMethodPostMail));
+ // RGBcollector.setCallbackWebSocketClientEvent(callback(&webServer,&ESPWebServer::delegateMethodWebSocketClientEvent));
+  //RGBcollector.setCallbackWebSocketClientText(callback(&webServer,&ESPWebServer::delegateMethodWebSocketClientText));
+ 
+  
+ // MQTTnetwork.startup();
+ // RGBcollector.startup();
+  //webServer.startup();
   platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
  //platform_debug::PlatformDebug::pause();
+  
 }
 
 RGB rgb;
 static String currentTime="";
-
+Thread threadSignal(osPriorityNormal,1024*6,NULL,"signal");
 void loop() {
   pinMode(21,OUTPUT);
   pinMode(23,OUTPUT);
 //  digitalWrite(21,HIGH);
 //  digitalWrite(23,HIGH);
-
- 
   while (true) {
-   // _std_mutex.lock();
+
    // if( timeMachine.getDateTime(currentTime)){
    //     platform_debug::PlatformDebug::println(currentTime);
    // }else{
    //     platform_debug::PlatformDebug::println("ERROR:currentTime");
    // }
-   // _std_mutex.unlock();
-   // RGBcollector.delegateMethodPostMail(MeasEventType::EventSystemMeasure);
-    
-    //ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));
-    
-    osEvent evt=  mail_box.get();
-    
-    if (evt.status == osEventMail) {
-      /*if(!ESPwebServer.isRunning()){
 
-        threadWeb.start(callback(&ESPwebServer,&ESPWebServer::startup));
-        threadWeb.join();
-      }*/
-      mail_control_t* mail= (mail_control_t*)evt.value.p;
-      threadWeb.flags_set(mail->id);
-      Serial.println("set:"+String(flag,DEC));
-      mail_box.free(mail);
-    }
+   // RGBcollector.delegateMethodPostMail(MeasEventType::EventSystemMeasure);
+    //ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));
     //std::this_thread::sleep_for(chrono::seconds(10));
+      osEvent evt=  mail_box.get();
+      if (evt.status == osEventMail) {
+        if(!webService.isRunning()){
+
+           webService.startup();
+         // webServer.startup();
+        }else{
+          webService.shutdown();
+        }
+        mail_control_t* mail= (mail_control_t*)evt.value.p;
+        mail_box.free(mail);
+      }
   }
 }
 

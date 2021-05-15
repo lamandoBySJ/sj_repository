@@ -1,42 +1,32 @@
-#include "ESPWebServer.h"
-//AsyncWebServer ESPWebServer::_server(80);
-//AsyncEventSource ESPWebServer::_events("/events");
-//AsyncWebSocket ESPWebServer::_wss("/ws");
-//AsyncCallbackJsonWebHandler* ESPWebServer::_handler=nullptr;
+#include "ESPWebService.h"
 
-ESPWebServer::ESPWebServer():_mtx(),_mtxEventSource(),
-                            _server(nullptr),_events("/events"),_wss("/ws"),_handler(nullptr),
-                            running(false),
-                            _mail_box(),
-                            _callback(nullptr){
-       
+void ESPWebService::startup(){
+    init();
+    _thread.start(callback(this,&ESPWebService::run_web_service));
 }
-
-ESPWebServer::~ESPWebServer(){
-
-}
-
-const char* PARAM_MESSAGE = "message";
-void ESPWebServer::startup(){
+void ESPWebService::shutdown(){
+     _thread.terminate();
+}   
+void ESPWebService::init(){
       //  std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
       //  lck.lock();
-     
+        Serial.println("Run:Web");
+        std::lock_guard<std::mutex> lck(mtx);
+    
         if(running){
             return;
         }else{
             running =true;
         }
-        _server = new AsyncWebServer(80);
-       // WiFi.mode(WIFI_AP_STA);
+        _server =new AsyncWebServer(80);
         WiFi.softAP(web_properties::ap_ssid.c_str(), web_properties::ap_pass.c_str());
-
        //MDNS.addService("http","tcp",80);
         _server->addHandler(new SPIFFSEditor(FFat, web_properties::http_user,web_properties::http_pass));
         _server->on("/heap", HTTP_GET, [](AsyncWebServerRequest *request){
             request->send(200, "text/plain", String(ESP.getFreeHeap()));
         });
         _server->serveStatic("/", FFat, "/data").setDefaultFile("index.html");
-        _server->onNotFound(std::bind(&ESPWebServer::notFound,this,std::placeholders::_1));
+        _server->onNotFound(std::bind(&ESPWebService::notFound,this,std::placeholders::_1));
 
         /*_server->onNotFound([](AsyncWebServerRequest *request){
             
@@ -187,7 +177,7 @@ void ESPWebServer::startup(){
         });
         
         _server->addHandler(_handler);
-        _wss.onEvent(std::bind(&ESPWebServer::onWsEvent,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3,std::placeholders::_4,std::placeholders::_5,std::placeholders::_6) );
+        _wss.onEvent(std::bind(&ESPWebService::onWsEvent,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3,std::placeholders::_4,std::placeholders::_5,std::placeholders::_6) );
         _server->addHandler(&_wss);
        
         _events.onConnect([](AsyncEventSourceClient* client) {
@@ -208,39 +198,25 @@ void ESPWebServer::startup(){
      
         _server->begin();
         
-        _thread = std::thread(&ESPWebServer::run_web_server,this);   
         platform_debug::TracePrinter::printTrace("WEB Server is running...\n"); 
 }
 
+void ESPWebService::run_web_service()
+{
+  
 
-void ESPWebServer::run_web_server(){
-        while(true){
-            osEvent evt= _mail_box.get();
-            if (evt.status == osEventMail) {
+    while(true){
+        osEvent evt= _mail_box.get();
+        if (evt.status == osEventMail) {
                 web_server::mail_t *mail = (web_server::mail_t *)evt.value.p;
                 _mail_box.free(mail); 
-            }
-           // _wss.cleanupClients();
-            platform_debug::TracePrinter::printTrace("Thread:ws_wss.cleanupClients()\n");
-        } 
+        }
+         _wss.cleanupClients();
+        platform_debug::TracePrinter::printTrace("Thread:ws_wss.cleanupClients()\n");
+    } 
 }
 
-void ESPWebServer::post_mail(int message){
-
-    web_server::mail_t *mail = _mail_box.alloc();
-    if(mail!=NULL){
-        mail->message = message;
-        _mail_box.put(mail) ;
-     }
-}
-
-void ESPWebServer::delegateMethodWebSocketClientPostEvent(const String& message, const String& event, uint32_t id, uint32_t reconnect){
-  // std::unique_lock<std::mutex> _lock(_mtxEventSource, std::defer_lock);
-  // _lock.lock();
-    _events.send(message.c_str(),event.c_str(),id, reconnect);
-}
-
-void ESPWebServer::onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient *client, AwsEventType type, void * arg, uint8_t *data, size_t len)
+void ESPWebService::onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient *client, AwsEventType type, void * arg, uint8_t *data, size_t len)
 {
     if (type == WS_EVT_CONNECT) {
         platform_debug::TracePrinter::printf("ws[%s][%u] connect\n", server->url(), client->id());
@@ -296,7 +272,7 @@ void ESPWebServer::onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient *clie
     }
 }
 
-void ESPWebServer::notFound(AsyncWebServerRequest *request) {
+void ESPWebService::notFound(AsyncWebServerRequest *request) {
     platform_debug::TracePrinter::printTrace("NOT_FOUND: ");
             if(request->method() == HTTP_GET)
                 platform_debug::TracePrinter::printTrace("GET");
@@ -341,4 +317,13 @@ void ESPWebServer::notFound(AsyncWebServerRequest *request) {
             }
 
             request->send(404);
+}
+
+void ESPWebService::post_mail(int message){
+
+    web_server::mail_t *mail = _mail_box.alloc();
+    if(mail!=NULL){
+        mail->message = message;
+        _mail_box.put(mail) ;
+     }
 }

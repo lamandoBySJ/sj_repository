@@ -30,7 +30,7 @@ typedef enum class MeasMode : uint8_t{
     Time35ms=5
 }MeasMode;
 
- class BH1749NUC : public ColorSensorBase
+ class BH1749NUC 
  {
 public:
     BH1749NUC()=delete;
@@ -44,10 +44,7 @@ public:
         _data[1] = 1;
     }
     ~BH1749NUC();
-    bool begin() override;
-    
-    
- 
+    bool begin();
     void sendCommand(uint8_t reg_address,uint8_t* data,int len);
     uint8_t getManufacturerId();
     bool init(GainIR gain_ir,GainRGB gain_rgb,MeasMode meas_mode);
@@ -67,10 +64,10 @@ public:
     bool mode_control2_set(uint8_t val);
     bool mode_control2_get(uint8_t *val);
    
-    bool red_data_get(rgb1bit16_t& rgb);
-    bool green_data_get(rgb1bit16_t& rgb);
-    bool blue_data_get(rgb1bit16_t& rgb);
-    bool ir_data_get(rgb1bit16_t& rgb);  
+    bool red_data_get(reg_uint16_t& rgb);
+    bool green_data_get(reg_uint16_t& rgb);
+    bool blue_data_get(reg_uint16_t& rgb);
+    bool ir_data_get(reg_uint16_t& rgb);  
     //bool data_get(uint16_t& data);
 
 private:
@@ -83,7 +80,7 @@ private:
     uint8_t _scl;
     uint32_t _frequency;
     uint8_t _device_address;
-    rgb1bit16_t _reg_value;
+    reg_uint16_t _reg_value;
     uint8_t _reg_addr[2];
  };
 

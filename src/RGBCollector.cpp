@@ -1,30 +1,9 @@
 #include "RGBCollector.h"
 
-template<class T>
-RGBCollector<T>::RGBCollector(MQTTNetwork& MQTTnetwork,ColorSensor<T>& colorSensor):
-    _MQTTnetwork(MQTTnetwork),_colorSensor(colorSensor),_rgb(),_rgbTemp(),_mail_box()
-    ,_mtx(),_mtxCallback(),_cbWebSocketClientEvent(nullptr),_colorConverter()
-{
-
-}
-template<class T>
-RGBCollector<T>::~RGBCollector()
-{
-
-}
-
-template<class T>
-void RGBCollector<T>::startup()
-{
-   //_thread = std::thread(&RGBCollector<T>::run_collector,this); 
-    //_thread.join();
-}
 
 template<class T>
 void RGBCollector<T>::delegateMethodPostMail(MeasEventType measEventType,uint32_t id)
 {
-    std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
-	lck.lock();
     collector::mail_t *mail = _mail_box.alloc();
     if(mail!=NULL){
         mail->id = id;
@@ -32,48 +11,32 @@ void RGBCollector<T>::delegateMethodPostMail(MeasEventType measEventType,uint32_
         _mail_box.put(mail) ;
      }
 }
+template<class T>
+void RGBCollector<T>::startup()
+{
+  // _thread = std::thread(&RGBCollector<T>::run_task_collection,this); 
+}
 
 template<class T>
-void RGBCollector<T>::run_collector()
+void RGBCollector<T>::run_task_collection()
 {
-    DynamicJsonDocument  docProgress(200);
-    DynamicJsonDocument  doc(2048);
-    int progress=0;
+
+    DynamicJsonDocument  doc(1024);
     while(true){
+       
         osEvent evt= _mail_box.get();
         if (evt.status == osEventMail) {
-            _rgb.R.i16bit=0;
-            _rgb.G.i16bit=0;
-            _rgb.B.i16bit=0;
-            _rgb.IR.i16bit=0;
-            _colorSensor.measurementModeActive();
-            for(char i=0;i<5;++i){
-                _colorSensor.getRGB(_rgbTemp);
-
-                if(_rgb.R.i16bit < _rgbTemp.R.i16bit ||
-                   _rgb.G.i16bit < _rgbTemp.G.i16bit ||
-                   _rgb.B.i16bit < _rgbTemp.B.i16bit)
-                {
-                    _rgb.R.i16bit=_rgbTemp.R.i16bit;
-                    _rgb.G.i16bit=_rgbTemp.G.i16bit;
-                     _rgb.B.i16bit=_rgbTemp.B.i16bit;
-                    _rgb.IR.i16bit=_rgbTemp.IR.i16bit;
-                 }
-                progress+=15;
-                docProgress["status"]="measuring";
-                docProgress["progress"]=progress;
-                runCallbackWebSocketClientPostEvent(docProgress.as<String>(),"progress");
-                std::this_thread::sleep_for(chrono::milliseconds(200));
-                
-                platform_debug::TracePrinter::printTrace(String(_rgb.R.i16bit,DEC)+": "+
-                                                              String(_rgb.G.i16bit,DEC)+": "+
-                                                              String(_rgb.B.i16bit,DEC)+": "+
-                                                              String(_rgb.IR.i16bit,DEC) ); 
-                                                                                        
-            }
-            _colorSensor.measurementModeInactive();
+              int progress=0;
+            /* std::array<RGB,5> a;
+             _colorSensor.loopMeasure(_rgb,std::chrono::milliseconds(200),a);
+            runCallbackWebSocketClientPostEvent("{\"status\":\"measuring\",\"progress\":"+String(progress,DEC)+"}","progress");
+            platform_debug::TracePrinter::printTrace(String(_rgb.R.u16bit,DEC)+": "+
+                                                              String(_rgb.G.u16bit,DEC)+": "+
+                                                              String(_rgb.B.u16bit,DEC)+": "+
+                                                              String(_rgb.IR.u16bit,DEC) ); 
+           
             //platform_debug::TracePrinter::printTrace("Returned :No Client connected!\n");
-            doc.clear();
+              doc.clear();
             JsonArray data = doc.createNestedArray("TowerColor");
             _colorConverter.color(_rgb,data);
             
@@ -83,30 +46,30 @@ void RGBCollector<T>::run_collector()
             {
                 case  MeasEventType::EventSystemMeasure:
                 {
-                    doc["r_reg"] = _rgb.R.i16bit;
-                    doc["g_reg"] = _rgb.G.i16bit;
-                    doc["b_reg"] = _rgb.B.i16bit;
+                    doc["r_reg"] = _rgb.R.u16bit;
+                    doc["g_reg"] = _rgb.G.u16bit;
+                    doc["b_reg"] = _rgb.B.u16bit;
                 }
                 break;
                 case  MeasEventType::EventServerMeasure:
                 {
-                    doc["r_reg"] = _rgb.R.i16bit;
-                    doc["g_reg"] = _rgb.G.i16bit;
-                    doc["b_reg"] = _rgb.B.i16bit;
+                    doc["r_reg"] = _rgb.R.u16bit;
+                    doc["g_reg"] = _rgb.G.u16bit;
+                    doc["b_reg"] = _rgb.B.u16bit;
                 }
                 break;
                 case  MeasEventType::EventSystemOffset:
                 {
-                    int32_t red_diff = (_rgb.R.i16bit-rgb_properties::r_offset);
-                    int32_t green_diff = (_rgb.G.i16bit-rgb_properties::g_offset);
-                    int32_t blue_diff = (_rgb.B.i16bit-rgb_properties::b_offset);
+                    int32_t red_diff = (_rgb.R.u16bit-rgb_properties::r_offset);
+                    int32_t green_diff = (_rgb.G.u16bit-rgb_properties::g_offset);
+                    int32_t blue_diff = (_rgb.B.u16bit-rgb_properties::b_offset);
                     doc["r_diff"] =  abs(red_diff);
                     doc["g_diff"] =  abs(green_diff);
                     doc["b_diff"] =  abs(blue_diff);
 
-                    rgb_properties::r_offset = _rgb.R.i16bit;
-                    rgb_properties::g_offset = _rgb.G.i16bit;
-                    rgb_properties::b_offset = _rgb.B.i16bit;
+                    rgb_properties::r_offset = _rgb.R.u16bit;
+                    rgb_properties::g_offset = _rgb.G.u16bit;
+                    rgb_properties::b_offset = _rgb.B.u16bit;
 
                     doc["r_offset"] = rgb_properties::r_offset;
                     doc["g_offset"] = rgb_properties::g_offset;
@@ -128,12 +91,12 @@ void RGBCollector<T>::run_collector()
                 break;
                 case  MeasEventType::EventWebAppMeasure:
                 {
-                    int32_t red_diff = (_rgb.R.i16bit-rgb_properties::r_offset);
-                    int32_t green_diff = (_rgb.G.i16bit-rgb_properties::g_offset);
-                    int32_t blue_diff = (_rgb.B.i16bit-rgb_properties::b_offset);
-                    doc["r_reg"] = _rgb.R.i16bit;
-                    doc["g_reg"] = _rgb.G.i16bit;
-                    doc["b_reg"] = _rgb.B.i16bit;
+                    int32_t red_diff = (_rgb.R.u16bit-rgb_properties::r_offset);
+                    int32_t green_diff = (_rgb.G.u16bit-rgb_properties::g_offset);
+                    int32_t blue_diff = (_rgb.B.u16bit-rgb_properties::b_offset);
+                    doc["r_reg"] = _rgb.R.u16bit;
+                    doc["g_reg"] = _rgb.G.u16bit;
+                    doc["b_reg"] = _rgb.B.u16bit;
                     doc["r_offset"] = rgb_properties::r_offset;
                     doc["g_offset"] = rgb_properties::g_offset;
                     doc["b_offset"] = rgb_properties::b_offset;
@@ -148,10 +111,9 @@ void RGBCollector<T>::run_collector()
                 default: break;
             }
              _mail_box.free(mail); 
-            
-            docProgress["status"]="done";
-            docProgress["progress"]=100;
-            runCallbackWebSocketClientPostEvent(docProgress.as<String>(),"progress");
+
+            runCallbackWebSocketClientPostEvent("{\"status\":\"done\",\"progress\":100}","progress");
+            */
         }
     } 
 }

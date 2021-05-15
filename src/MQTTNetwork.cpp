@@ -1,11 +1,14 @@
 #include "MQTTNetwork.h"
 
 void MQTTNetwork::runWiFiEventService(){
+
     for(;;){
       osEvent evt = _mailBoxWiFiEvent.get();
       if (evt.status == osEventMail) {
         mail_wifi_event_t* event = ( mail_wifi_event_t *)evt.value.p;
         platform_debug::TracePrinter::printTrace("[WiFi-event] event: "+String(event->id,DEC));
+        std::lock_guard<rtos::Mutex> lck(_mtx);
+       
         switch(event->id) {
           case SYSTEM_EVENT_STA_STOP:
               WiFi.mode(WIFI_STA);
@@ -78,7 +81,7 @@ void MQTTNetwork::_thunkConnectToMqtt(void* pvTimerID)
 }
 void MQTTNetwork::_connectToMqtt()
 {
-    //std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
+    // std::lock_guard<rtos::Mutex> lck(_mtx);
     //lck.lock();
     platform_debug::TracePrinter::printTrace("MQTT Connecting...");
     mqttClient.connect();
@@ -88,8 +91,7 @@ void MQTTNetwork::_connectToWifi()
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 }*/
 bool MQTTNetwork::connected(){
-  std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
-  lck.lock();
+   std::lock_guard<rtos::Mutex> lck(_mtx);
   return mqttClient.connected();
 }
 bool MQTTNetwork::publish(const String& topic,const String& payload, uint8_t qos, bool retain,bool dup, uint16_t message_id)
@@ -98,8 +100,7 @@ bool MQTTNetwork::publish(const String& topic,const String& payload, uint8_t qos
    if(!connected()) {
      return false;
    }
-    std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
-    lck.lock();
+  std::lock_guard<rtos::Mutex> lck(_mtx);
    return  mqttClient.publish(topic.c_str(),qos, retain, payload.c_str(),payload.length(),dup,message_id) == 1;
 }
 bool  MQTTNetwork::subscribe(const String& topic, uint8_t qos)
@@ -108,8 +109,7 @@ bool  MQTTNetwork::subscribe(const String& topic, uint8_t qos)
      return false;
    }
 
-  std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
-  lck.lock();
+   std::lock_guard<rtos::Mutex> lck(_mtx);
   return  mqttClient.subscribe(topic.c_str(), qos)!=0;;
 }
 bool MQTTNetwork::unsubscribe(const String& topic)
@@ -118,8 +118,7 @@ bool MQTTNetwork::unsubscribe(const String& topic)
    if(!connected()) {
      return false;
    }
-   std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
-   lck.lock();
+    std::lock_guard<rtos::Mutex> lck(_mtx);
    return unsubscribe(topic.c_str());
 }
 void MQTTNetwork::onMqttConnect(bool sessionPresent)
@@ -211,7 +210,7 @@ void MQTTNetwork::onMqttPublish(uint16_t packetId)
 /*
 void MQTTNetwork::setMqttReconnectTimer(bool start)
 {
-    std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
+     std::lock_guard<rtos::Mutex> lck(_mtx);
     lck.lock();
     if(start){
           xTimerStart(_mqttReconnectTimer,0);
@@ -222,7 +221,7 @@ void MQTTNetwork::setMqttReconnectTimer(bool start)
 
 void MQTTNetwork::setWifiReconnectTimer(bool start)
 {
-    std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
+     std::lock_guard<rtos::Mutex> lck(_mtx);
     lck.lock();
       if(start){
           xTimerStart(_wifiReconnectTimer,0);
@@ -231,8 +230,9 @@ void MQTTNetwork::setWifiReconnectTimer(bool start)
       }
 }
 */
-void MQTTNetwork::startup(){
-
+void MQTTNetwork::init()
+{
+      std::lock_guard<rtos::Mutex> lck(_mtx);
       MQTTNetwork::MQTT_HOST    = user_properties::host.c_str();
       MQTTNetwork::MQTT_PORT    = user_properties::port;
       MQTTNetwork::WIFI_SSID    = user_properties::ssid.c_str();
@@ -257,25 +257,19 @@ void MQTTNetwork::startup(){
       mqttClient.onMessage(callback(this,&MQTTNetwork::onMqttMessage));
       mqttClient.onPublish(callback(this,&MQTTNetwork::onMqttPublish));
       mqttClient.setServer(MQTT_HOST, MQTT_PORT);
-      
-      _threadOnMessage = std::thread(&MQTTNetwork::run_mail_box_message,this);
-     //_threadOnMessage.start(callback(this,&MQTTNetwork::run_mail_box));
-     _threadSubscribe.start(callback(this,&MQTTNetwork::run_mail_box_subscribe));
-     _threadWiFiEvent.start(callback(this,&MQTTNetwork::runWiFiEventService));
 
-    mail_wifi_event_t* evt=_mailBoxWiFiEvent.alloc();
-    evt->id=SYSTEM_EVENT_STA_STOP;
-    _mailBoxWiFiEvent.put(evt);
+       mail_wifi_event_t* evt=_mailBoxWiFiEvent.alloc();
+      evt->id=SYSTEM_EVENT_STA_STOP;
+      _mailBoxWiFiEvent.put(evt);
 }
 
 void MQTTNetwork::disconnect(bool autoConnect)
 {
-  std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
-  lck.lock();
+   std::lock_guard<rtos::Mutex> lck(_mtx);
   mqttClient.disconnect();
 }
 
-void MQTTNetwork::run_mail_box_message(){
+void MQTTNetwork::run_mail_box_on_message_arrived(){
   while(true){
    
     osEvent evt= _mail_box.get();
@@ -291,7 +285,7 @@ void MQTTNetwork::run_mail_box_message(){
  // vTaskDelete(NULL);
 }
 
-void MQTTNetwork::run_mail_box_subscribe(){
+void MQTTNetwork::run_mail_box_topics_subscribed(){
   while(true){
    
     osEvent evt= _mail_box_subscribe.get();

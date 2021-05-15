@@ -16,7 +16,6 @@
 //#define NDEBUG
 namespace platform_debug
 {
-     
 struct web_properties
 {
     static String ap_ssid;
@@ -35,15 +34,15 @@ struct rgb_properties
 struct RGB
 {
     RGB(){
-        R.u16bit = 0;
-        G.u16bit = 0;
-        B.u16bit = 0;
-        IR.u16bit = 0;
+        R.i16bit = 0;
+        G.i16bit = 0;
+        B.i16bit = 0;
+        IR.i16bit = 0;
     }
-    reg_uint16_t R;
-    reg_uint16_t G;
-    reg_uint16_t B;
-    reg_uint16_t IR;
+    rgb1bit16_t R;
+    rgb1bit16_t G;
+    rgb1bit16_t B;
+    rgb1bit16_t IR;
     uint32_t h;
     uint32_t s;
     uint32_t l;

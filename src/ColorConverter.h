@@ -2,17 +2,18 @@
 #define COLOR_CONVERTER_H
 #include "Arduino.h"
 #include "ArduinoJson.h"
+#include "platform_debug.h"
 
 enum class MeasEventType : char{
-            EventSystemMeasure = 0,
-            EventServerMeasure,
-            EventSystemOffset,
-            EventWebAppMeasure
+    EventSystemMeasure = 0,
+    EventServerMeasure,
+    EventSystemOffset,
+    EventWebAppMeasure
 };
-
 class ColorConverter
 {
 public:
+       
     ColorConverter()=default;
    void RGBToHSL(RGB& rgb_hsl){
         double _delta=0;
@@ -25,15 +26,15 @@ public:
         double _s=0;
         double _l=0;
 
-        if(rgb_hsl.R.i16bit > 255  || rgb_hsl.G.i16bit > 255 || rgb_hsl.B.i16bit > 255){
-            uint16_t  base_max = max( max(rgb_hsl.R.i16bit, rgb_hsl.G.i16bit), rgb_hsl.G.i16bit);
-            _r = (uint16_t )(rgb_hsl.R.i16bit*255.0 / base_max);
-            _g = (uint16_t )(rgb_hsl.G.i16bit*255.0 / base_max);
-            _b = (uint16_t )(rgb_hsl.B.i16bit*255.0 / base_max);  
+        if(rgb_hsl.R.u16bit > 255  || rgb_hsl.G.u16bit > 255 || rgb_hsl.B.u16bit > 255){
+            uint16_t  base_max = max( max(rgb_hsl.R.u16bit, rgb_hsl.G.u16bit), rgb_hsl.G.u16bit);
+            _r = (uint16_t )(rgb_hsl.R.u16bit*255.0 / base_max);
+            _g = (uint16_t )(rgb_hsl.G.u16bit*255.0 / base_max);
+            _b = (uint16_t )(rgb_hsl.B.u16bit*255.0 / base_max);  
         }else{
-            _r = rgb_hsl.R.i16bit/255.0;
-            _g = rgb_hsl.G.i16bit/255.0;
-            _b = rgb_hsl.B.i16bit/255.0; 
+            _r = rgb_hsl.R.u16bit/255.0;
+            _g = rgb_hsl.G.u16bit/255.0;
+            _b = rgb_hsl.B.u16bit/255.0; 
         }
 
         _cmax = max(_r,max(_g, _b));

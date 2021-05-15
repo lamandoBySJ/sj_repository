@@ -164,7 +164,7 @@ bool BH1749NUC::data_get(uint16_t& data)
         return success;
 }
 */
-bool BH1749NUC::red_data_get(rgb1bit16_t& rgb)
+bool BH1749NUC::red_data_get(reg_uint16_t& rgb)
 {   
         /*
         bool ret;
@@ -178,7 +178,7 @@ bool BH1749NUC::red_data_get(rgb1bit16_t& rgb)
     });
 }
 
-bool BH1749NUC::green_data_get(rgb1bit16_t& rgb)
+bool BH1749NUC::green_data_get(reg_uint16_t& rgb)
 {    
     /*
     bool ret;
@@ -192,7 +192,7 @@ bool BH1749NUC::green_data_get(rgb1bit16_t& rgb)
     });
 }
 
-bool BH1749NUC::blue_data_get(rgb1bit16_t& rgb)
+bool BH1749NUC::blue_data_get(reg_uint16_t& rgb)
 {
     /*
     bool ret;
@@ -206,7 +206,7 @@ bool BH1749NUC::blue_data_get(rgb1bit16_t& rgb)
     });
 }
     
-bool BH1749NUC::ir_data_get(rgb1bit16_t& rgb)
+bool BH1749NUC::ir_data_get(reg_uint16_t& rgb)
 {
     /*
     bool ret;
