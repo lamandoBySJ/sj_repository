@@ -40,7 +40,7 @@ using namespace std;
 class ESPWebService //: private mbed::NonCopyable<ESPWebServer>
 {
 public:
-    ESPWebService():_thread(osPriorityNormal,1024*8),
+    ESPWebService():_thread(osPriorityNormal,1024*2),
         _server(nullptr),_events("/events"),_wss("/ws"),_handler(nullptr),
         running(false),
         _mail_box(),
@@ -67,24 +67,23 @@ public:
     bool isRunning(){
        // std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
        // lck.lock();
-       // std::lock_guard<std::mutex> lck(_mtxCallback);
+        std::lock_guard<rtos::Mutex> lck(_mtx);
         return running;
     }
-    //using CallbackFun = std::function<void()>;
-    void runCallbackPostMailToCollector(MeasEventType measEventType,uint32_t id){
+    void runCallbackPostMailToCollector(MeasEventType measEventType,AsyncWebSocketClient *client){
         std::lock_guard<rtos::Mutex> lck(_mtx);
         if(this->_callback!=nullptr){
-            this->_callback(measEventType,id);
+            this->_callback(measEventType,client);
         }
     }
    
-    void setCallbackPostMailToCollector(mbed::Callback<void(MeasEventType,uint32_t)> callback){
+    void setCallbackPostMailToCollector(mbed::Callback<void(MeasEventType,AsyncWebSocketClient *client)> callback){
         std::lock_guard<rtos::Mutex> lck(_mtx);
         this->_callback=callback;
     }
 
-    void delegateMethodWebSocketClientText(uint32_t id,const String& text){
-        _wss.client(id)->text(text);
+    void delegateMethodWebSocketClientText(AsyncWebSocketClient *client,const String& text){
+        client->text(text);
     }
     void delegateMethodWebSocketClientEvent(const String& message, const String& event, uint32_t id, uint32_t reconnect){
         _events.send(message.c_str(),event.c_str(),id, reconnect);
@@ -101,7 +100,7 @@ private:
     const char* PARAM_MESSAGE = "message";
     bool running;
     rtos::Mail<web_server::mail_t, 16> _mail_box;
-    mbed::Callback<void(MeasEventType,uint32_t)> _callback;
+    mbed::Callback<void(MeasEventType,AsyncWebSocketClient*)> _callback;
     
     
     

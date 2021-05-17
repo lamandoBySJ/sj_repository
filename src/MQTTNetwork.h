@@ -41,9 +41,9 @@ class MQTTNetwork
 {
 public:
     MQTTNetwork():
-    _threadWiFiEvent(osPriorityNormal,1024*6),
-    _threadOnMessage(osPriorityNormal,1024*6),
-    _threadSubscribe(osPriorityNormal,1024*6),
+    _threadWiFiEvent(osPriorityNormal,1024*2),
+    _threadOnMessage(osPriorityNormal,1024*3),
+    _threadSubscribe(osPriorityNormal,1024*2),
     _autoConnect(true)
     {
      

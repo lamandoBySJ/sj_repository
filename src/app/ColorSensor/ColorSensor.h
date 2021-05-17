@@ -21,10 +21,10 @@ class ColorSensor
 {
 public:
     ColorSensor()=delete;
-    ColorSensor(T&,std::mutex& mutex);
-    ColorSensor(T&,std::mutex& mutex,uint8_t rst);
+    ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,std::mutex& mutex);
+    ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,std::mutex& mutex,uint8_t rst);
     ~ColorSensor()=default;
-    void startup(bool pwrEnable=true);
+    void init(bool pwrEnable=true);
     bool getRGB(RGB& rgb);
     void measurementModeActive();
     void measurementModeInactive();
@@ -32,17 +32,18 @@ public:
     template<typename _Rep, typename _Period,typename _Array>
     void loopMeasure(RGB& rgb,const std::chrono::duration<_Rep,_Period> &timeInterval,_Array& _rgbTemp)
     {   
-      
+        
         int count =_rgbTemp.size();
         measurementModeActive();
         for(char i=0;i < count;++i){
             getRGB(_rgbTemp[i]);
            
             Serial.println("loop measure:R:"+String(_rgbTemp[i].R.u16bit,DEC));
+            break;
             std::this_thread::sleep_for(timeInterval);
         }
         measurementModeInactive();
-
+        /*
         std::sort(_rgbTemp.begin(),_rgbTemp.end(),[](const RGB& left,const RGB& right)->bool{
            return left.R.u16bit < right.R.u16bit;
         });
@@ -59,13 +60,13 @@ public:
         rgb.R.u16bit=_rgbTemp[count-1].R.u16bit;
         rgb.G.u16bit=_rgbTemp[count-1].G.u16bit;
         rgb.B.u16bit=_rgbTemp[count-1].B.u16bit;
-        rgb.IR.u16bit=_rgbTemp[count-1].IR.u16bit;
+        rgb.IR.u16bit=_rgbTemp[count-1].IR.u16bit;*/
     }
+    using callbackFun=bool(T::*)(reg_uint16_t& value);
 private:
-    T& _colorSensor;
+    T _als;
     std::mutex& _mtx;
     uint8_t _rst;
-    using callbackFun=bool(T::*)(reg_uint16_t& value);
     std::array<callbackFun, 4> ptrFuns;
     bh1749nuc_mode_control2_t _mode_control2;
 };

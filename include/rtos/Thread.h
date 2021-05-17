@@ -122,7 +122,7 @@ public:
 
       @note You cannot call this function from ISR context.
     */
-
+   
     Thread(uint32_t tz_module, osPriority priority = osPriorityNormal,
            uint32_t stack_size = OS_STACK_SIZE,
            unsigned char *stack_mem = nullptr, const char *name = nullptr)

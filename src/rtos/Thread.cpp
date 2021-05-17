@@ -83,7 +83,7 @@ osStatus Thread::start(mbed::Callback<void()> task)
     }
 
     if (!_dynamic_stack) {
-        if (_attr.stack_mem == nullptr) {
+       if (_attr.stack_mem == nullptr) {
             _attr.stack_mem = new uint32_t[_attr.stack_size / sizeof(uint32_t)];
              MBED_ASSERT(_attr.stack_mem != nullptr);
         }
@@ -97,7 +97,6 @@ osStatus Thread::start(mbed::Callback<void()> task)
     _task = task;
   
     _tid = osThreadNew(&Thread::_thunk, this, &_attr);
-    
     if (_tid == nullptr) {
         if (_dynamic_stack) {
             // Cast before deallocation as delete[] does not accept void*
@@ -108,7 +107,7 @@ osStatus Thread::start(mbed::Callback<void()> task)
         _join_sem.release();
         return osErrorResource;
     }
-    _mutex.unlock();
+   _mutex.unlock();
     return osOK;
 }
 
@@ -329,8 +328,8 @@ Thread::~Thread()
     terminate();
     if (!_dynamic_stack) {
         // Cast before deallocation as delete[] does not accept void*
-        delete[] static_cast<uint32_t *>(_attr.stack_mem);
-        _attr.stack_mem = nullptr;
+       delete[] static_cast<uint32_t *>(_attr.stack_mem);
+       _attr.stack_mem = nullptr;
     }
 }
 

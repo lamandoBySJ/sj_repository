@@ -33,6 +33,7 @@ bool BH1749NUC::begin()
         success=true;
         init(GainIR::X1, GainRGB::X1, MeasMode::Forbidden);
     }
+
     return success;
 }
 bool BH1749NUC::init(GainIR gain_ir,GainRGB gain_rgb,MeasMode meas_mode)
@@ -94,7 +95,7 @@ bool BH1749NUC::ir_gain_set(uint8_t val)
         uint8_t dummy;
         bool ret = platform_read(BH1749NUC_MODE_CONTROL1_REG_ADDR, &dummy, 1);
         if (true == ret ) {
-         bool   ret =platform_write(BH1749NUC_MODE_CONTROL1_REG_ADDR, &(val), 1);
+          return platform_write(BH1749NUC_MODE_CONTROL1_REG_ADDR, &(val), 1);
         }
     
         return ret;
@@ -110,14 +111,13 @@ bool BH1749NUC::rgb_gain_set(uint8_t val)
         uint8_t dummy;
         bool ret = platform_read(BH1749NUC_MODE_CONTROL1_REG_ADDR, &dummy, 1);
         if (true == ret) {
-     bool       ret = platform_write(BH1749NUC_MODE_CONTROL1_REG_ADDR, &(val), 1);
+            return platform_write(BH1749NUC_MODE_CONTROL1_REG_ADDR, &(val), 1);
         }
         return ret;
 }
 bool BH1749NUC::rgb_gain_get( uint8_t *val)
 {
-        bool ret = platform_read( BH1749NUC_MODE_CONTROL1_REG_ADDR, val, 1);
-        return ret;
+    return platform_read( BH1749NUC_MODE_CONTROL1_REG_ADDR, val, 1);       
 }
 
 bool  BH1749NUC::measurement_mode_set(uint8_t val)
@@ -133,8 +133,7 @@ bool  BH1749NUC::measurement_mode_set(uint8_t val)
 }
 bool BH1749NUC::measurement_mode_get(uint8_t *val)
 {
-        bool ret = platform_read(BH1749NUC_MODE_CONTROL1_REG_ADDR, val, 1);
-        return ret;
+   return platform_read(BH1749NUC_MODE_CONTROL1_REG_ADDR, val, 1);
 }
 
 

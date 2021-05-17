@@ -464,7 +464,6 @@ osThreadId_t osThreadNew (osThreadFunc_t func, void *argument, const osThreadAtt
   int32_t mem;
 
   hTask = NULL;
-
   if (!IS_IRQ() && (func != NULL)) {
     stack = configMINIMAL_STACK_SIZE;
     prio  = (UBaseType_t)osPriorityNormal;
@@ -486,7 +485,7 @@ osThreadId_t osThreadNew (osThreadFunc_t func, void *argument, const osThreadAtt
       if (attr->stack_size > 0U) {
         /* In FreeRTOS stack is not in bytes, but in sizeof(StackType_t) which is 4 on ARM ports.       */
         /* Stack size should be therefore 4 byte aligned in order to avoid division caused side effects */
-       // stack = attr->stack_size / sizeof(StackType_t);
+        //stack = attr->stack_size / sizeof(StackType_t);
        stack = attr->stack_size ;
       }
      
@@ -505,7 +504,13 @@ osThreadId_t osThreadNew (osThreadFunc_t func, void *argument, const osThreadAtt
     else {
       mem = 0;
     }
-
+     BaseType_t ret=  xTaskCreatePinnedToCore((TaskFunction_t)func, name,stack, argument, prio, &hTask, tskNO_AFFINITY);   
+     if(ret==pdFALSE){
+        while(1){
+          debug("xTaskCreatePinnedToCore:ERR:%s\n",name);
+        }
+     }
+    /*
     if (mem == 1) {
       //attr->cb_size-68
       //sizeof(StaticTask_t)-364
@@ -519,12 +524,14 @@ osThreadId_t osThreadNew (osThreadFunc_t func, void *argument, const osThreadAtt
       if (mem == 0) {
         #if (configSUPPORT_DYNAMIC_ALLOCATION == 1)
         xTaskCreatePinnedToCore((TaskFunction_t)func, name,stack, argument, prio, &hTask, 1);   
-        // if (xTaskCreate ((TaskFunction_t)func, name, (uint16_t)stack, argument, prio, &hTask) != pdPASS) {
-        //    hTask = NULL;
-        //  }
+        if (xTaskCreate ((TaskFunction_t)func, name, (uint16_t)stack, argument, prio, &hTask) != pdPASS) {
+            hTask = NULL;
+        }
         #endif
+      }else{
+            xTaskCreatePinnedToCore((TaskFunction_t)func, name,stack, argument, prio, &hTask, 1);   
       }
-    }
+    }*/
   }
 
   return ((osThreadId_t)hTask);

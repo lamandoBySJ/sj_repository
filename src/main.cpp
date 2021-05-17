@@ -62,20 +62,18 @@ using namespace platform_debug;
 
 // mutex for critical section
 std::mutex std_mtx; 
-DS1307 ds1307(Wire1,21,22); //stlb
+//DS1307 ds1307(Wire,21,22); //stlb
 //DS1307 ds1307(Wire1,32,33); //ips
-TimeMachine<DS1307> timeMachine(ds1307,std_mtx,13);  
-
-BH1749NUC bh1749nuc(Wire,4,15);
-ColorSensor<BH1749NUC> colorSensor(bh1749nuc,std_mtx,2);
-
-CmdParser cmdParser;
-
-
+//TimeMachine<DS1307> timeMachine(ds1307,std_mtx,13);  
+//OLEDDisplay Wire
+//BH1749NUC bh1749nuc(Wire1,4,15);
+//BH1749NUC* bh1749nuc;
+ColorSensor<BH1749NUC> colorSensor(Wire1,4,15,std_mtx,2);
+//CmdParser cmdParser;
 MQTTNetwork MQTTnetwork;
-ESPWebService webService;
+RGBCollector RGBcollector(MQTTnetwork);
 
-RGBCollector<BH1749NUC> RGBcollector(MQTTnetwork,colorSensor);
+ESPWebService webService;
 
 //OLEDScreen<12> oled(Heltec.display);
 struct mail_control_t{
@@ -83,11 +81,15 @@ struct mail_control_t{
   uint32_t id=0;   
 };
 rtos::Mail<mail_control_t, 16> mail_box;
+
+rtos::Thread thdTest;
+
+
 //#define OLEDSCREEN 
 void setup() {
  // put your setup code here, to run once:
   //WIFI Kit series V1 not support Vext control
-  esp_sleep_wakeup_cause_t cause =  esp_sleep_get_wakeup_cause();
+ 
   #ifdef NDEBUG
     Heltec.begin(false, true , false , true, BAND);
     Serial.setDebugOutput(false);
@@ -104,26 +106,38 @@ void setup() {
       PlatformDebug::init(Serial);
     #endif
   #endif
-     //thd = std::thread(&Test::terminal,&test);
-    // thd.detach();
+
+  //TracePrinter t;
+  //  thdTest.start(callback(&t,&TracePrinter::run_trace_back));
+  TracePrinter::startup();
+  for(;;){
+    TracePrinter::printTrace("test.....");
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
+  
+
+  colorSensor.init();
+   /*
+  RGB _rgb;
+  colorSensor.measurementModeActive();
+   colorSensor.getRGB(_rgb);
+   Serial.println(_rgb.R.u16bit);
+    Serial.println(_rgb.G.u16bit);
+     Serial.println(_rgb.B.u16bit);*/
+  platform_debug::PlatformDebug::pause();
+  //LoRa.dumpRegisters(Serial);
  
-  attachInterrupt(0,[](){
+
+  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+  platform_debug::PlatformDebug::println(" ************ STLB ************ ");
+   attachInterrupt(0,[](){
     volatile static int id=0;
     mail_control_t* mail=  mail_box.alloc();
     mail->id = ++id;
     mail_box.put_from_isr(mail);
   },FALLING);
-  
 
-
-  //LoRa.dumpRegisters(Serial);
- //   SemaphoreHandle_t hMutex;
- // vQueueAddToRegistry(hMutex,"");
-   TracePrinter::startup();
-
-  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-  platform_debug::PlatformDebug::println(" ************ STLB ************ ");
-  
+     esp_sleep_wakeup_cause_t cause =  esp_sleep_get_wakeup_cause();
    switch(cause){
     case ESP_SLEEP_WAKEUP_UNDEFINED:
     platform_debug::TracePrinter::printTrace("ESP_SLEEP_WAKEUP_UNDEFINED");
@@ -154,32 +168,22 @@ void setup() {
     break; 
     default:break;
   }
-  //threads[0].start(callback(&test,&Test::run));
- // threads[1].start(callback(&test,&Test::run));
- // for(;;){
- //   static int i=0;
- //   platform_debug::TracePrinter::printTrace("1111111111111111111111111"+String(++i,DEC));
-  //  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  //}
-  
-  pinMode(18,OUTPUT);
-  pinMode(23,OUTPUT);
-  pinMode(5,OUTPUT);
-  pinMode(19,OUTPUT);
-  pinMode(22,PULLUP);
+  /*
+    pinMode(5,OUTPUT);
+    pinMode(23,OUTPUT);
+    pinMode(16,OUTPUT);
+    pinMode(17,OUTPUT);
+    pinMode(18,OUTPUT);
+    pinMode(19,OUTPUT);
+  */
+
+
   //esp_sleep_enable_ext0_wakeup(GPIO_NUM_26,0);
   //uint64_t mask = 1|1<<26;
   //esp_sleep_enable_ext1_wakeup(mask,ESP_EXT1_WAKEUP_ANY_HIGH);
   //gpio_wakeup_enable(GPIO_NUM_0,GPIO_INTR_LOW_LEVEL);
   //gpio_wakeup_enable(GPIO_NUM_26,GPIO_INTR_HIGH_LEVEL);
   //esp_sleep_enable_gpio_wakeup();
- /*
-  //int Maxint = numeric_limits<int32_t>::max();
-  //int Minint = numeric_limits<int32_t>::min();
-  //platform_debug::PlatformDebug::println(" ************ Max ************ "+String(Maxint,DEC));
-  //platform_debug::PlatformDebug::println(" ************ Min ************ "+String(Minint,DEC));
-  pinMode(0, PULLUP);
-  */
 
   std::string mac_address=WiFi.macAddress().c_str();
   std::string mark=":";
@@ -247,24 +251,29 @@ void setup() {
  
 //  timeMachine.startup(true,__DATE__,__TIME__);
 //timeMachine.setEpoch(1614764209+8*60*60);
- // colorSensor.startup();
+
   //MQTTnetwork.addTopic("SmartBox/TimeSync");
-  MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerTime");
-  MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerReq");
-  MQTTnetwork.addOnMessageCallback(callback(&cmdParser,&CmdParser::onMessageCallback));
+  //MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerTime");
+  //MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerReq");
+  //MQTTnetwork.addOnMessageCallback(callback(&cmdParser,&CmdParser::onMessageCallback));
 
   
-  //webServer.setCallbackPostMailToCollector(callback(&RGBcollector,&RGBCollector<BH1749NUC>::delegateMethodPostMail));
- // RGBcollector.setCallbackWebSocketClientEvent(callback(&webServer,&ESPWebServer::delegateMethodWebSocketClientEvent));
-  //RGBcollector.setCallbackWebSocketClientText(callback(&webServer,&ESPWebServer::delegateMethodWebSocketClientText));
+  webService.setCallbackPostMailToCollector(callback(&RGBcollector,&RGBCollector::delegateMethodPostMail));
+  RGBcollector.setCallbackWebSocketClientEvent(callback(&webService,&ESPWebService::delegateMethodWebSocketClientEvent));
+  RGBcollector.setCallbackWebSocketClientText(callback(&webService,&ESPWebService::delegateMethodWebSocketClientText));
  
   
  // MQTTnetwork.startup();
- // RGBcollector.startup();
-  //webServer.startup();
+  //RGBcollector.startup();
+
+  //thdTest.start(callback(&RGBcollector,&RGBCollector::run_task_collection));
+  //thdTest.start(callback(&RGBcollector,&RGBCollector<ColorSensor<BH1749NUC>>::run_task_collection));
+
   platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
- //platform_debug::PlatformDebug::pause();
-  
+
+
+ // webService.startup();
+  platform_debug::PlatformDebug::pause();
 }
 
 RGB rgb;
@@ -275,6 +284,10 @@ void loop() {
   pinMode(23,OUTPUT);
 //  digitalWrite(21,HIGH);
 //  digitalWrite(23,HIGH);
+  //colorSensor.getRGB(rgb);
+  Serial.println(rgb.R.u16bit);
+   Serial.println(rgb.G.u16bit);
+    Serial.println(rgb.B.u16bit);
   while (true) {
 
    // if( timeMachine.getDateTime(currentTime)){
@@ -286,15 +299,18 @@ void loop() {
    // RGBcollector.delegateMethodPostMail(MeasEventType::EventSystemMeasure);
     //ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));
     //std::this_thread::sleep_for(chrono::seconds(10));
+
+   
+
       osEvent evt=  mail_box.get();
       if (evt.status == osEventMail) {
-        if(!webService.isRunning()){
+       /* if(!webService.isRunning()){
 
            webService.startup();
          // webServer.startup();
         }else{
           webService.shutdown();
-        }
+        }*/
         mail_control_t* mail= (mail_control_t*)evt.value.p;
         mail_box.free(mail);
       }

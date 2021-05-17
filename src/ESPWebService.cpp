@@ -203,15 +203,13 @@ void ESPWebService::init(){
 
 void ESPWebService::run_web_service()
 {
-  
-
     while(true){
         osEvent evt= _mail_box.get();
         if (evt.status == osEventMail) {
                 web_server::mail_t *mail = (web_server::mail_t *)evt.value.p;
                 _mail_box.free(mail); 
         }
-         _wss.cleanupClients();
+       //  _wss.cleanupClients();
         platform_debug::TracePrinter::printTrace("Thread:ws_wss.cleanupClients()\n");
     } 
 }
@@ -232,12 +230,12 @@ void ESPWebService::onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient *cli
         client->ping();
         delay(200);
     } else if (type == WS_EVT_DISCONNECT) {
-        platform_debug::TracePrinter::printf("ws[%s][%u] disconnect\n", server->url(), client->id());
+        platform_debug::TracePrinter::printf("ws[%s][%u] disconnect\n", server->url(), client);
         post_mail(0);
     } else if (type == WS_EVT_ERROR) {
-        platform_debug::TracePrinter::printf("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t*)arg), (char*)data);
+        platform_debug::TracePrinter::printf("ws[%s][%u] error(%u): %s\n", server->url(), client, *((uint16_t*)arg), (char*)data);
     } else if (type == WS_EVT_PONG) {
-        platform_debug::TracePrinter::printf("ws[%s][%u] pong[%u]: %s\n", server->url(), client->id(), len, (len) ? (char*)data : "");
+        platform_debug::TracePrinter::printf("ws[%s][%u] pong[%u]: %s\n", server->url(), client, len, (len) ? (char*)data : "");
     } else if (type == WS_EVT_DATA) {
         AwsFrameInfo * info = (AwsFrameInfo*)arg;
         String msg = "";
@@ -258,14 +256,15 @@ void ESPWebService::onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient *cli
             }
             DynamicJsonDocument  doc(500);
             DeserializationError error = deserializeJson(doc, msg.c_str());
-            platform_debug::TracePrinter::printTrace("==============================="+String(client->id(),DEC));
+           // platform_debug::TracePrinter::printTrace("==============================="+String(client->id(),DEC));
             platform_debug::TracePrinter::printTrace(msg);
+
             if (!error) //检查反序列化是否成功
             {
                 if (doc["msg"].as<String>() == String("rgb_offset")) {
-                    runCallbackPostMailToCollector(MeasEventType::EventSystemOffset,client->id());
+                    runCallbackPostMailToCollector(MeasEventType::EventSystemOffset,client);
                 } else if (doc["msg"].as<String>() == String("rgb_measure")) {
-                    runCallbackPostMailToCollector(MeasEventType::EventWebAppMeasure,client->id());
+                    runCallbackPostMailToCollector(MeasEventType::EventWebAppMeasure,client);
                 }
             }
         }

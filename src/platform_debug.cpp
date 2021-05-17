@@ -25,9 +25,8 @@ int    user_properties::port = 1883;
 
 
 #if !defined(NDEBUG)
-PlatformDebug* PlatformDebug::_platformDebug=nullptr;
+PlatformDebug PlatformDebug::_platformDebug;
 std::mutex  PlatformDebug::_mtx;
 bool PlatformDebug::_finished=false;
-TracePrinter* TracePrinter::_tracePrinter=new TracePrinter();
-std::mutex TracePrinter::_mtx;
+TracePrinter  TracePrinter::_tracePrinter;
 #endif

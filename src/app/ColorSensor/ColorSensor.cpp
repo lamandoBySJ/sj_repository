@@ -1,112 +1,76 @@
 #include "ColorSensor.h"
-/*
+
 template<typename T>
-int32_t ColorSensor<T>::thunk_write_reg(void *thread_ptr)
-{
-  (static_cast< ColorSensor * > (thread_ptr))->_task_write();
+ColorSensor<T>::ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,std::mutex& mutex):_als(wire,sda,scl),_mtx(mutex),_rst(0)
+{   
+    
+    ptrFuns[0]= &T::red_data_get;
+    ptrFuns[1]= &T::green_data_get;
+    ptrFuns[2]= &T::blue_data_get;
+    ptrFuns[3]= &T::ir_data_get;
+    _mode_control2.reg=0;
 }
 
 template<typename T>
-int32_t ColorSensor<T>::thunk_read_reg(void *thread_ptr)
+ColorSensor<T>::ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,std::mutex& mutex,uint8_t rst):_als(wire,sda,scl),_mtx(mutex),_rst(rst)
 {
-  (static_cast< ColorSensor * > (thread_ptr))->_task_read();
-}
-*/
-
-template<typename T>
-ColorSensor<T>::ColorSensor(T& als,std::mutex& mutex):_colorSensor(als),_mtx(mutex)
-{
-    _rst = 0;
+    ptrFuns[0]= &T::red_data_get;
+    ptrFuns[1]= &T::green_data_get;
+    ptrFuns[2]= &T::blue_data_get;
+    ptrFuns[3]= &T::ir_data_get;
+    _mode_control2.reg=0;
 }
 
 template<typename T>
-ColorSensor<T>::ColorSensor(T& als,std::mutex& mutex,uint8_t rst):_colorSensor(als),_mtx(mutex)
-{
-    _rst = rst;
-}
-
-template<typename T>
-void ColorSensor<T>::startup(bool pwrEnable)
+void ColorSensor<T>::init(bool pwrEnable)
  {
+   //  std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
+  //  lck.lock();
     if(pwrEnable){
       pinMode(this->_rst, OUTPUT);
       digitalWrite(this->_rst,HIGH);
     }
     ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-    ptrFuns[0]= &T::red_data_get;
-    ptrFuns[1]= &T::green_data_get;
-    ptrFuns[2]= &T::blue_data_get;
-    ptrFuns[3]= &T::ir_data_get;
-    std::unique_lock<std::mutex> _mutex(_mtx, std::defer_lock);
-    _mutex.lock();
-    bool cuccess =  _colorSensor.begin();
-    
-    if(cuccess){
-      digitalWrite(5,HIGH);
-    }else{
-      digitalWrite(5,LOW);
+
+    if(!_als.begin()){
+      digitalWrite(23,HIGH);
+      
     }
-    platform_debug::TracePrinter::printTrace(String(cuccess ? "OK":"ERROR:"+String(__FILE__)+String(":")+String(__LINE__)));
+
 }
 
 template<typename T>
 void ColorSensor<T>::measurementModeActive()
 {
-  _colorSensor.measurement_active();
+  _als.measurement_active();
 }
 template<typename T>
 void ColorSensor<T>::measurementModeInactive()
 {
-  _colorSensor.measurement_inactive();
+  _als.measurement_inactive();
 }
-
+std::mutex mtx;
 template<typename T>
 bool ColorSensor<T>::getRGB(RGB& rgb)
 {
   int timeout=3000;
- std::unique_lock<std::mutex> _mutex(_mtx, std::defer_lock);
-  _mutex.lock();
+ std::unique_lock<std::mutex> lck(mtx, std::defer_lock);
+lck.lock();
 
   do{
-       _colorSensor.mode_control2_get(&_mode_control2.reg);
+       _als.mode_control2_get(&_mode_control2.reg);
        if(--timeout==0){
          return false;
        }
        delay(1);
   } while (!_mode_control2.bitfield.valid);
 
- return (_colorSensor.*ptrFuns[0])(rgb.R) &&
-  (_colorSensor.*ptrFuns[1])(rgb.G)&&
-  (_colorSensor.*ptrFuns[2])(rgb.B)&&
-  (_colorSensor.*ptrFuns[3])(rgb.IR);
-
+ return (_als.*ptrFuns[0])(rgb.R) &&
+  (_als.*ptrFuns[1])(rgb.G)&&
+  (_als.*ptrFuns[2])(rgb.B)&&
+  (_als.*ptrFuns[3])(rgb.IR);
+ 
 }
 
-/*
-template<>
-class ColorSensor<ColorSensorBase>
-{
-public:
-    ColorSensor()=delete;
-    ColorSensor(ColorSensorBase* csb,rtos::Mutex& mutex):_csb(csb),_colorSensor(*_csb),_mutex(mutex)
-    {
-        
-    }
-    ColorSensor(ColorSensorBase* csb,rtos::Mutex& mutex,uint8_t rst):_csb(csb),_colorSensor(*_csb),_mutex(mutex)
-    {
-
-    }
-    ~ColorSensor()=default;
-    void startup(bool pwrEnable=true)
-    {
-          debug("BH1749NUCBase..........................\n");
-    }
-private:
-
-    ColorSensorBase* _csb;
-    ColorSensorBase& _colorSensor;
-    rtos::Mutex& _mutex;
-    uint8_t _rst;
-};
-*/
 template class ColorSensor<BH1749NUC>;
+
