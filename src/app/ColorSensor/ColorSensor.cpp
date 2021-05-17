@@ -34,9 +34,9 @@ void ColorSensor<T>::init(bool pwrEnable)
 
     if(!_als.begin()){
       digitalWrite(23,HIGH);
-      
     }
 
+    
 }
 
 template<typename T>

@@ -17,7 +17,6 @@ void RGBCollector::run_task_collection()
 {
     colorSensor.init();
     
-    Serial.println("run_task_collection:...........................................");
     DynamicJsonDocument  doc(1024);
     while(true){
        

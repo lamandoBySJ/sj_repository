@@ -68,23 +68,14 @@ std::mutex std_mtx;
 //OLEDDisplay Wire
 //BH1749NUC bh1749nuc(Wire1,4,15);
 //BH1749NUC* bh1749nuc;
-ColorSensor<BH1749NUC> colorSensor(Wire1,4,15,std_mtx,2);
+
 //CmdParser cmdParser;
 MQTTNetwork MQTTnetwork;
 RGBCollector RGBcollector(MQTTnetwork);
-
 ESPWebService webService;
 
-//OLEDScreen<12> oled(Heltec.display);
-struct mail_control_t{
-  uint32_t counter=0; 
-  uint32_t id=0;   
-};
-rtos::Mail<mail_control_t, 16> mail_box;
-
-rtos::Thread thdTest;
-
-
+rtos::Mail<mail_control_t, 16> mail_box_debug;
+rtos::Thread thdDebug;
 //#define OLEDSCREEN 
 void setup() {
  // put your setup code here, to run once:
@@ -106,18 +97,11 @@ void setup() {
       PlatformDebug::init(Serial);
     #endif
   #endif
-
-  //TracePrinter t;
-  //  thdTest.start(callback(&t,&TracePrinter::run_trace_back));
   TracePrinter::startup();
-  for(;;){
-    TracePrinter::printTrace("test.....");
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-  }
-  
-
-  colorSensor.init();
-   /*
+  //ColorSensor<BH1749NUC> colorSensor(Wire1,4,15,std_mtx,2);
+  //colorSensor.init();
+ // platform_debug::TracePrinter::printTrace("OK");
+ /*
   RGB _rgb;
   colorSensor.measurementModeActive();
    colorSensor.getRGB(_rgb);
@@ -132,9 +116,9 @@ void setup() {
   platform_debug::PlatformDebug::println(" ************ STLB ************ ");
    attachInterrupt(0,[](){
     volatile static int id=0;
-    mail_control_t* mail=  mail_box.alloc();
+    mail_control_t* mail=  mail_box_debug.alloc();
     mail->id = ++id;
-    mail_box.put_from_isr(mail);
+    mail_box_debug.put_from_isr(mail);
   },FALLING);
 
      esp_sleep_wakeup_cause_t cause =  esp_sleep_get_wakeup_cause();
@@ -302,7 +286,7 @@ void loop() {
 
    
 
-      osEvent evt=  mail_box.get();
+      osEvent evt=  mail_box_debug.get();
       if (evt.status == osEventMail) {
        /* if(!webService.isRunning()){
 
@@ -312,7 +296,7 @@ void loop() {
           webService.shutdown();
         }*/
         mail_control_t* mail= (mail_control_t*)evt.value.p;
-        mail_box.free(mail);
+        mail_box_debug.free(mail);
       }
   }
 }

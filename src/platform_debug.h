@@ -16,6 +16,11 @@
 //#define NDEBUG 
 namespace platform_debug
 {
+struct mail_control_t{
+  uint32_t counter=0; 
+  uint32_t id=0;   
+};
+
      
 struct web_properties
 {
@@ -262,7 +267,7 @@ public:
     TracePrinter()
     {
         #if !defined(NDEBUG)
-        _thread=new Thread(osPriorityNormal,1024*2);
+        _thread=new Thread(osPriorityNormal,1024*6);
         #endif
     }
     TracePrinter&  operator=(const TracePrinter& other)=delete;
@@ -275,10 +280,8 @@ public:
     }
  
    void run_trace_back(){
-       Serial.println("run_trace_back");
         while(true){
             osEvent evt=  TracePrinter::_tracePrinter._mail_box.get();
-            Serial.println("evt.status:"+String((int)evt.status,DEC));
             if (evt.status == osEventMail) {
                 mail_trace_t *mail = (mail_trace_t *)evt.value.p;
                  platform_debug::PlatformDebug::println(mail->log);
@@ -323,7 +326,12 @@ public:
        TracePrinter::_tracePrinter.println(e);
        #endif
     }
-
+    static inline void print(const char* e)
+    {
+        #if !defined(NDEBUG)
+       TracePrinter::_tracePrinter.println(e);
+       #endif
+    }
     void println(const String& e){
         #if !defined(NDEBUG)
         mail_trace_t *mail =  TracePrinter::_tracePrinter._mail_box.alloc();

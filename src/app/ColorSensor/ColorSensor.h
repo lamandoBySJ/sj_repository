@@ -20,7 +20,7 @@ template<typename T>
 class ColorSensor 
 {
 public:
-    ColorSensor()=delete;
+    ColorSensor()=default;
     ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,std::mutex& mutex);
     ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,std::mutex& mutex,uint8_t rst);
     ~ColorSensor()=default;
@@ -37,9 +37,6 @@ public:
         measurementModeActive();
         for(char i=0;i < count;++i){
             getRGB(_rgbTemp[i]);
-           
-            Serial.println("loop measure:R:"+String(_rgbTemp[i].R.u16bit,DEC));
-            break;
             std::this_thread::sleep_for(timeInterval);
         }
         measurementModeInactive();
