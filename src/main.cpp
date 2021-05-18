@@ -35,7 +35,7 @@ extern "C" {
 #include "FS.h"
 #include "FFat.h"
 #include "FFatHelper.h"
-//#include "ESPwebService.h"
+#include "ESPWebService.h"
 #include "ColorCollector.h"
 #include "OTAService.h"
 #include "CmdParser.h"
@@ -48,28 +48,13 @@ using namespace std;
 using namespace mstd;
 using namespace rtos;
 using namespace platform_debug;
-
 #define BAND    470E6 
-#if CONFIG_AUTOSTART_ARDUINO
-#if CONFIG_FREERTOS_UNICORE
-#define ARDUINO_RUNNING_CORE 0
-#else
-#define ARDUINO_RUNNING_CORE 1
-#endif
-#endif
 //python3 esptool.py --port COM20 --baud 115200 write_flash -fm dio -fs 16MB  0x410000 partitions.bin
 //C:\Users\Administrator\.platformio\packages\framework-arduinoespressif32\tools\partitions
-
-// mutex for critical section
-std::mutex std_mtx; 
-//DS1307 ds1307(Wire,21,22); //stlb
 //DS1307 ds1307(Wire1,32,33); //ips
-//TimeMachine<DS1307> timeMachine(ds1307,std_mtx,13);  
-//OLEDDisplay Wire
-//BH1749NUC bh1749nuc(Wire1,4,15);
-//BH1749NUC* bh1749nuc;
-
-//CmdParser cmdParser;
+std::mutex std_mutex;
+TimeMachine<DS1307> timeMachine(std_mutex,21,22,13);  
+TracePrinter* tracePrinter =nullptr;
 //#define OLEDSCREEN 
 void setup() {
  // put your setup code here, to run once:
@@ -87,15 +72,15 @@ void setup() {
   #endif
 
   platform_debug_init(true,false);
-  platform_debug::TracePrinter* tracePrinter=new  platform_debug::TracePrinter();
+  tracePrinter = new  platform_debug::TracePrinter();
   tracePrinter->startup();
- 
+  
  // platform_debug::PlatformDebug::pause();
   //LoRa.dumpRegisters(Serial);
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
   platform_debug::PlatformDebug::println(" ************ STLB ************ ");
 
-     esp_sleep_wakeup_cause_t cause =  esp_sleep_get_wakeup_cause();
+  esp_sleep_wakeup_cause_t cause =  esp_sleep_get_wakeup_cause();
    switch(cause){
     case ESP_SLEEP_WAKEUP_UNDEFINED:
     platform_debug::TracePrinter::printTrace("ESP_SLEEP_WAKEUP_UNDEFINED");
@@ -126,16 +111,7 @@ void setup() {
     break; 
     default:break;
   }
-  /*
-    pinMode(5,OUTPUT);
-    pinMode(23,OUTPUT);
-    pinMode(16,OUTPUT);
-    pinMode(17,OUTPUT);
-    pinMode(18,OUTPUT);
-    pinMode(19,OUTPUT);
-  */
-
-
+  
   //esp_sleep_enable_ext0_wakeup(GPIO_NUM_26,0);
   //uint64_t mask = 1|1<<26;
   //esp_sleep_enable_ext1_wakeup(mask,ESP_EXT1_WAKEUP_ANY_HIGH);
@@ -155,10 +131,10 @@ void setup() {
     }
   }
 
-  web_properties::ap_ssid = WiFi.macAddress();
-  platform_debug::DeviceInfo::BoardID = mac_address.c_str();
-  //platform_debug::DeviceInfo::BoardID = String(mac_address.substr(mac_address.length()-4,4).c_str());
-  platform_debug::PlatformDebug::println("DeviceInfo::BoardID:"+platform_debug::DeviceInfo::BoardID);
+  ESPWebService::webProperties.ap_ssid = WiFi.macAddress();
+  Platform::deviceInfo.BoardID = mac_address.c_str();
+  //Platform::deviceInfo.BoardID = String(mac_address.substr(mac_address.length()-4,4).c_str());
+  platform_debug::PlatformDebug::println("DeviceInfo::BoardID:"+Platform::deviceInfo.BoardID);
   
   if(FFatHelper::init()){
       platform_debug::PlatformDebug::println("OK:File system mounted");
@@ -167,7 +143,7 @@ void setup() {
   }
 
   //FFatHelper::deleteFiles(FFat, "/", 0);
- FFatHelper::listDir(FFat, "/", 0);
+  FFatHelper::listDir(FFat, "/", 0);
   if(!FFatHelper::exists("/TowerColor")){
       FFatHelper::createDir(FFat,"/TowerColor");
       platform_debug::PlatformDebug::println("Dir created:/TowerColor");
@@ -176,98 +152,118 @@ void setup() {
       FFatHelper::createDir(FFat,"/data");
       platform_debug::PlatformDebug::println("Dir created:/data");
   }
+  
 
+  platform_debug::PlatformDebug::println("user_properties::path:"+MQTTNetwork::userProperties.path);
+  platform_debug::PlatformDebug::println("user_properties::ssid:"+MQTTNetwork::userProperties.ssid);
+  platform_debug::PlatformDebug::println("user_properties::pass:"+MQTTNetwork::userProperties.pass);
+  platform_debug::PlatformDebug::println("user_properties::host:"+MQTTNetwork::userProperties.host);
+  platform_debug::PlatformDebug::println(String(MQTTNetwork::userProperties.port,DEC));
+
+ 
   DynamicJsonDocument  docProperties(1024);
   String text;
-  if(FFatHelper::readFile(FFat,user_properties::path,text)){
+ if(FFatHelper::readFile(FFat,MQTTNetwork::userProperties.path,text)){
       platform_debug::PlatformDebug::println(text); 
       DeserializationError error = deserializeJson(docProperties, text);
       if(!error){
-          user_properties::ssid =  docProperties["ssid"].as<String>();
-          user_properties::pass =  docProperties["pass"].as<String>();
-          user_properties::host =  docProperties["host"].as<String>();
-          user_properties::port =  docProperties["port"].as<int>();
+          MQTTNetwork::userProperties.ssid =  docProperties["ssid"].as<String>();
+          MQTTNetwork::userProperties.pass =  docProperties["pass"].as<String>();
+          MQTTNetwork::userProperties.host =  docProperties["host"].as<String>();
+          MQTTNetwork::userProperties.port =  docProperties["port"].as<int>();
           
-          platform_debug::PlatformDebug::println("user_properties::ssid:"+user_properties::ssid);
-          platform_debug::PlatformDebug::println("user_properties::pass:"+user_properties::pass);
-          platform_debug::PlatformDebug::println("user_properties::host:"+user_properties::host);
-          platform_debug::PlatformDebug::println("user_properties::port:"+String(user_properties::port,DEC));
+          platform_debug::PlatformDebug::println("user_properties::ssid:"+MQTTNetwork::userProperties.ssid);
+          platform_debug::PlatformDebug::println("user_properties::pass:"+MQTTNetwork::userProperties.pass);
+          platform_debug::PlatformDebug::println("user_properties::host:"+MQTTNetwork::userProperties.host);
+          platform_debug::PlatformDebug::println("user_properties::port:"+String(MQTTNetwork::userProperties.port,DEC));
       }
   }
 
-  if(FFatHelper::readFile(FFat,rgb_properties::path,text)){
+  if(FFatHelper::readFile(FFat,ColorCollector::rgb_properties.path,text)){
       DeserializationError error= deserializeJson(docProperties, text);
       if(!error){
-          rgb_properties::r_offset =  docProperties["r_offset"].as<uint16_t>();
-          rgb_properties::g_offset =  docProperties["g_offset"].as<uint16_t>();
-          rgb_properties::b_offset =  docProperties["b_offset"].as<uint16_t>();
-          platform_debug::PlatformDebug::println("rgb_properties::r_offset:"+String(rgb_properties::r_offset));
-          platform_debug::PlatformDebug::println("rgb_properties::g_offset:"+String(rgb_properties::g_offset));
-          platform_debug::PlatformDebug::println("rgb_properties::b_offset:"+String(rgb_properties::b_offset));
+          ColorCollector::rgb_properties.r_offset =  docProperties["r_offset"].as<uint16_t>();
+          ColorCollector::rgb_properties.g_offset =  docProperties["g_offset"].as<uint16_t>();
+          ColorCollector::rgb_properties.b_offset =  docProperties["b_offset"].as<uint16_t>();
+          platform_debug::PlatformDebug::println("rgb_properties::r_offset:"+String(ColorCollector::rgb_properties.r_offset));
+          platform_debug::PlatformDebug::println("rgb_properties::g_offset:"+String(ColorCollector::rgb_properties.g_offset));
+          platform_debug::PlatformDebug::println("rgb_properties::b_offset:"+String(ColorCollector::rgb_properties.b_offset));
       }
   }
 
   platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
-
-
+  //platform_debug::PlatformDebug::pause();
 }
 
 
-static String currentTime="";
-//MQTTNetwork  MQTTnetwork;
-static rtos::Mail<mail_control_t, 16> mail_box_debug;
-rtos::Thread thdDebug;
-ColorCollector colorCollector;
-ESPWebService webService;
+//rtos::Thread thdDebug;
+MQTTNetwork  MQTTnetwork;
 void loop() {
+
+
+  ColorCollector colorCollector;
+  ESPWebService webService;
   
-  attachInterrupt(0,[&](){
+  timeMachine.startup(true,__DATE__,__TIME__);
+//timeMachine.setEpoch(1614764209+8*60*60);
+
+  MQTTnetwork.addSubscribeTopic("SmartBox/TimeSync");
+  MQTTnetwork.addSubscribeTopic(Platform::deviceInfo.BoardID+"/ServerTime");
+  MQTTnetwork.addSubscribeTopic(Platform::deviceInfo.BoardID+"/ServerReq");
+  //MQTTnetwork.addOnMessageCallback(callback(&cmdParser,&CmdParser::onMessageCallback));
+
+  webService.setCallbackPostMailToCollector(callback(&colorCollector,&ColorCollector::delegateMethodPostMail));
+  colorCollector.setCallbackWebSocketClientEvent(callback(&webService,&ESPWebService::delegateMethodWebSocketClientEvent));
+  colorCollector.setCallbackWebSocketClientText(callback(&webService,&ESPWebService::delegateMethodWebSocketClientText));
+ 
+ //thdDebug.start(callback(&MQTTnetwork,&MQTTNetwork::runWiFiEventService));
+  
+  try{
+      MQTTnetwork.startup();
+      colorCollector.startup();
+  }catch(const osStatusException& e){
+     platform_debug::TracePrinter::printTrace(e.what());
+     platform_debug::PlatformDebug::pause();
+  }
+  
+   
+  // webService.startup();
+ /*attachInterrupt(0,[&](){
     volatile static int id=0;
     mail_control_t* mail=  mail_box_debug.alloc();
     mail->id = ++id;
     mail_box_debug.put_from_isr(mail);
   },FALLING);
-// timeMachine.startup(true,__DATE__,__TIME__);
-//timeMachine.setEpoch(1614764209+8*60*60);
-
-  //MQTTnetwork.addTopic("SmartBox/TimeSync");
-  //MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerTime");
-  //MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerReq");
-  //MQTTnetwork.addOnMessageCallback(callback(&cmdParser,&CmdParser::onMessageCallback));
-  webService.setCallbackPostMailToCollector(callback(&colorCollector,&ColorCollector::delegateMethodPostMail));
-  colorCollector.setCallbackWebSocketClientEvent(callback(&webService,&ESPWebService::delegateMethodWebSocketClientEvent));
-  colorCollector.setCallbackWebSocketClientText(callback(&webService,&ESPWebService::delegateMethodWebSocketClientText));
-
-  // MQTTnetwork.startup();
-  platform_debug::TracePrinter::printTrace("RGBCollector....init");
-  colorCollector.startup();
-  webService.startup();
-
+  */
+  String currentTime="";
   while (true) {
 
-            
-   // if( timeMachine.getDateTime(currentTime)){
-   //     platform_debug::PlatformDebug::println(currentTime);
-   // }else{
-   //     platform_debug::PlatformDebug::println("ERROR:currentTime");
-   // }
-
+         ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));    
+        if( timeMachine.getDateTime(currentTime)){
+            platform_debug::TracePrinter::printTrace(currentTime);
+         }else{
+            platform_debug::TracePrinter::printTrace("ERROR:currentTime");
+        }
+       bool ret =  MQTTNetwork::getClient()->publish("test",currentTime);
+      if(!ret){
+          platform_debug::TracePrinter::printTrace("publish Fail");
+      }
    // RGBcollector.delegateMethodPostMail(MeasEventType::EventSystemMeasure);
     //ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));
-
-     ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));
+  /*  rtos::Mail<mail_control_t, 16> mail_box_debug;
+    
       osEvent evt=  mail_box_debug.get();
       if (evt.status == osEventMail) {
-       /* if(!webService.isRunning()){
+       if(!webService.isRunning()){
 
            webService.startup();
          // webServer.startup();
         }else{
           webService.shutdown();
-        }*/
+        }
         mail_control_t* mail= (mail_control_t*)evt.value.p;
         mail_box_debug.free(mail);
-      }
+      }*/
   }
 }
 //platform_debug::PlatformDebug::pause();

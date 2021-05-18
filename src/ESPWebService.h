@@ -31,21 +31,49 @@ using namespace platform_debug;
 
 namespace web_server
 {    
+    struct WebProperties
+    {   
+        WebProperties(){
+            ap_ssid="STLB_SSID";
+            ap_pass="Aa000000";
+            http_user="admin";
+            http_pass="admin";
+            server_upload_url = "<form method='POST' action='/upload' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>";
+        }
+        String ap_ssid;
+        String ap_pass;
+        String http_user;
+        String http_pass;
+        String server_upload_url;
+
+        WebProperties& operator=(const WebProperties& properties){
+            this->ap_ssid = properties.ap_ssid;
+            this->ap_pass = properties.ap_pass;
+            this->http_user = properties.http_user;
+            this->http_pass = properties.http_pass;
+            this->server_upload_url = properties.server_upload_url;
+            return *this;
+        }
+    };
     struct mail_t{
        // uint32_t counter=0;   
          uint32_t message;
     };
 }
 using namespace std;
-class ESPWebService //: private mbed::NonCopyable<ESPWebServer>
+using namespace web_server;
+class ESPWebService 
 {
 public:
+
+    static WebProperties webProperties;
+
     ESPWebService():_thread(osPriorityNormal,1024*6),_mtx(),
         _events("/events"),_wss("/ws"),_handler(nullptr),
         running(false),
         _callback(nullptr)
     {
-          
+        
     }
     ~ESPWebService(){
         Serial.println("~~~~~~~~~~~~~~XXX~~~~~~~~~~~~~~~~~~~~~~~~~");
@@ -96,9 +124,7 @@ private:
     const char* PARAM_MESSAGE = "message";
     bool running;
     mbed::Callback<void(MeasEventType,AsyncWebSocketClient*)> _callback;
-    
-    
-    
+
 };
 
 #endif

@@ -11,6 +11,27 @@
  //using WebServerEventSourceCallback = void(ESPWebServer::*)(const String& message, const String& event, uint32_t id, uint32_t reconnect);
 namespace collector
 {
+    struct RGBProperties
+    {   
+        RGBProperties(){
+            path ="/als_constant";
+            r_offset = 0;
+            g_offset = 0;
+            b_offset = 0;
+        }
+        String path;
+        uint16_t r_offset;
+        uint16_t g_offset;
+        uint16_t b_offset;
+
+        RGBProperties& operator=(const RGBProperties& properties){
+           this->path =  properties.path;
+           this->r_offset = properties.r_offset;
+           this->g_offset = properties.g_offset;
+           this->b_offset = properties.b_offset;
+           return *this;
+        }
+    };
     struct mail_t{
         AsyncWebSocketClient *client;
         MeasEventType eventType;
@@ -25,7 +46,7 @@ using namespace collector;
 class ColorCollector
 {
 public:
-
+    static RGBProperties rgb_properties;
     ColorCollector():
         _thread(osPriorityNormal,1024*6),
         _rgb(),_colorConverter(),
@@ -42,7 +63,8 @@ public:
    
     void startup()
     {  
-        _thread.start(callback(this,&ColorCollector::run_task_collection));
+        osStatus  status = _thread.start(callback(this,&ColorCollector::run_task_collection));
+        (status!=osOK ? throw osStatusException((osStatus_t)status,_thread.get_name()):NULL);
     }
     
     void run_task_collection();
@@ -80,6 +102,7 @@ public:
         std::lock_guard<std::mutex> lck(_mtx);
         this->_cbWebSocketClientText=callback;
     }
+
 private:
     rtos::Thread _thread;
     RGB _rgb;

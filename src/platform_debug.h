@@ -10,10 +10,44 @@
 #include <stdarg.h>
 #include "heltec.h"
 #include "BH1749NUC_REG/bh1749nuc_reg.h"
+#include <map>
 //git clone -b 分支名 网址.git 
 //git clone -b lesson-2 https://github.com/hemiahwu/vue-basic-playlist.git
 
 void platform_debug_init(bool SerialEnabled=false,bool OLEDEnabled=false);
+struct osStatusDictionary
+{
+   static String& getExceptionName(osStatus_t osStatus,const char* threadName,const char* thisThreadName=nullptr){
+        static String e;
+        static std::map<osStatus_t,String> _map;
+        if(_map.size()==0){
+            _map[osOK]="osOK";
+            _map[osErrorTimeout]="osErrorTimeout";
+            _map[osErrorParameter ]="osErrorParameter ";
+            _map[osErrorResource]="osErrorResource";
+            _map[osErrorNoMemory]="osErrorNoMemory";
+            _map[osErrorISR]="osErrorISR";
+            _map[osStatusReserved ]="osStatusReserved ";
+        }
+        e = "--- "+_map[osStatus]+"[ code:"+String((int)osStatus,DEC)+",Thread:"+String(threadName)+",ThisThread:"+String(thisThreadName)+" ]"+" ---";
+        return e;
+    }
+};
+
+struct osStatusException:public std::exception
+{
+    osStatusException(osStatus_t osStatus,const char* threadName=nullptr)
+    {
+        this->osStatus  = osStatus;
+        this->threadName = threadName;
+    }
+    String status;
+    const char* threadName;
+    osStatus_t osStatus;
+    const char* what() const throw(){
+        return osStatusDictionary::getExceptionName(osStatus,threadName,ThisThread::get_name()).c_str() ;
+    }
+};
 
 //#define NDEBUG 
 namespace platform_debug
@@ -23,44 +57,14 @@ struct mail_control_t{
   uint32_t id=0;   
 };
 
-     
-struct web_properties
-{
-    static String ap_ssid;
-    static String ap_pass;
-    static String http_user;
-    static String http_pass;
-    static String server_upload_uri;
-};
-struct rgb_properties
-{
-    static String path;
-    static uint16_t r_offset;
-    static uint16_t g_offset;
-    static uint16_t b_offset;
-};
-struct RGB
-{
-    RGB(){
-        R.u16bit = 0;
-        G.u16bit = 0;
-        B.u16bit = 0;
-        IR.u16bit = 0;
+struct DeviceInfo
+{   
+    DeviceInfo(){
+        BoardID="ABCD";
+        Family="k49a";
     }
-    reg_uint16_t R;
-    reg_uint16_t G;
-    reg_uint16_t B;
-    reg_uint16_t IR;
-    uint32_t h;
-    uint32_t s;
-    uint32_t l;
-};
-struct user_properties{
-static String path ;
-static String ssid ;
-static String pass ;
-static String host ;
-static int    port ;
+    String BoardID;
+    String Family;
 };
 struct IPSProtocol
 {
@@ -77,6 +81,16 @@ struct IPSProtocol
     String collector;
     String mode;
 };
+
+class Platform
+{
+public:
+    static DeviceInfo deviceInfo;
+    Platform(){
+
+    }
+};
+
 //template <typename Signature>
 //class PlatformDebug;
 class PlatformDebug
@@ -252,12 +266,6 @@ public:
     std::vector<Callback<void()>> _onPrintLogoCallbacks;
     static std::mutex _mtx;
 
-};
-
-struct DeviceInfo
-{
-   static String BoardID;
-   static String Family;
 };
 
 typedef struct {

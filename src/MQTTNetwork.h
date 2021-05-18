@@ -14,11 +14,12 @@
 #include <vector>
 #include <mutex>
 #include <thread>
+#include "platform/mbed.h"
 namespace mqtt
 {
 typedef struct {
     bool sessionPresent;  
-} mail_on_connect_t;
+} mail_subscribe_t;
 typedef struct {
     uint32_t counter=0;  
     system_event_id_t id;
@@ -30,8 +31,30 @@ typedef struct {
     size_t total;
     String topic;
     String payload;
-} mail_t;
-
+} mail_message_t;
+struct  UserProperties{
+    UserProperties()
+    {
+        path="/user_constant";
+        ssid = "IoTwlan";
+        pass = "mitac1993";
+        host = "mslmqtt.mic.com.cn";
+        port = 1883;
+    }
+    String  path ;
+    String  ssid ;
+    String  pass ;
+    String  host ;
+    int     port ;
+    UserProperties& operator=(const UserProperties& properties){
+        this->path = properties.path;
+        this->ssid = properties.ssid;
+        this->pass = properties.pass;
+        this->host = properties.host;
+        this->port = properties.port;
+        return *this;
+    }
+};
 }
 
 using namespace mqtt;
@@ -40,13 +63,15 @@ using namespace platform_debug;
 class MQTTNetwork
 {
 public:
-    MQTTNetwork():
-    _threadWiFiEvent(osPriorityNormal,1024*2),
-    _threadOnMessage(osPriorityNormal,1024*3),
-    _threadSubscribe(osPriorityNormal,1024*2),
-    _autoConnect(true)
+    MQTTNetwork()try:_autoConnect(true),
+    _threadWiFiEvent(0,osPriorityNormal,1024*2,nullptr,"thdWiFiEvent"),
+    _threadOnMessage(0,osPriorityNormal,1024*2,nullptr,"thdOnMessage"),
+    _threadSubscribe(0,osPriorityNormal,1024*2,nullptr,"thdSubscribe")
+    
     {
-     
+        MQTTNetwork::_client=this;
+    }catch(const std::bad_alloc &e) {
+         platform_debug::TracePrinter::printTrace(e.what());
     }
      ~MQTTNetwork()=default;
     MQTTNetwork(const MQTTNetwork& other)=default;
@@ -66,11 +91,22 @@ public:
     
     void init();
    
-    void startup(){
+    void startup()  //throw (osStatusException)
+    {
         init();
-        _threadOnMessage.start(callback(this,&MQTTNetwork::run_mail_box_on_message_arrived));
-        _threadSubscribe.start(callback(this,&MQTTNetwork::run_mail_box_topics_subscribed));
-        _threadWiFiEvent.start(callback(this,&MQTTNetwork::runWiFiEventService));
+
+        osStatus  status;
+        status =  _threadWiFiEvent.start(callback(this,&MQTTNetwork::runWiFiEventService));
+        (status!=osOK ? throw osStatusException((osStatus_t)status,_threadWiFiEvent.get_name()):NULL);
+        status =  _threadOnMessage.start(callback(this,&MQTTNetwork::run_mail_box_on_message_arrived));
+        (status!=osOK ? throw osStatusException((osStatus_t)status,_threadOnMessage.get_name()):NULL);
+        status =   _threadSubscribe.start(callback(this,&MQTTNetwork::run_mail_box_topics_subscribed));
+        (status!=osOK ? throw osStatusException((osStatus_t)status,_threadSubscribe.get_name()):NULL);
+        
+        mail_wifi_event_t* evt=_mailBoxWiFiEvent.alloc();
+        evt->id=SYSTEM_EVENT_STA_STOP;
+        _mailBoxWiFiEvent.put(evt);
+
     }
   
     void switchWiFiMode(wifi_mode_t mode){
@@ -98,27 +134,33 @@ public:
     void addSubscribeTopics(std::vector<String>& vec);
     void addOnMqttConnectCallback(Callback<void(bool)> func);
     void addOnMqttDisonnectCallback(Callback<void(AsyncMqttClientDisconnectReason)> func);
+    static mqtt::UserProperties userProperties;
+    static MQTTNetwork* getClient(){
+        return _client;
+    }
 private:
+    static MQTTNetwork* _client;
     static const char* MQTT_HOST;
     static const char* WIFI_SSID;
     static const char* WIFI_PASSWORD;
     //static IPAddress MQTT_HOST ;
     static uint16_t MQTT_PORT ;
     static AsyncMqttClient mqttClient;
-    rtos::Mutex _mtx;
+    bool _autoConnect;
     rtos::Thread _threadWiFiEvent;
     rtos::Thread _threadOnMessage;
     rtos::Thread _threadSubscribe;
-    bool _autoConnect;
+    
     //TimerHandle_t _mqttReconnectTimer;
    // TimerHandle_t _wifiReconnectTimer;
     rtos::Mail<mail_wifi_event_t, 8> _mailBoxWiFiEvent;
-    rtos::Mail<mqtt::mail_t, 16> _mail_box;
-    rtos::Mail<mqtt::mail_on_connect_t, 2> _mail_box_subscribe;
+    rtos::Mail<mqtt::mail_message_t, 16> _mail_box_on_message;
+    rtos::Mail<mqtt::mail_subscribe_t, 2> _mail_box_on_subscribe;
     std::vector<Callback<void(const String&,const String&)>>  _onMessageCallbacks;
     std::vector<Callback<void(bool)>>  _onMqttConnectCallbacks;
     std::vector<Callback<void(AsyncMqttClientDisconnectReason)>>  _onMqttDisconnectCallbacks;
     std::set<String>  _topics;
+    rtos::Mutex _mtx;
 };
 #endif
 /*

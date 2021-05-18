@@ -14,7 +14,22 @@
 
 using namespace platform_debug;
 using namespace rtos;
-
+struct RGB
+{
+    RGB(){
+        R.u16bit = 0;
+        G.u16bit = 0;
+        B.u16bit = 0;
+        IR.u16bit = 0;
+    }
+    reg_uint16_t R;
+    reg_uint16_t G;
+    reg_uint16_t B;
+    reg_uint16_t IR;
+    uint32_t h;
+    uint32_t s;
+    uint32_t l;
+};
 
 template<typename T>
 class ColorSensor 

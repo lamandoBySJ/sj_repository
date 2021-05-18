@@ -10,5 +10,6 @@
 
 #include "platform/mbed_debug.h"
 #include "rtos/ThisThread.h"
+#include "rtos/Thread.h"
 #include "rtos/Mutex.h"
 #endif

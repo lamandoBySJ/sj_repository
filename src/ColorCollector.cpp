@@ -1,5 +1,7 @@
 #include "ColorCollector.h"
 
+RGBProperties ColorCollector::rgb_properties;
+
 DynamicJsonDocument  doc(1024);
 void ColorCollector::run_task_collection()
 {
@@ -30,7 +32,7 @@ void ColorCollector::run_task_collection()
             _colorConverter.color(_rgb,data);
           
           
-            doc["box_mac_id"] = web_properties::ap_ssid;
+            doc["box_mac_id"] = ESPWebService::webProperties.ap_ssid;
             doc["r_reg"] = _rgb.R.u16bit;
             doc["g_reg"] = _rgb.G.u16bit;
             doc["b_reg"] = _rgb.B.u16bit;
@@ -44,43 +46,43 @@ void ColorCollector::run_task_collection()
             {
                 case  MeasEventType::EventSystemMeasure:
                 {
-                    doc["r_offset"] = rgb_properties::r_offset;
-                    doc["g_offset"] = rgb_properties::g_offset;
-                    doc["b_offset"] = rgb_properties::b_offset;
+                    doc["r_offset"] = ColorCollector::rgb_properties.r_offset;
+                    doc["g_offset"] = ColorCollector::rgb_properties.g_offset;
+                    doc["b_offset"] = ColorCollector::rgb_properties.b_offset;
                 }
                 break;
                 case  MeasEventType::EventServerMeasure:
                 {
-                    doc["r_offset"] = rgb_properties::r_offset;
-                    doc["g_offset"] = rgb_properties::g_offset;
-                    doc["b_offset"] = rgb_properties::b_offset;
+                    doc["r_offset"] = ColorCollector::rgb_properties.r_offset;
+                    doc["g_offset"] = ColorCollector::rgb_properties.g_offset;
+                    doc["b_offset"] = ColorCollector::rgb_properties.b_offset;
                 }
                 break;
                 case  MeasEventType::EventSystemOffset:
                 {   
                     
-                    int32_t red_diff = (_rgb.R.u16bit-rgb_properties::r_offset);
-                    int32_t green_diff = (_rgb.G.u16bit-rgb_properties::g_offset);
-                    int32_t blue_diff = (_rgb.B.u16bit-rgb_properties::b_offset);
+                    int32_t red_diff = (_rgb.R.u16bit-ColorCollector::rgb_properties.r_offset);
+                    int32_t green_diff = (_rgb.G.u16bit-ColorCollector::rgb_properties.g_offset);
+                    int32_t blue_diff = (_rgb.B.u16bit-ColorCollector::rgb_properties.b_offset);
                     doc["r_diff"] =  abs(red_diff);
                     doc["g_diff"] =  abs(green_diff);
                     doc["b_diff"] =  abs(blue_diff);
 
-                    rgb_properties::r_offset = _rgb.R.u16bit;
-                    rgb_properties::g_offset = _rgb.G.u16bit;
-                    rgb_properties::b_offset = _rgb.B.u16bit;
+                    ColorCollector::rgb_properties.r_offset = _rgb.R.u16bit;
+                    ColorCollector::rgb_properties.g_offset = _rgb.G.u16bit;
+                    ColorCollector::rgb_properties.b_offset = _rgb.B.u16bit;
 
-                    doc["r_offset"] = rgb_properties::r_offset;
-                    doc["g_offset"] = rgb_properties::g_offset;
-                    doc["b_offset"] = rgb_properties::b_offset;
+                    doc["r_offset"] = ColorCollector::rgb_properties.r_offset;
+                    doc["g_offset"] = ColorCollector::rgb_properties.g_offset;
+                    doc["b_offset"] = ColorCollector::rgb_properties.b_offset;
                     doc["ws_evt_type"]="WS_EVT_DATA";
                     doc["msg"]="RgbOffset";
                      
-                    String text=String("{\"r_offset\":")+String(rgb_properties::r_offset,DEC)
-                                 +String(",\"g_offset\":")+String(rgb_properties::g_offset,DEC)
-                                 +String(",\"b_offset\":")+String(rgb_properties::b_offset,DEC)+String("}");
+                    String text=String("{\"r_offset\":")+String(ColorCollector::rgb_properties.r_offset,DEC)
+                                 +String(",\"g_offset\":")+String(ColorCollector::rgb_properties.g_offset,DEC)
+                                 +String(",\"b_offset\":")+String(ColorCollector::rgb_properties.b_offset,DEC)+String("}");
                       
-                    if(FFatHelper::writeFile(FFat,rgb_properties::path.c_str(),text)){
+                    if(FFatHelper::writeFile(FFat,ColorCollector::rgb_properties.path.c_str(),text)){
                         doc["file_write"]=true;
                     }else{
                         doc["file_write"]=false;
@@ -90,15 +92,15 @@ void ColorCollector::run_task_collection()
                 break;
                 case  MeasEventType::EventWebAppMeasure:
                 {
-                    int32_t red_diff = (_rgb.R.u16bit-rgb_properties::r_offset);
-                    int32_t green_diff = (_rgb.G.u16bit-rgb_properties::g_offset);
-                    int32_t blue_diff = (_rgb.B.u16bit-rgb_properties::b_offset);
+                    int32_t red_diff = (_rgb.R.u16bit-ColorCollector::rgb_properties.r_offset);
+                    int32_t green_diff = (_rgb.G.u16bit-ColorCollector::rgb_properties.g_offset);
+                    int32_t blue_diff = (_rgb.B.u16bit-ColorCollector::rgb_properties.b_offset);
                     doc["r_diff"] =  abs(red_diff);
                     doc["g_diff"] =  abs(green_diff);
                     doc["b_diff"] =  abs(blue_diff);
-                    doc["r_offset"] = rgb_properties::r_offset;
-                    doc["g_offset"] = rgb_properties::g_offset;
-                    doc["b_offset"] = rgb_properties::b_offset;
+                    doc["r_offset"] = ColorCollector::rgb_properties.r_offset;
+                    doc["g_offset"] = ColorCollector::rgb_properties.g_offset;
+                    doc["b_offset"] = ColorCollector::rgb_properties.b_offset;
                     doc["ws_evt_type"]="WS_EVT_DATA";
                     doc["msg"]="RgbMeasure";
                     runCallbackWebSocketClientText(mail->client,doc.as<String>());

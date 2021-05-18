@@ -1,44 +1,79 @@
 #include "MQTTNetwork.h"
 
-void MQTTNetwork::runWiFiEventService(){
+mqtt::UserProperties MQTTNetwork::userProperties;
 
-    for(;;){
-      osEvent evt = _mailBoxWiFiEvent.get();
-      if (evt.status == osEventMail) {
-        mail_wifi_event_t* event = ( mail_wifi_event_t *)evt.value.p;
-        platform_debug::TracePrinter::printTrace("[WiFi-event] event: "+String(event->id,DEC));
-        std::lock_guard<rtos::Mutex> lck(_mtx);
-       
-        switch(event->id) {
-          case SYSTEM_EVENT_STA_STOP:
-              WiFi.mode(WIFI_STA);
-              WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-              platform_debug::TracePrinter::printTrace("WiFi Connecting...");
-          break;
-          case SYSTEM_EVENT_STA_START:
-            
-          break;
-          case SYSTEM_EVENT_STA_GOT_IP:
-              platform_debug::TracePrinter::printTrace("WiFi connected:SYSTEM_EVENT_STA_GOT_IP");
-              platform_debug::TracePrinter::printTrace("IP address: "+WiFi.localIP().toString());
-              platform_debug::TracePrinter::printTrace("MQTT Connecting...");
-              mqttClient.connect();
-              break;
-          case SYSTEM_EVENT_STA_DISCONNECTED:
-              platform_debug::TracePrinter::printTrace("WiFi lost connection"); 
-              WiFi.mode(WIFI_OFF);
-              //std::this_thread::sleep_for(std::chrono::seconds(1));
-              break;
-            case SYSTEM_EVENT_STA_CONNECTED:
-              platform_debug::TracePrinter::printTrace("WiFi connected:SYSTEM_EVENT_STA_CONNECTED"); 
-              break;
-          default:
-            platform_debug::TracePrinter::printTrace("WiFi Event Unknow"); 
-          break;
+void MQTTNetwork::runWiFiEventService(){
+     platform_debug::TracePrinter::printTrace("-----------------runWiFiEventService-----------------");
+    while(true){
+        osEvent evt = _mailBoxWiFiEvent.get();
+        if (evt.status == osEventMail) {
+          mail_wifi_event_t* event = ( mail_wifi_event_t *)evt.value.p;
+          platform_debug::TracePrinter::printTrace("[WiFi-event] event: "+String(event->id,DEC));
+          //std::lock_guard<rtos::Mutex> lck(_mtx);
+        
+          switch(event->id) {
+            case SYSTEM_EVENT_STA_STOP:
+                WiFi.mode(WIFI_STA);
+                WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+                platform_debug::TracePrinter::printTrace("WiFi Connecting...");
+            break;
+            case SYSTEM_EVENT_STA_START:
+              
+            break;
+            case SYSTEM_EVENT_STA_GOT_IP:
+                platform_debug::TracePrinter::printTrace("WiFi connected:SYSTEM_EVENT_STA_GOT_IP");
+                platform_debug::TracePrinter::printTrace("IP address: "+WiFi.localIP().toString());
+                platform_debug::TracePrinter::printTrace("MQTT Connecting...");
+                mqttClient.connect();
+                break;
+            case SYSTEM_EVENT_STA_DISCONNECTED:
+                platform_debug::TracePrinter::printTrace("WiFi lost connection"); 
+                WiFi.mode(WIFI_OFF);
+                break;
+              case SYSTEM_EVENT_STA_CONNECTED:
+                platform_debug::TracePrinter::printTrace("WiFi connected:SYSTEM_EVENT_STA_CONNECTED"); 
+                break;
+            default:
+              platform_debug::TracePrinter::printTrace("WiFi Event Unknow"); 
+            break;
+          }
+          _mailBoxWiFiEvent.free(event);
         }
-        _mailBoxWiFiEvent.free(event);
-      }
     }
+}
+
+void MQTTNetwork::run_mail_box_topics_subscribed(){
+  platform_debug::TracePrinter::printTrace("-----------------run_mail_box_topics_subscribed-----------------");
+  while(true){
+    osEvent evt= _mail_box_on_subscribe.get();
+    if (evt.status == osEventMail) {
+        mqtt::mail_subscribe_t *mail = (mqtt::mail_subscribe_t *)evt.value.p;
+        for(auto& v : _onMqttConnectCallbacks){
+            v.call(mail->sessionPresent);
+        }
+        for(auto& v : _topics){
+            platform_debug::TracePrinter::printTrace("[*]subscribe: "+v);
+            if(!subscribe(v, 0)){
+              break;
+            }
+        }
+        _mail_box_on_subscribe.free(mail); 
+    }
+  }
+}
+
+void MQTTNetwork::run_mail_box_on_message_arrived(){
+  platform_debug::TracePrinter::printTrace("-----------------run_mail_box_on_message_arrived-----------------");
+  while(true){
+    osEvent evt= _mail_box_on_message.get();
+    if (evt.status == osEventMail) {
+        mail_message_t *mail = (mail_message_t *)evt.value.p;
+        for(auto& v:  _onMessageCallbacks){
+              v.call(mail->topic,mail->payload);
+        }
+        _mail_box_on_message.free(mail); 
+    }
+  }
 }
 
 void MQTTNetwork::WiFiEvent(system_event_id_t event, system_event_info_t info) {
@@ -48,59 +83,29 @@ void MQTTNetwork::WiFiEvent(system_event_id_t event, system_event_info_t info) {
     _mailBoxWiFiEvent.put(evt);
   }else{
     platform_debug::TracePrinter::printTrace("ESP.restart()");
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    ThisThread::sleep_for(Kernel::Clock::duration_seconds(10));
     ESP.restart();
   }
 }
 
 AsyncMqttClient MQTTNetwork::mqttClient;
-///*
+MQTTNetwork* MQTTNetwork::_client=nullptr;
 //const char* MQTTNetwork::MQTT_HOST="mslmqtt.mic.com.cn";
-const char* MQTTNetwork::MQTT_HOST="mslmqtt.mic.com.cn";
+const char* MQTTNetwork::MQTT_HOST="10.86.3.147";
 uint16_t MQTTNetwork::MQTT_PORT = 1883;
-const char* MQTTNetwork::WIFI_SSID="IoTwlan";
-const char* MQTTNetwork::WIFI_PASSWORD="mitac1993";
-//const char* MQTTNetwork::WIFI_SSID="IPS";
-//const char* MQTTNetwork::WIFI_PASSWORD="Aa000000";
-//*/
-/*
-const char* MQTTNetwork::MQTT_HOST("192.168.1.133");
-uint16_t MQTTNetwork::MQTT_PORT =1883;
-const char* MQTTNetwork::WIFI_SSID="IPS";
-const char* MQTTNetwork::WIFI_PASSWORD="Aa000000";
-//*/
+const char* MQTTNetwork::WIFI_SSID="Mitac IOT_GPS";
+const char* MQTTNetwork::WIFI_PASSWORD="6789067890";
 
-/*
-void MQTTNetwork::_thunkConnectToWifi(void* pvTimerID)
-{
-    static_cast<MQTTNetwork*>(pvTimerID)->_connectToWifi();
-}
-void MQTTNetwork::_thunkConnectToMqtt(void* pvTimerID) 
-{
-    static_cast<MQTTNetwork*>(pvTimerID)-> _connectToMqtt();
-}
-void MQTTNetwork::_connectToMqtt()
-{
-    // std::lock_guard<rtos::Mutex> lck(_mtx);
-    //lck.lock();
-    platform_debug::TracePrinter::printTrace("MQTT Connecting...");
-    mqttClient.connect();
-}
-void MQTTNetwork::_connectToWifi() 
-{
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-}*/
 bool MQTTNetwork::connected(){
    std::lock_guard<rtos::Mutex> lck(_mtx);
   return mqttClient.connected();
 }
 bool MQTTNetwork::publish(const String& topic,const String& payload, uint8_t qos, bool retain,bool dup, uint16_t message_id)
 {
-  
    if(!connected()) {
      return false;
    }
-  std::lock_guard<rtos::Mutex> lck(_mtx);
+   std::lock_guard<rtos::Mutex> lck(_mtx);
    return  mqttClient.publish(topic.c_str(),qos, retain, payload.c_str(),payload.length(),dup,message_id) == 1;
 }
 bool  MQTTNetwork::subscribe(const String& topic, uint8_t qos)
@@ -124,10 +129,10 @@ bool MQTTNetwork::unsubscribe(const String& topic)
 void MQTTNetwork::onMqttConnect(bool sessionPresent)
 {
     platform_debug::TracePrinter::printTrace("OK: Connected to MQTT.");
-    mail_on_connect_t *mail = _mail_box_subscribe.alloc();
+    mail_subscribe_t *mail = _mail_box_on_subscribe.alloc();
     if(mail!=NULL){
         mail->sessionPresent = sessionPresent;
-        _mail_box_subscribe.put(mail) ;
+        _mail_box_on_subscribe.put(mail) ;
     }
 }
 void MQTTNetwork::onMqttDisconnect(AsyncMqttClientDisconnectReason reason) 
@@ -189,7 +194,7 @@ void MQTTNetwork::onMqttUnsubscribe(uint16_t packetId)
 void MQTTNetwork::onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) 
 {
       
-      mail_t *mail = _mail_box.alloc();
+      mail_message_t *mail = _mail_box_on_message.alloc();
       if(mail!=NULL){
         mail->topic = topic;
         mail->payload = String(payload).substring(0,len);
@@ -198,7 +203,7 @@ void MQTTNetwork::onMqttMessage(char* topic, char* payload, AsyncMqttClientMessa
         mail->properties.retain = properties.retain;
         mail->index = index;
         mail->total = total;
-        _mail_box.put(mail) ;
+        _mail_box_on_message.put(mail) ;
       }
 }
   
@@ -207,45 +212,24 @@ void MQTTNetwork::onMqttPublish(uint16_t packetId)
     platform_debug::TracePrinter::printTrace("Publish acknowledged. \n");
     platform_debug::TracePrinter::printTrace("  packetId: "+String(packetId,DEC));
 }
-/*
-void MQTTNetwork::setMqttReconnectTimer(bool start)
-{
-     std::lock_guard<rtos::Mutex> lck(_mtx);
-    lck.lock();
-    if(start){
-          xTimerStart(_mqttReconnectTimer,0);
-    }else{
-          xTimerStop(_mqttReconnectTimer,0);
-    }
-}
 
-void MQTTNetwork::setWifiReconnectTimer(bool start)
-{
-     std::lock_guard<rtos::Mutex> lck(_mtx);
-    lck.lock();
-      if(start){
-          xTimerStart(_wifiReconnectTimer,0);
-      }else{
-          xTimerStop(_wifiReconnectTimer,0);
-      }
-}
-*/
 void MQTTNetwork::init()
 {
       std::lock_guard<rtos::Mutex> lck(_mtx);
-      MQTTNetwork::MQTT_HOST    = user_properties::host.c_str();
-      MQTTNetwork::MQTT_PORT    = user_properties::port;
-      MQTTNetwork::WIFI_SSID    = user_properties::ssid.c_str();
-      MQTTNetwork::WIFI_PASSWORD= user_properties::pass.c_str();
+     /* MQTTNetwork::MQTT_HOST    = MQTTNetwork::userProperties.host.c_str();
+      MQTTNetwork::MQTT_PORT    = MQTTNetwork::userProperties.port;
+      MQTTNetwork::WIFI_SSID    = MQTTNetwork::userProperties.ssid.c_str();
+      MQTTNetwork::WIFI_PASSWORD= MQTTNetwork::userProperties.pass.c_str();
+      */
       platform_debug::TracePrinter::printTrace("MQTTNetwork::MQTT_SSID:"+String(MQTTNetwork::WIFI_SSID));
       platform_debug::TracePrinter::printTrace("MQTTNetwork::MQTT_PASS:"+String(WIFI_PASSWORD));
       platform_debug::TracePrinter::printTrace(String(MQTT_HOST)+":"+String(MQTT_PORT,DEC));
       
     
-      mqttClient.setWill("STLB_WILL",0,false,platform_debug::DeviceInfo::BoardID.c_str(),platform_debug::DeviceInfo::BoardID.length());
+      mqttClient.setWill("STLB_WILL",0,false,Platform::deviceInfo.BoardID.c_str(),Platform::deviceInfo.BoardID.length());
       mqttClient.setCleanSession(true);
       mqttClient.setKeepAlive(120);
-      mqttClient.setClientId(platform_debug::DeviceInfo::BoardID);
+      mqttClient.setClientId(Platform::deviceInfo.BoardID);
       WiFi.onEvent(std::bind(&MQTTNetwork::WiFiEvent,this,std::placeholders::_1,std::placeholders::_2));
      // _wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)this, reinterpret_cast<TimerCallbackFunction_t>(&MQTTNetwork::_thunkConnectToWifi));
       //_mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)this, reinterpret_cast<TimerCallbackFunction_t>(&MQTTNetwork::_thunkConnectToMqtt));
@@ -257,54 +241,12 @@ void MQTTNetwork::init()
       mqttClient.onMessage(callback(this,&MQTTNetwork::onMqttMessage));
       mqttClient.onPublish(callback(this,&MQTTNetwork::onMqttPublish));
       mqttClient.setServer(MQTT_HOST, MQTT_PORT);
-
-       mail_wifi_event_t* evt=_mailBoxWiFiEvent.alloc();
-      evt->id=SYSTEM_EVENT_STA_STOP;
-      _mailBoxWiFiEvent.put(evt);
 }
 
 void MQTTNetwork::disconnect(bool autoConnect)
 {
    std::lock_guard<rtos::Mutex> lck(_mtx);
-  mqttClient.disconnect();
-}
-
-void MQTTNetwork::run_mail_box_on_message_arrived(){
-  while(true){
-   
-    osEvent evt= _mail_box.get();
-    if (evt.status == osEventMail) {
-        mail_t *mail = (mail_t *)evt.value.p;
-        for(auto& v:  _onMessageCallbacks){
-              v.call(mail->topic,mail->payload);
-        }
-        
-        _mail_box.free(mail); 
-    }
-  }
- // vTaskDelete(NULL);
-}
-
-void MQTTNetwork::run_mail_box_topics_subscribed(){
-  while(true){
-   
-    osEvent evt= _mail_box_subscribe.get();
-    if (evt.status == osEventMail) {
-        
-        mqtt::mail_on_connect_t *mail = (mqtt::mail_on_connect_t *)evt.value.p;
-        for(auto& v : _onMqttConnectCallbacks){
-            v.call(mail->sessionPresent);
-        }
-        for(auto& v : _topics){
-            platform_debug::TracePrinter::printTrace("[*]subscribe: "+v);
-            if(!subscribe(v, 0)){
-              break;
-            }
-        }
-        _mail_box_subscribe.free(mail); 
-    }
-  }
- // vTaskDelete(NULL);
+   mqttClient.disconnect();
 }
 
 void MQTTNetwork::addOnMessageCallback(Callback<void(const String&,const String&)> func)

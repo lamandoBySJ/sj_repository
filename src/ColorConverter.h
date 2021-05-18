@@ -3,13 +3,14 @@
 #include "Arduino.h"
 #include "ArduinoJson.h"
 #include "platform_debug.h"
-
+#include "ColorCollector.h"
 enum class MeasEventType : char{
     EventSystemMeasure = 0,
     EventServerMeasure,
     EventSystemOffset,
     EventWebAppMeasure
 };
+
 class ColorConverter
 {
 public:

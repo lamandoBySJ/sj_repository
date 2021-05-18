@@ -14,8 +14,8 @@ class TimeMachine
 {
 public:
     TimeMachine()=delete;
-    TimeMachine(RTC& rtc,std::mutex& mutex);
-    TimeMachine(RTC& rtc,std::mutex& mutex,uint8_t rst);
+    TimeMachine(std::mutex& mutex,uint8_t sda,uint8_t scl);
+    TimeMachine(std::mutex& mutex,uint8_t sda,uint8_t scl,uint8_t rst);
     ~TimeMachine()=default;
     void startup(bool pwrEnable=true,const char* date=nullptr,const  char* timee=nullptr);
     time_t getEpoch();
@@ -23,7 +23,7 @@ public:
     void setDateTime(const char* date,const  char* time);
     void setEpoch(time_t epoch);
 private:
-    RTC& _rtc;
+    RTC _rtc;
     std::mutex& _mtx;  
     uint8_t _rst;
     bool selftest();

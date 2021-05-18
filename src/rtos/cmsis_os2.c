@@ -504,12 +504,7 @@ osThreadId_t osThreadNew (osThreadFunc_t func, void *argument, const osThreadAtt
     else {
       mem = 0;
     }
-     BaseType_t ret=  xTaskCreatePinnedToCore((TaskFunction_t)func, name,stack, argument, prio, &hTask, tskNO_AFFINITY);   
-     if(ret==pdFALSE){
-        while(1){
-          debug("xTaskCreatePinnedToCore:ERR:%s\n",name);
-        }
-     }
+    xTaskCreatePinnedToCore((TaskFunction_t)func, name,stack, argument, prio, &hTask, 1);   //tskNO_AFFINITY
     /*
     if (mem == 1) {
       //attr->cb_size-68
