@@ -8,7 +8,6 @@
 #include <esp_event_legacy.h>
 #include <WiFiType.h>
 #include <WiFi.h>
-#include "platform_debug.h"
 #include "app/OLEDScreen/OLEDScreen.h"
 #include "rtos/cmsis_os2.h"
 extern "C" {
@@ -37,12 +36,13 @@ extern "C" {
 #include "FFat.h"
 #include "FFatHelper.h"
 //#include "ESPwebService.h"
-#include "RGBCollector.h"
+#include "ColorCollector.h"
 #include "OTAService.h"
 #include "CmdParser.h"
 #include "rtos/Mutex.h"
 #include "rtos/cmsis_os2.h"
 #include "freertos/queue.h"
+#include "platform_debug.h"
 
 using namespace std;
 using namespace mstd;
@@ -70,12 +70,6 @@ std::mutex std_mtx;
 //BH1749NUC* bh1749nuc;
 
 //CmdParser cmdParser;
-MQTTNetwork MQTTnetwork;
-RGBCollector RGBcollector(MQTTnetwork);
-ESPWebService webService;
-
-rtos::Mail<mail_control_t, 16> mail_box_debug;
-rtos::Thread thdDebug;
 //#define OLEDSCREEN 
 void setup() {
  // put your setup code here, to run once:
@@ -87,39 +81,19 @@ void setup() {
   #else
     #ifdef OLEDSCREEN
       Heltec.begin(true, true , true , true, BAND);
-     // PlatformDebug::init(Serial,oled);
-      PlatformDebug::init(Serial,OLEDScreen<12>(Heltec.display));
-     // PlatformDebug::init(Serial,std::move(oled));
-      PlatformDebug::printLogo();
-     
     #else
       Heltec.begin(false, false , true , true, BAND);
-      PlatformDebug::init(Serial);
     #endif
   #endif
-  TracePrinter::startup();
-  //ColorSensor<BH1749NUC> colorSensor(Wire1,4,15,std_mtx,2);
-  //colorSensor.init();
- // platform_debug::TracePrinter::printTrace("OK");
- /*
-  RGB _rgb;
-  colorSensor.measurementModeActive();
-   colorSensor.getRGB(_rgb);
-   Serial.println(_rgb.R.u16bit);
-    Serial.println(_rgb.G.u16bit);
-     Serial.println(_rgb.B.u16bit);*/
-  platform_debug::PlatformDebug::pause();
-  //LoRa.dumpRegisters(Serial);
- 
 
+  platform_debug_init(true,false);
+  platform_debug::TracePrinter* tracePrinter=new  platform_debug::TracePrinter();
+  tracePrinter->startup();
+ 
+ // platform_debug::PlatformDebug::pause();
+  //LoRa.dumpRegisters(Serial);
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
   platform_debug::PlatformDebug::println(" ************ STLB ************ ");
-   attachInterrupt(0,[](){
-    volatile static int id=0;
-    mail_control_t* mail=  mail_box_debug.alloc();
-    mail->id = ++id;
-    mail_box_debug.put_from_isr(mail);
-  },FALLING);
 
      esp_sleep_wakeup_cause_t cause =  esp_sleep_get_wakeup_cause();
    switch(cause){
@@ -193,7 +167,7 @@ void setup() {
   }
 
   //FFatHelper::deleteFiles(FFat, "/", 0);
-  FFatHelper::listDir(FFat, "/", 0);
+ FFatHelper::listDir(FFat, "/", 0);
   if(!FFatHelper::exists("/TowerColor")){
       FFatHelper::createDir(FFat,"/TowerColor");
       platform_debug::PlatformDebug::println("Dir created:/TowerColor");
@@ -232,48 +206,46 @@ void setup() {
           platform_debug::PlatformDebug::println("rgb_properties::b_offset:"+String(rgb_properties::b_offset));
       }
   }
- 
-//  timeMachine.startup(true,__DATE__,__TIME__);
+
+  platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
+
+
+}
+
+
+static String currentTime="";
+//MQTTNetwork  MQTTnetwork;
+static rtos::Mail<mail_control_t, 16> mail_box_debug;
+rtos::Thread thdDebug;
+ColorCollector colorCollector;
+ESPWebService webService;
+void loop() {
+  
+  attachInterrupt(0,[&](){
+    volatile static int id=0;
+    mail_control_t* mail=  mail_box_debug.alloc();
+    mail->id = ++id;
+    mail_box_debug.put_from_isr(mail);
+  },FALLING);
+// timeMachine.startup(true,__DATE__,__TIME__);
 //timeMachine.setEpoch(1614764209+8*60*60);
 
   //MQTTnetwork.addTopic("SmartBox/TimeSync");
   //MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerTime");
   //MQTTnetwork.addSubscribeTopic(platform_debug::DeviceInfo::BoardID+"/ServerReq");
   //MQTTnetwork.addOnMessageCallback(callback(&cmdParser,&CmdParser::onMessageCallback));
+  webService.setCallbackPostMailToCollector(callback(&colorCollector,&ColorCollector::delegateMethodPostMail));
+  colorCollector.setCallbackWebSocketClientEvent(callback(&webService,&ESPWebService::delegateMethodWebSocketClientEvent));
+  colorCollector.setCallbackWebSocketClientText(callback(&webService,&ESPWebService::delegateMethodWebSocketClientText));
 
-  
-  webService.setCallbackPostMailToCollector(callback(&RGBcollector,&RGBCollector::delegateMethodPostMail));
-  RGBcollector.setCallbackWebSocketClientEvent(callback(&webService,&ESPWebService::delegateMethodWebSocketClientEvent));
-  RGBcollector.setCallbackWebSocketClientText(callback(&webService,&ESPWebService::delegateMethodWebSocketClientText));
- 
-  
- // MQTTnetwork.startup();
-  //RGBcollector.startup();
+  // MQTTnetwork.startup();
+  platform_debug::TracePrinter::printTrace("RGBCollector....init");
+  colorCollector.startup();
+  webService.startup();
 
-  //thdTest.start(callback(&RGBcollector,&RGBCollector::run_task_collection));
-  //thdTest.start(callback(&RGBcollector,&RGBCollector<ColorSensor<BH1749NUC>>::run_task_collection));
-
-  platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
-
-
- // webService.startup();
-  platform_debug::PlatformDebug::pause();
-}
-
-RGB rgb;
-static String currentTime="";
-Thread threadSignal(osPriorityNormal,1024*6,NULL,"signal");
-void loop() {
-  pinMode(21,OUTPUT);
-  pinMode(23,OUTPUT);
-//  digitalWrite(21,HIGH);
-//  digitalWrite(23,HIGH);
-  //colorSensor.getRGB(rgb);
-  Serial.println(rgb.R.u16bit);
-   Serial.println(rgb.G.u16bit);
-    Serial.println(rgb.B.u16bit);
   while (true) {
 
+            
    // if( timeMachine.getDateTime(currentTime)){
    //     platform_debug::PlatformDebug::println(currentTime);
    // }else{
@@ -282,10 +254,8 @@ void loop() {
 
    // RGBcollector.delegateMethodPostMail(MeasEventType::EventSystemMeasure);
     //ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));
-    //std::this_thread::sleep_for(chrono::seconds(10));
 
-   
-
+     ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));
       osEvent evt=  mail_box_debug.get();
       if (evt.status == osEventMail) {
        /* if(!webService.isRunning()){
@@ -300,6 +270,8 @@ void loop() {
       }
   }
 }
-
-
-
+//platform_debug::PlatformDebug::pause();
+    //std::this_thread::sleep_for(chrono::seconds(10));
+   //  std::unique_lock<rtos::Mutex> lck(_mtx, std::defer_lock);
+      //  lck.lock();
+            // std::lock_guard<rtos::Mutex> lck(_mtx);
