@@ -21,6 +21,7 @@ class ColorSensor
 {
 public:
     ColorSensor()=default;
+
     ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,std::mutex& mutex);
     ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,std::mutex& mutex,uint8_t rst);
     ~ColorSensor()=default;
@@ -29,15 +30,21 @@ public:
     void measurementModeActive();
     void measurementModeInactive();
 
-    template<typename _Rep, typename _Period,typename _Array>
-    void loopMeasure(RGB& rgb,const std::chrono::duration<_Rep,_Period> &timeInterval,_Array& _rgbTemp)
+    template<typename _Array>
+    void loopMeasure(RGB& rgb,const Kernel::Clock::duration_u32& timeInterval,_Array& _rgbTemp)
     {   
-        
+        std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
+        lck.lock();
         int count =_rgbTemp.size();
+        int dim=50/count;
         measurementModeActive();
         for(char i=0;i < count;++i){
             getRGB(_rgbTemp[i]);
-            std::this_thread::sleep_for(timeInterval);
+            ThisThread::sleep_for(timeInterval);
+            if(_measHook){
+               _measHook(i*dim,"measuring","progress");
+            }
+           // platform_debug::TracePrinter::printTrace(String(_rgbTemp[i].R.u16bit,DEC)+": "+ String(_rgbTemp[i].G.u16bit,DEC)+": "+String(_rgbTemp[i].B.u16bit,DEC)+": "+ String(_rgbTemp[i].IR.u16bit,DEC) ); 
         }
         measurementModeInactive();
         /*
@@ -60,12 +67,18 @@ public:
         rgb.IR.u16bit=_rgbTemp[count-1].IR.u16bit;*/
     }
     using callbackFun=bool(T::*)(reg_uint16_t& value);
+
+    void setMeasurementHook(std::function<void(int,const String&, const String&)> measHook){
+       _measHook = measHook;
+    }
+
 private:
     T _als;
     std::mutex& _mtx;
     uint8_t _rst;
     std::array<callbackFun, 4> ptrFuns;
     bh1749nuc_mode_control2_t _mode_control2;
+    std::function<void(int,const String&, const String&)> _measHook;
 };
 
 #endif

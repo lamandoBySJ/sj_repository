@@ -20,13 +20,13 @@
 #include <app/ColorSensor/ColorSensor.h>
 #include <platform/mbed.h>
 #include <platform/Callback.h>
-#include <RGBCollector.h>
+#include <ColorCollector.h>
 #include <ColorConverter.h>
 #include <rtos/Mutex.h>
 #include "rtos/Thread.h"
 #include "rtos/Mail.h"
 #include "rtos/cmsis_os.h"
-
+#include "rtos/ThisThread.h"
 using namespace platform_debug;
 
 namespace web_server
@@ -40,13 +40,12 @@ using namespace std;
 class ESPWebService //: private mbed::NonCopyable<ESPWebServer>
 {
 public:
-    ESPWebService():_thread(osPriorityNormal,1024*2),
-        _server(nullptr),_events("/events"),_wss("/ws"),_handler(nullptr),
+    ESPWebService():_thread(osPriorityNormal,1024*6),_mtx(),
+        _events("/events"),_wss("/ws"),_handler(nullptr),
         running(false),
-        _mail_box(),
         _callback(nullptr)
     {
-
+          
     }
     ~ESPWebService(){
         Serial.println("~~~~~~~~~~~~~~XXX~~~~~~~~~~~~~~~~~~~~~~~~~");
@@ -57,11 +56,9 @@ public:
 
     void startup();
     void shutdown();
-    void init();
     void run_web_service();
     void notFound(AsyncWebServerRequest *request);
     void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len) ;
-    void post_mail(int message);
 
    // void delegateMethodWebSocketClientPostEvent(const String& message, const String& event, uint32_t id=0, uint32_t reconnect=0);
     bool isRunning(){
@@ -92,14 +89,12 @@ public:
 private:
     rtos::Thread _thread;
     rtos::Mutex _mtx;
-    std::mutex mtx;
-    AsyncWebServer* _server;
     AsyncEventSource _events;
     AsyncWebSocket _wss;
     AsyncCallbackJsonWebHandler* _handler;
+    AsyncWebSocketClient* _client;
     const char* PARAM_MESSAGE = "message";
     bool running;
-    rtos::Mail<web_server::mail_t, 16> _mail_box;
     mbed::Callback<void(MeasEventType,AsyncWebSocketClient*)> _callback;
     
     

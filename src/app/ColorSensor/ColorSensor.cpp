@@ -1,7 +1,7 @@
 #include "ColorSensor.h"
 
 template<typename T>
-ColorSensor<T>::ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,std::mutex& mutex):_als(wire,sda,scl),_mtx(mutex),_rst(0)
+ColorSensor<T>::ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,std::mutex& mutex):_als(wire,sda,scl),_mtx(mutex),_rst(0),_measHook(nullptr)
 {   
     
     ptrFuns[0]= &T::red_data_get;
@@ -12,7 +12,7 @@ ColorSensor<T>::ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,std::mutex& m
 }
 
 template<typename T>
-ColorSensor<T>::ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,std::mutex& mutex,uint8_t rst):_als(wire,sda,scl),_mtx(mutex),_rst(rst)
+ColorSensor<T>::ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,std::mutex& mutex,uint8_t rst):_als(wire,sda,scl),_mtx(mutex),_rst(rst),_measHook(nullptr)
 {
     ptrFuns[0]= &T::red_data_get;
     ptrFuns[1]= &T::green_data_get;
@@ -24,8 +24,8 @@ ColorSensor<T>::ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,std::mutex& m
 template<typename T>
 void ColorSensor<T>::init(bool pwrEnable)
  {
-   //  std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
-  //  lck.lock();
+    std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
+    lck.lock();
     if(pwrEnable){
       pinMode(this->_rst, OUTPUT);
       digitalWrite(this->_rst,HIGH);
@@ -35,8 +35,7 @@ void ColorSensor<T>::init(bool pwrEnable)
     if(!_als.begin()){
       digitalWrite(23,HIGH);
     }
-
-    
+    platform_debug::TracePrinter::printTrace(String(__FILE__)+String(":")+String(__LINE__));
 }
 
 template<typename T>
@@ -54,9 +53,6 @@ template<typename T>
 bool ColorSensor<T>::getRGB(RGB& rgb)
 {
   int timeout=3000;
- std::unique_lock<std::mutex> lck(mtx, std::defer_lock);
-lck.lock();
-
   do{
        _als.mode_control2_get(&_mode_control2.reg);
        if(--timeout==0){

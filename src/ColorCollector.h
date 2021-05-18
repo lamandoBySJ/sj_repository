@@ -1,5 +1,5 @@
-#ifndef __RGB_COLLECTOR_H
-#define __RGB_COLLECTOR_H
+#ifndef __COLOR_COLLECTOR_H
+#define __COLOR_COLLECTOR_H
 #include "Arduino.h"
 #include "ArduinoJson.h"
 #include "ESPWebService.h"
@@ -20,15 +20,14 @@ namespace collector
 }
 using namespace collector;
 
-extern ColorSensor<BH1749NUC> colorSensor;
 
-class RGBCollector
+
+class ColorCollector
 {
 public:
 
-    RGBCollector(MQTTNetwork& MQTTnetwork):
+    ColorCollector():
         _thread(osPriorityNormal,1024*6),
-        _MQTTnetwork(MQTTnetwork),
         _rgb(),_colorConverter(),
         _cbWebSocketClientEvent(nullptr),
         _cbWebSocketClientText(nullptr)
@@ -36,20 +35,33 @@ public:
 
     }
 
-    ~RGBCollector()
+    ~ColorCollector()
     {
        
     }
    
-    void startup();
+    void startup()
+    {  
+        _thread.start(callback(this,&ColorCollector::run_task_collection));
+    }
+    
     void run_task_collection();
-    void delegateMethodPostMail(MeasEventType measEventType,AsyncWebSocketClient* client);
-    void runCallbackWebSocketClientPostEvent(const String& message, const String& event){
+
+    void delegateMethodPostMail(MeasEventType measEventType,AsyncWebSocketClient* client)
+    {   
+        collector::mail_t *mail = _mail_box_post.alloc();
+        if(mail!=NULL){
+            mail->client = client;
+            mail->eventType = measEventType;
+            _mail_box_post.put(mail) ;
+        }
+    }
+    void runCallbackWebSocketClientPostEvent(int progress,const String& status , const String& event){
          //std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
 	    // lck.lock();
          std::lock_guard<std::mutex> lck(_mtx);
          if(this->_cbWebSocketClientEvent!=nullptr){
-            this->_cbWebSocketClientEvent(message,event,0,0);
+            this->_cbWebSocketClientEvent("{\"status\":\""+status+"\",\"progress\":"+String(progress,DEC)+"}",event,0,0);
          }
     }
     void setCallbackWebSocketClientEvent(mbed::Callback<void(const String&, const String&,uint32_t,uint32_t)> callback){
@@ -60,6 +72,7 @@ public:
     void runCallbackWebSocketClientText(AsyncWebSocketClient *client,const String& text){
          std::lock_guard<std::mutex> lck(_mtx);
          if(this->_cbWebSocketClientText!=nullptr){
+               platform_debug::TracePrinter::printTrace("ESP:::A:::::"+text);
             this->_cbWebSocketClientText(client,text);
          }
     }
@@ -68,15 +81,13 @@ public:
         this->_cbWebSocketClientText=callback;
     }
 private:
-
     rtos::Thread _thread;
-    MQTTNetwork& _MQTTnetwork;
     RGB _rgb;
     ColorConverter _colorConverter;
     mbed::Callback<void(const String&, const String&,uint32_t,uint32_t)> _cbWebSocketClientEvent;
     mbed::Callback<void(AsyncWebSocketClient*,const String&)> _cbWebSocketClientText;
     std::mutex _mtx;
-    rtos::Mail<collector::mail_t, 16> _mail_box;
+    rtos::Mail<collector::mail_t, 16> _mail_box_post;
     
 };
 
