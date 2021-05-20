@@ -45,7 +45,7 @@ private:
     IPSProtocol _IPSProtocol;
     String _topicSubServerRequest;
     String _topicPubgatewayResponse;
-    Mail<mqtt::mail_message_t,16> _mail_box_mqtt;
+    Mail<mqtt::mail_mqtt_t,16> _mail_box_mqtt;
     Mail<lora::mail_t,16> _mail_box_lora;
     std::vector<String> _topics;
     String _topicLearn;

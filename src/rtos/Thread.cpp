@@ -76,7 +76,6 @@ void Thread::constructor(osPriority priority,
 osStatus Thread::start(mbed::Callback<void()> task)
 {
     _mutex.lock();
-
     if ((_tid != 0) || _finished) {
         _mutex.unlock();
         return osErrorParameter;

@@ -2,9 +2,9 @@
 
 void LoRaCollector::startup(WirelessTechnologyType type)
 {
-    _topicCommandResponse = Platform::deviceInfo.Family+ String("/command/response/DC");
-    _topicCommand = Platform::deviceInfo.Family+ String("/command/request/DC");
-   _topicSendRssi = Platform::deviceInfo.Family+String("/send_rssi/#");
+    _topicCommandResponse = Platform::getDeviceInfo()->Family+ String("/command/response/DC");
+    _topicCommand = Platform::getDeviceInfo()->Family+ String("/command/request/DC");
+   _topicSendRssi = Platform::getDeviceInfo()->Family+String("/send_rssi/#");
   
     _topics.push_back(_topicSendRssi);
     _topics.push_back(_topicCommand);
@@ -26,7 +26,7 @@ void LoRaCollector::run_mqtt_service()
     while(true){
         osEvent evt= _mail_box_mqtt.get();
         if (evt.status == osEventMail) {
-            mqtt::mail_message_t *mail = (mqtt::mail_message_t *)evt.value.p;
+            mqtt::mail_mqtt_t *mail = (mqtt::mail_mqtt_t *)evt.value.p;
             platform_debug::TracePrinter::printTrace("[DC]MQTT:"+mail->topic);
             DynamicJsonDocument  doc(mail->payload.length()+1024);
             DeserializationError error = deserializeJson(doc,mail->payload);
@@ -93,7 +93,7 @@ void LoRaCollector::run_mqtt_service()
                     _IPSProtocol.mode       = doc["mode"].as<String>();
                     
                 }
-                _mqttNetwork.publish(_topicCommandResponse,"{\""+Platform::deviceInfo.BoardID+"\":\"OK\"}");
+                _mqttNetwork.publish(_topicCommandResponse,"{\""+Platform::getDeviceInfo()->BoardID+"\":\"OK\"}");
             }
             
             
@@ -136,7 +136,7 @@ void LoRaCollector::run_background_service()
 
                     _mapOnlineDevices[mail_background->TAG_ID].clear();
                     _mapOnlineDevices.erase(mail_background->TAG_ID);
-                    //_mqttNetwork.publish(_IPSProtocol.family+"/send_error/"+Platform::deviceInfo.BoardID,_fingerprints);
+                    //_mqttNetwork.publish(_IPSProtocol.family+"/send_error/"+Platform::getDeviceInfo()->BoardID,_fingerprints);
                     if(_mapTimeoutExpired.find(mail_background->TAG_ID)!=_mapTimeoutExpired.end()){
                         _mapTimeoutExpired.erase(mail_background->TAG_ID);
                     }
@@ -179,7 +179,7 @@ void LoRaCollector::onMqttDisconnectCallback(AsyncMqttClientDisconnectReason rea
 }
 void LoRaCollector::onMessageMqttCallback(const String& topic,const String& payload)
 {   
-    mqtt::mail_message_t *mail =  _mail_box_mqtt.alloc();
+    mqtt::mail_mqtt_t *mail =  _mail_box_mqtt.alloc();
     if(mail!=NULL){
         mail->topic = topic;
         mail->payload = payload;
@@ -195,7 +195,7 @@ void LoRaCollector::run_lora_service()
         if (evt.status == osEventMail) {
             lora::mail_t *mail = (lora::mail_t *)evt.value.p;
             platform_debug::TracePrinter::printTrace("[DC]lora:Rx:"+mail->receiver+String(":Tx:")+mail->sender);
-            if(mail->receiver == Platform::deviceInfo.BoardID){
+            if(mail->receiver == Platform::getDeviceInfo()->BoardID){
                 
                 DynamicJsonDocument  doc(mail->packet.length()+128);
                 DeserializationError error = deserializeJson(doc,mail->packet);

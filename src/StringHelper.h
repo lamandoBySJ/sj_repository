@@ -56,14 +56,13 @@ public:
     {
         try
         { 
+            out.clear();
             regex re{delim};
-
             for (auto it = sregex_token_iterator(in.begin(), in.end(), re, -1) ; it != sregex_token_iterator(); ++it)
             {
                // cout << "TOKEN: " << (string) *it << endl;
                 out.push_back(it->str().c_str());
-            }
-                
+            }  
         }
         catch(const std::exception& e)
         {
@@ -72,7 +71,6 @@ public:
         }
 
     }
-    
 
 };
 

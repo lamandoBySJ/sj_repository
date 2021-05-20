@@ -7,7 +7,7 @@
 enum class MeasEventType : char{
     EventSystemMeasure = 0,
     EventServerMeasure,
-    EventSystemOffset,
+    EventWebAppOffset,
     EventWebAppMeasure
 };
 

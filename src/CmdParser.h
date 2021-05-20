@@ -2,7 +2,6 @@
 #define CMD_PARSER_H
 #include "Arduino.h"
 #include <ArduinoJson.h>
-#include "OTAService.h"
 #include <functional>
 #include <mutex>
 #include <thread>
@@ -15,7 +14,7 @@
 #include "Countdown.h"
 #include "platform_debug.h"
 using namespace std;
-extern TimeMachine<DS1307> timeMachine;
+
 
 enum class RequestType : uint8_t
 {
@@ -31,9 +30,9 @@ enum class RequestType : uint8_t
 class CmdParser
 {
 public:
-    CmdParser():_mtx(),_OTAService()
+    CmdParser():_mtx()
     {
-        _funOTA = std::bind(&OTAService::execute,&_OTAService,std::placeholders::_1);
+       
         str_map_type[String("als_measure")]   = RequestType::ALS_MEASURE;
         str_map_type[String("ota_upgrade")]   = RequestType::OTA_UPGRADE;
         str_map_type[String("ota_cancel")]    = RequestType::OTA_CANCEL;
@@ -82,7 +81,7 @@ public:
 private:
     std::thread _threadCountdown;
     std::mutex _mtx;
-    OTAService _OTAService;
+  
     StringHelper _StringHelper;
     std::vector<String> _topics;
     std::map<String,RequestType> str_map_type;

@@ -35,15 +35,11 @@ extern "C" {
 #include "FS.h"
 #include "FFat.h"
 #include "FFatHelper.h"
-#include "ESPWebService.h"
-#include "ColorCollector.h"
-#include "OTAService.h"
-#include "CmdParser.h"
 #include "rtos/Mutex.h"
 #include "rtos/cmsis_os2.h"
 #include "freertos/queue.h"
 #include "platform_debug.h"
-
+#include "SmartBox.h"
 using namespace std;
 using namespace mstd;
 using namespace rtos;
@@ -52,35 +48,34 @@ using namespace platform_debug;
 //python3 esptool.py --port COM20 --baud 115200 write_flash -fm dio -fs 16MB  0x410000 partitions.bin
 //C:\Users\Administrator\.platformio\packages\framework-arduinoespressif32\tools\partitions
 //DS1307 ds1307(Wire1,32,33); //ips
-std::mutex std_mutex;
-TimeMachine<DS1307> timeMachine(std_mutex,21,22,13);  
-TracePrinter* tracePrinter =nullptr;
+
 //#define OLEDSCREEN 
 void setup() {
  // put your setup code here, to run once:
-  //WIFI Kit series V1 not support Vext control
- 
   #ifdef NDEBUG
+    //WIFI Kit series V1 not support Vext control
     Heltec.begin(false, true , false , true, BAND);
     Serial.setDebugOutput(false);
+    //LoRa.dumpRegisters(Serial);
   #else
     #ifdef OLEDSCREEN
       Heltec.begin(true, true , true , true, BAND);
+       // PlatformDebug::init(Serial,oled);
+        PlatformDebug::init(Serial,OLEDScreen<12>(Heltec.display));
+        // PlatformDebug::init(Serial,std::move(oled));
+        PlatformDebug::printLogo();
     #else
       Heltec.begin(false, false , true , true, BAND);
+      PlatformDebug::getInstance()->init(Serial);
     #endif
   #endif
 
-  platform_debug_init(true,false);
-  tracePrinter = new  platform_debug::TracePrinter();
-  tracePrinter->startup();
-  
- // platform_debug::PlatformDebug::pause();
-  //LoRa.dumpRegisters(Serial);
+  TracePrinter::getInstance()->startup();
+
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
   platform_debug::PlatformDebug::println(" ************ STLB ************ ");
 
-  esp_sleep_wakeup_cause_t cause =  esp_sleep_get_wakeup_cause();
+   esp_sleep_wakeup_cause_t cause =  esp_sleep_get_wakeup_cause();
    switch(cause){
     case ESP_SLEEP_WAKEUP_UNDEFINED:
     platform_debug::TracePrinter::printTrace("ESP_SLEEP_WAKEUP_UNDEFINED");
@@ -112,30 +107,16 @@ void setup() {
     default:break;
   }
   
-  //esp_sleep_enable_ext0_wakeup(GPIO_NUM_26,0);
-  //uint64_t mask = 1|1<<26;
-  //esp_sleep_enable_ext1_wakeup(mask,ESP_EXT1_WAKEUP_ANY_HIGH);
-  //gpio_wakeup_enable(GPIO_NUM_0,GPIO_INTR_LOW_LEVEL);
-  //gpio_wakeup_enable(GPIO_NUM_26,GPIO_INTR_HIGH_LEVEL);
-  //esp_sleep_enable_gpio_wakeup();
+  String mac_address=WiFi.macAddress();
+  mac_address.replace(":","");
+  Platform::getWebProperties()->ap_ssid = WiFi.macAddress();
+  platform_debug::PlatformDebug::println("DeviceInfo::BoardID:"+mac_address);
+  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+  Platform::getDeviceInfo()->BoardID = mac_address;
+  Platform::getDeviceInfo()->Family = "k49a";
+  platform_debug::PlatformDebug::println(Platform::getDeviceInfo()->BoardID);
 
-  std::string mac_address=WiFi.macAddress().c_str();
-  std::string mark=":";
-  unsigned int nSize = mark.size();
-  unsigned int position = mac_address.find(mark);
-  if(position != string::npos){
-     for(unsigned int pos=position;pos != string::npos;){
-        mac_address.erase(pos, nSize);
-        platform_debug::PlatformDebug::println(mac_address);
-        pos= mac_address.find(mark);
-    }
-  }
 
-  ESPWebService::webProperties.ap_ssid = WiFi.macAddress();
-  Platform::deviceInfo.BoardID = mac_address.c_str();
-  //Platform::deviceInfo.BoardID = String(mac_address.substr(mac_address.length()-4,4).c_str());
-  platform_debug::PlatformDebug::println("DeviceInfo::BoardID:"+Platform::deviceInfo.BoardID);
-  
   if(FFatHelper::init()){
       platform_debug::PlatformDebug::println("OK:File system mounted");
   }else{
@@ -154,28 +135,28 @@ void setup() {
   }
   
 
-  platform_debug::PlatformDebug::println("user_properties::path:"+MQTTNetwork::userProperties.path);
-  platform_debug::PlatformDebug::println("user_properties::ssid:"+MQTTNetwork::userProperties.ssid);
-  platform_debug::PlatformDebug::println("user_properties::pass:"+MQTTNetwork::userProperties.pass);
-  platform_debug::PlatformDebug::println("user_properties::host:"+MQTTNetwork::userProperties.host);
-  platform_debug::PlatformDebug::println(String(MQTTNetwork::userProperties.port,DEC));
+  platform_debug::PlatformDebug::println("user_properties::path:"+Platform::getUserProperties()->path);
+  platform_debug::PlatformDebug::println("user_properties::ssid:"+Platform::getUserProperties()->ssid);
+  platform_debug::PlatformDebug::println("user_properties::pass:"+Platform::getUserProperties()->pass);
+  platform_debug::PlatformDebug::println("user_properties::host:"+Platform::getUserProperties()->host);
+  platform_debug::PlatformDebug::println(String(Platform::getUserProperties()->port,DEC));
 
  
   DynamicJsonDocument  docProperties(1024);
   String text;
- if(FFatHelper::readFile(FFat,MQTTNetwork::userProperties.path,text)){
+ if(FFatHelper::readFile(FFat,Platform::getUserProperties()->path,text)){
       platform_debug::PlatformDebug::println(text); 
       DeserializationError error = deserializeJson(docProperties, text);
       if(!error){
-          MQTTNetwork::userProperties.ssid =  docProperties["ssid"].as<String>();
-          MQTTNetwork::userProperties.pass =  docProperties["pass"].as<String>();
-          MQTTNetwork::userProperties.host =  docProperties["host"].as<String>();
-          MQTTNetwork::userProperties.port =  docProperties["port"].as<int>();
+          Platform::getUserProperties()->ssid =  docProperties["ssid"].as<String>();
+          Platform::getUserProperties()->pass =  docProperties["pass"].as<String>();
+          Platform::getUserProperties()->host =  docProperties["host"].as<String>();
+          Platform::getUserProperties()->port =  docProperties["port"].as<int>();
           
-          platform_debug::PlatformDebug::println("user_properties::ssid:"+MQTTNetwork::userProperties.ssid);
-          platform_debug::PlatformDebug::println("user_properties::pass:"+MQTTNetwork::userProperties.pass);
-          platform_debug::PlatformDebug::println("user_properties::host:"+MQTTNetwork::userProperties.host);
-          platform_debug::PlatformDebug::println("user_properties::port:"+String(MQTTNetwork::userProperties.port,DEC));
+          platform_debug::PlatformDebug::println("user_properties::ssid:"+Platform::getUserProperties()->ssid);
+          platform_debug::PlatformDebug::println("user_properties::pass:"+Platform::getUserProperties()->pass);
+          platform_debug::PlatformDebug::println("user_properties::host:"+Platform::getUserProperties()->host);
+          platform_debug::PlatformDebug::println("user_properties::port:"+String(Platform::getUserProperties()->port,DEC));
       }
   }
 
@@ -190,84 +171,53 @@ void setup() {
           platform_debug::PlatformDebug::println("rgb_properties::b_offset:"+String(ColorCollector::rgb_properties.b_offset));
       }
   }
-
-  platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
-  //platform_debug::PlatformDebug::pause();
-}
-
-
-//rtos::Thread thdDebug;
-MQTTNetwork  MQTTnetwork;
-void loop() {
-
-
-  ColorCollector colorCollector;
-  ESPWebService webService;
-  
-  timeMachine.startup(true,__DATE__,__TIME__);
-//timeMachine.setEpoch(1614764209+8*60*60);
-
-  MQTTnetwork.addSubscribeTopic("SmartBox/TimeSync");
-  MQTTnetwork.addSubscribeTopic(Platform::deviceInfo.BoardID+"/ServerTime");
-  MQTTnetwork.addSubscribeTopic(Platform::deviceInfo.BoardID+"/ServerReq");
-  //MQTTnetwork.addOnMessageCallback(callback(&cmdParser,&CmdParser::onMessageCallback));
-
-  webService.setCallbackPostMailToCollector(callback(&colorCollector,&ColorCollector::delegateMethodPostMail));
-  colorCollector.setCallbackWebSocketClientEvent(callback(&webService,&ESPWebService::delegateMethodWebSocketClientEvent));
-  colorCollector.setCallbackWebSocketClientText(callback(&webService,&ESPWebService::delegateMethodWebSocketClientText));
  
- //thdDebug.start(callback(&MQTTnetwork,&MQTTNetwork::runWiFiEventService));
+  platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
   
-  try{
-      MQTTnetwork.startup();
-      colorCollector.startup();
-  }catch(const osStatusException& e){
-     platform_debug::TracePrinter::printTrace(e.what());
-     platform_debug::PlatformDebug::pause();
-  }
+}
+
+SmartBox smartBox;
+os::ThreadControlGuard threadControlGuard;
+void loop() {
   
-   
-  // webService.startup();
- /*attachInterrupt(0,[&](){
-    volatile static int id=0;
-    mail_control_t* mail=  mail_box_debug.alloc();
-    mail->id = ++id;
-    mail_box_debug.put_from_isr(mail);
+ attachInterrupt(0,[&](){
+    detachInterrupt(0);
+    threadControlGuard.set_signal_id(0,true);
   },FALLING);
-  */
-  String currentTime="";
+ 
+  smartBox.startup();
+
   while (true) {
-
-         ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));    
-        if( timeMachine.getDateTime(currentTime)){
-            platform_debug::TracePrinter::printTrace(currentTime);
-         }else{
-            platform_debug::TracePrinter::printTrace("ERROR:currentTime");
-        }
-       bool ret =  MQTTNetwork::getClient()->publish("test",currentTime);
-      if(!ret){
-          platform_debug::TracePrinter::printTrace("publish Fail");
-      }
-   // RGBcollector.delegateMethodPostMail(MeasEventType::EventSystemMeasure);
-    //ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));
-  /*  rtos::Mail<mail_control_t, 16> mail_box_debug;
-    
-      osEvent evt=  mail_box_debug.get();
-      if (evt.status == osEventMail) {
-       if(!webService.isRunning()){
-
-           webService.startup();
-         // webServer.startup();
-        }else{
-          webService.shutdown();
-        }
-        mail_control_t* mail= (mail_control_t*)evt.value.p;
-        mail_box_debug.free(mail);
-      }*/
+    //ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));    
+     switch (threadControlGuard.get_signal_id())
+     {
+     case 0:
+        smartBox.start_web_task();
+       break;
+     case 1:
+      break;
+     case 2:
+      break;
+     case 3:
+      break;
+     default:
+      break;
+    }
   }
 }
+/*
+if( timeMachine.getDateTime(currentTime)){
+            platform_debug::TracePrinter::printTrace(currentTime);
+}else{
+            platform_debug::TracePrinter::printTrace("ERROR:currentTime");
+}
+bool ret =  MQTTNetwork::getClient()->publish("test",currentTime);
+if(!ret){
+            platform_debug::TracePrinter::printTrace("publish Fail");
+}
+*/
 //platform_debug::PlatformDebug::pause();
-    //std::this_thread::sleep_for(chrono::seconds(10));
-   //  std::unique_lock<rtos::Mutex> lck(_mtx, std::defer_lock);
-      //  lck.lock();
-            // std::lock_guard<rtos::Mutex> lck(_mtx);
+//std::this_thread::sleep_for(chrono::seconds(10));
+//  std::unique_lock<rtos::Mutex> lck(_mtx, std::defer_lock);
+//  lck.lock();
+// std::lock_guard<rtos::Mutex> lck(_mtx);

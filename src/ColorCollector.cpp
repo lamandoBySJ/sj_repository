@@ -2,14 +2,14 @@
 
 RGBProperties ColorCollector::rgb_properties;
 
-DynamicJsonDocument  doc(1024);
+
 void ColorCollector::run_task_collection()
 {
-
-    std::mutex std_mtx;
-    ColorSensor<BH1749NUC>  colorSensor(Wire1,4,15,std_mtx,2);
+    DynamicJsonDocument  doc(1024);
+    rtos::Mutex std_mtx;
+    ColorSensor<BH1749NUC,rtos::Mutex>  colorSensor(Wire1,4,15,std_mtx,2);
     colorSensor.init();
-    colorSensor.setMeasurementHook(std::bind(&ColorCollector::runCallbackWebSocketClientPostEvent,this,
+    colorSensor.attachMeasurementHook(std::bind(&ColorCollector::runCallbackWebSocketClientPostEvent,this,
         std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
      std::array<RGB,5> arrRGB;
     while(true){
@@ -32,7 +32,7 @@ void ColorCollector::run_task_collection()
             _colorConverter.color(_rgb,data);
           
           
-            doc["box_mac_id"] = ESPWebService::webProperties.ap_ssid;
+            doc["box_mac_id"] = Platform::getWebProperties()->ap_ssid;
             doc["r_reg"] = _rgb.R.u16bit;
             doc["g_reg"] = _rgb.G.u16bit;
             doc["b_reg"] = _rgb.B.u16bit;
@@ -49,6 +49,7 @@ void ColorCollector::run_task_collection()
                     doc["r_offset"] = ColorCollector::rgb_properties.r_offset;
                     doc["g_offset"] = ColorCollector::rgb_properties.g_offset;
                     doc["b_offset"] = ColorCollector::rgb_properties.b_offset;
+                    MQTTNetwork::getNetworkClient()->publish("TowerColorMeasure/"+Platform::getWebProperties()->ap_ssid,doc.as<String>());
                 }
                 break;
                 case  MeasEventType::EventServerMeasure:
@@ -56,9 +57,10 @@ void ColorCollector::run_task_collection()
                     doc["r_offset"] = ColorCollector::rgb_properties.r_offset;
                     doc["g_offset"] = ColorCollector::rgb_properties.g_offset;
                     doc["b_offset"] = ColorCollector::rgb_properties.b_offset;
+                    MQTTNetwork::getNetworkClient()->publish("TowerColor/"+Platform::getWebProperties()->ap_ssid,doc.as<String>());
                 }
                 break;
-                case  MeasEventType::EventSystemOffset:
+                case  MeasEventType::EventWebAppOffset:
                 {   
                     
                     int32_t red_diff = (_rgb.R.u16bit-ColorCollector::rgb_properties.r_offset);
@@ -88,6 +90,7 @@ void ColorCollector::run_task_collection()
                         doc["file_write"]=false;
                     }
                     runCallbackWebSocketClientText(mail->client,doc.as<String>());
+                    runCallbackWebSocketClientPostEvent(100,"done","progress");
                 }
                 break;
                 case  MeasEventType::EventWebAppMeasure:
@@ -104,12 +107,13 @@ void ColorCollector::run_task_collection()
                     doc["ws_evt_type"]="WS_EVT_DATA";
                     doc["msg"]="RgbMeasure";
                     runCallbackWebSocketClientText(mail->client,doc.as<String>());
+                    runCallbackWebSocketClientPostEvent(100,"done","progress");
                 }
                 break;
                 default: break;
             }
              _mail_box_post.free(mail); 
-            runCallbackWebSocketClientPostEvent(100,"done","progress");
+            
         }
     } 
 }

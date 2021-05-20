@@ -1,5 +1,5 @@
-#ifndef TIME_MACHINE_H
-#define TIME_MACHINE_H
+#ifndef __TIME_MACHINE_H
+#define __TIME_MACHINE_H
 
 #include "Arduino.h"
 #include "DS1307.h"
@@ -9,13 +9,13 @@
 #include <mutex>
 using namespace rtos;
 
-template<typename RTC>
+template<typename RTC,typename Mutex>
 class TimeMachine
 {
 public:
     TimeMachine()=delete;
-    TimeMachine(std::mutex& mutex,uint8_t sda,uint8_t scl);
-    TimeMachine(std::mutex& mutex,uint8_t sda,uint8_t scl,uint8_t rst);
+    TimeMachine(Mutex& mutex,uint8_t sda,uint8_t scl);
+    TimeMachine(Mutex& mutex,uint8_t sda,uint8_t scl,uint8_t rst);
     ~TimeMachine()=default;
     void startup(bool pwrEnable=true,const char* date=nullptr,const  char* timee=nullptr);
     time_t getEpoch();
@@ -24,7 +24,7 @@ public:
     void setEpoch(time_t epoch);
 private:
     RTC _rtc;
-    std::mutex& _mtx;  
+    Mutex& _mtx;  
     uint8_t _rst;
     bool selftest();
 };

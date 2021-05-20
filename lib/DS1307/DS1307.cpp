@@ -635,7 +635,7 @@ time_t DS1307::getEpoch()
 	epoch_tm.tm_mday = getDay();
 	epoch_tm.tm_mon = getMonth();
 	epoch_tm.tm_year = getYear();
-	epoch = mktime(&epoch_tm);
+	epoch = mktime(&epoch_tm)+8*60*60;
   datetime = String(epoch_tm.tm_year,DEC) + 
           String("-")+ 
           String(epoch_tm.tm_mon,DEC)+

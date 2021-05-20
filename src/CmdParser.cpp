@@ -13,7 +13,7 @@ void CmdParser::onMessageCallback(const String& topic,const String& payload)
             if (doc.containsKey("unix_timestamp")) {
                 long ts =   doc["unix_timestamp"].as<long>();
                 if (ts > 28800) {
-                    timeMachine.setEpoch((time_t)ts);
+                  //  timeMachine.setEpoch((time_t)ts);
                 }
             }
         }else if(_topics[1]=="ServerReq"){

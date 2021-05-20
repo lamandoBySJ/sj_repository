@@ -1,30 +1,30 @@
 #include "ColorSensor.h"
 
-template<typename T>
-ColorSensor<T>::ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,std::mutex& mutex):_als(wire,sda,scl),_mtx(mutex),_rst(0),_measHook(nullptr)
+template<typename Sensor,typename Mutex>
+ColorSensor<Sensor,Mutex>::ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,Mutex& mutex):_als(wire,sda,scl),_mtx(mutex),_rst(0),_measurementHook()
 {   
     
-    ptrFuns[0]= &T::red_data_get;
-    ptrFuns[1]= &T::green_data_get;
-    ptrFuns[2]= &T::blue_data_get;
-    ptrFuns[3]= &T::ir_data_get;
+    ptrFuns[0]= &Sensor::red_data_get;
+    ptrFuns[1]= &Sensor::green_data_get;
+    ptrFuns[2]= &Sensor::blue_data_get;
+    ptrFuns[3]= &Sensor::ir_data_get;
     _mode_control2.reg=0;
 }
 
-template<typename T>
-ColorSensor<T>::ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,std::mutex& mutex,uint8_t rst):_als(wire,sda,scl),_mtx(mutex),_rst(rst),_measHook(nullptr)
+template<typename Sensor,typename Mutex>
+ColorSensor<Sensor,Mutex>::ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,Mutex& mutex,uint8_t rst):_als(wire,sda,scl),_mtx(mutex),_rst(rst),_measurementHook()
 {
-    ptrFuns[0]= &T::red_data_get;
-    ptrFuns[1]= &T::green_data_get;
-    ptrFuns[2]= &T::blue_data_get;
-    ptrFuns[3]= &T::ir_data_get;
+    ptrFuns[0]= &Sensor::red_data_get;
+    ptrFuns[1]= &Sensor::green_data_get;
+    ptrFuns[2]= &Sensor::blue_data_get;
+    ptrFuns[3]= &Sensor::ir_data_get;
     _mode_control2.reg=0;
 }
 
-template<typename T>
-void ColorSensor<T>::init(bool pwrEnable)
+template<typename Sensor,typename Mutex>
+void ColorSensor<Sensor,Mutex>::init(bool pwrEnable)
  {
-    std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
+    std::unique_lock<Mutex> lck(_mtx, std::defer_lock);
     lck.lock();
     if(pwrEnable){
       pinMode(this->_rst, OUTPUT);
@@ -38,19 +38,19 @@ void ColorSensor<T>::init(bool pwrEnable)
     platform_debug::TracePrinter::printTrace(String(__FILE__)+String(":")+String(__LINE__));
 }
 
-template<typename T>
-void ColorSensor<T>::measurementModeActive()
+template<typename Sensor,typename Mutex>
+void ColorSensor<Sensor,Mutex>::measurementModeActive()
 {
   _als.measurement_active();
 }
-template<typename T>
-void ColorSensor<T>::measurementModeInactive()
+template<typename Sensor,typename Mutex>
+void ColorSensor<Sensor,Mutex>::measurementModeInactive()
 {
   _als.measurement_inactive();
 }
-std::mutex mtx;
-template<typename T>
-bool ColorSensor<T>::getRGB(RGB& rgb)
+Mutex mtx;
+template<typename Sensor,typename Mutex>
+bool ColorSensor<Sensor,Mutex>::getRGB(RGB& rgb)
 {
   int timeout=3000;
   do{
@@ -68,5 +68,6 @@ bool ColorSensor<T>::getRGB(RGB& rgb)
  
 }
 
-template class ColorSensor<BH1749NUC>;
+template class ColorSensor<BH1749NUC,rtos::Mutex>;
+template class ColorSensor<BH1749NUC,std::mutex>;
 
