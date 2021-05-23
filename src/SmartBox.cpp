@@ -23,7 +23,7 @@ void  SmartBox::task_web_service()
 void  SmartBox::startup(){
     
     try{
-      
+
        TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->init();  
 
        MQTTNetwork::getNetworkClient()->addOnMqttConnectCallback(callback(this,&SmartBox::onMqttConnect));
@@ -55,7 +55,7 @@ void SmartBox::start_core_task(){
     osEvent evt=  _mail_box_mqtt.get();
     if (evt.status == osEventMail) {
         mqtt::mail_mqtt_t* mail= (mqtt::mail_mqtt_t*)evt.value.p;
-       /* DeserializationError error = deserializeJson(doc, mail->payload); 
+        DeserializationError error = deserializeJson(doc, mail->payload); 
         if (error){
             _mail_box_mqtt.free(mail);
             continue;
@@ -75,12 +75,12 @@ void SmartBox::start_core_task(){
                               switch( str_map_type[event_type] ){
                                 case RequestType::ALS_MEASURE:
                                 {
-                                  //ColorCollector::getColorCollector()->delegateMethodPostMail(MeasEventType::EventSystemMeasure,nullptr);
+                                  colorCollector->delegateMethodPostMail(MeasEventType::EventSystemMeasure,nullptr);
                                   break;
                                 }
                                 case RequestType::MANUAL_REQUEST:
                                 {
-                                 // ColorCollector::getColorCollector()->delegateMethodPostMail(MeasEventType::EventServerMeasure,nullptr);
+                                 colorCollector->delegateMethodPostMail(MeasEventType::EventServerMeasure,nullptr);
                                   break;
                                 }
                                 case RequestType::OTA_CANCEL:
@@ -116,7 +116,7 @@ void SmartBox::start_core_task(){
                                 default:break;
                               }                  
               }
-        }*/
+        }
         _mail_box_mqtt.free(mail);  
     }
   }
