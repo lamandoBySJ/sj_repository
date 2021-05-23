@@ -43,8 +43,8 @@ using namespace platform_debug;
 //python3 esptool.py --port COM20 --baud 115200 write_flash -fm dio -fs 16MB  0x410000 partitions.bin
 //C:\Users\Administrator\.platformio\packages\framework-arduinoespressif32\tools\partitions
 //DS1307 ds1307(Wire1,32,33); //ips
-rtos::Mutex stdMutex;
-std::mutex std_mutex;
+alignas(128) rtos::Mutex stdMutex;
+alignas(128) std::mutex std_mutex;
 
 os::ThreadControlGuard threadControlGuard;
 
