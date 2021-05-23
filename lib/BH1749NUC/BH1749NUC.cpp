@@ -13,12 +13,12 @@ uint8_t BH1749NUC::getManufacturerId()
       _wire.beginTransmission(_device_address);
       _wire.write(MANUFACTURER_ID_REG_ADDRESS);
       _wire.endTransmission();
-      uint8_t  data = _wire.requestFrom((int)_device_address,1,1);
+     uint8_t  data = _wire.requestFrom((int)_device_address,1,1);
       if(_wire.available()){
         data = _wire.read();
        // _wire.flush();
       }
-      return data; 
+      return data;
 }
 bool BH1749NUC::begin()
 {
@@ -26,14 +26,13 @@ bool BH1749NUC::begin()
     _wire.begin(this->_sda, this->_scl,100000);
     _wire.beginTransmission(0x68);
     _wire.endTransmission() ;
-
+    /*
     byte whoamI= getManufacturerId();
-
+    
     if(whoamI == _facturerId){
         success=true;
         init(GainIR::X1, GainRGB::X1, MeasMode::Forbidden);
-    }
-
+    }*/
     return success;
 }
 bool BH1749NUC::init(GainIR gain_ir,GainRGB gain_rgb,MeasMode meas_mode)

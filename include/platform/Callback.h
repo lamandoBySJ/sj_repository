@@ -16,7 +16,6 @@
  */
 #ifndef MBED_CALLBACK_H
 #define MBED_CALLBACK_H
-
 #include <cstring>
 #include <cxxsupport/mstd_cstddef.h>
 #include <stdint.h>
@@ -25,17 +24,11 @@
 #include "platform/mbed_toolchain.h"
 #include <cxxsupport/mstd_type_traits.h>
 #include <cxxsupport/mstd_functional.h>
-#include <arduino.h>
-#include <HardwareSerial.h>
 // Controlling switches from config:
 // MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL - support storing non-trivial function objects
 // MBED_CONF_PLATFORM_CALLBACK_COMPARABLE - support memcmp comparing stored objects (requires zero padding)
 
-#ifdef __ICCARM__
-/* Force platform.callback-nontrivial for IAR */
-#undef MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL
-#define MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL 1
-#endif
+//#define MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL 1
 
 
 namespace mbed {
@@ -225,15 +218,17 @@ struct [[gnu::may_alias]] CallbackBase {
 #endif
     }
 
+  #if MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL
+    auto call_fn() const -> decltype(_ops->call) 
+    {
+        return _ops->call;
+    }
+#else
     auto call_fn() const -> decltype(_call) 
     {
-#if MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL
-        return _ops->call;
-#else
         return _call;
-#endif
     }
-
+#endif
     // Clear to empty - does not destroy
     void clear() noexcept
     {
@@ -274,19 +269,19 @@ struct [[gnu::may_alias]] CallbackBase {
 
 #if MBED_CONF_PLATFORM_CALLBACK_NONTRIVIAL
     // Copy construct F into storage
-    template <typename F>
+    template <typename Fun>
     static void target_copy(Store &d, const Store &p)
     {
-        const F &f = reinterpret_cast<const F &>(p);
-        new (&d) F(f);
+        const Fun &f = reinterpret_cast<const Fun &>(p);
+        new (&d) (Fun)(f);
     }
 
     // Destroy F in storage
-    template <typename F>
+    template <typename Fun>
     static void target_dtor(Store &p)
     {
-        F &f = reinterpret_cast<F &>(p);
-        f.~F();
+        Fun &f = reinterpret_cast<Fun &>(p);
+        f.~Fun();
     }
 
     // Trivial copy construction into storage
@@ -506,16 +501,14 @@ public:
     {
         MBED_ASSERT(bool(*this));
         auto op_call = reinterpret_cast<call_type *>(call_fn());
-        //return op_call(this, args...);
-        return op_call(this, std::forward<ArgTs>(args)...);
+        return op_call(this, args...);
     }
 
     /** Call the attached function
      */
     R operator()(ArgTs... args) const
     {
-       // return call(args...);
-       return call(std::forward<ArgTs>(args)...);
+        return call(args...);
     }
 
     /** Test if function has been assigned

@@ -8,23 +8,36 @@
 #include "platform_debug.h"
 #include <mutex>
 using namespace rtos;
-
-template<typename RTC,typename Mutex>
+extern rtos::Mutex stdMutex;
+extern std::mutex std_mutex;
+template<typename RTC,typename OSMutex>
 class TimeMachine
 {
 public:
     TimeMachine()=delete;
-    TimeMachine(Mutex& mutex,uint8_t sda,uint8_t scl);
-    TimeMachine(Mutex& mutex,uint8_t sda,uint8_t scl,uint8_t rst);
+    TimeMachine(TwoWire& wire,uint8_t sda,uint8_t scl,OSMutex &mutex);
+    TimeMachine(TwoWire& wire,uint8_t sda,uint8_t scl,uint8_t rst,OSMutex &mutex);
     ~TimeMachine()=default;
-    void startup(bool pwrEnable=true,const char* date=nullptr,const  char* timee=nullptr);
+    void init(bool pwrEnable=true,const char* date=nullptr,const  char* time=nullptr);
     time_t getEpoch();
     bool getDateTime(String&);
     void setDateTime(const char* date,const  char* time);
     void setEpoch(time_t epoch);
+
+    
+    template<class U = OSMutex, typename std::enable_if_t<std::is_same<U,rtos::Mutex>::value,int> = 0>
+    static TimeMachine<RTC,OSMutex>* getTimeMachine(){
+        static TimeMachine<RTC,rtos::Mutex>* rtc = new  TimeMachine<RTC,rtos::Mutex>(Wire,21,22,13,stdMutex);
+        return rtc;
+    }
+    template<class U = OSMutex, typename std::enable_if_t<std::is_same<U,std::mutex>::value,int> = 0>
+    static TimeMachine<RTC,OSMutex>* getTimeMachine(){
+        static TimeMachine<RTC,std::mutex>* rtc = new TimeMachine<RTC,std::mutex>(Wire,21,22,13,std_mutex);
+        return rtc;
+    }
 private:
     RTC _rtc;
-    Mutex& _mtx;  
+    OSMutex &_mtx;  
     uint8_t _rst;
     bool selftest();
 };

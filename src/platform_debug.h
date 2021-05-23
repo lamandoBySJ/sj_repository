@@ -13,7 +13,7 @@
 #include <map>
 struct osThread
 {
-   static String& get_error_cause(osStatus_t osStatus,const char* threadName,const char* thisThreadName=nullptr){
+   static String& get_error_reason(osStatus_t osStatus,const char* threadName,const char* thisThreadName=nullptr){
         static String e;
         static std::map<osStatus_t,String> _map;
         if(_map.size()==0){
@@ -32,13 +32,13 @@ struct osThread
 
 namespace os
 {   
-    struct mail_control_t{
+struct mail_control_t{
         uint32_t counter=0; 
         uint32_t id=0;   
-    };
-    class ThreadControlGuard
-    {
-    public:
+};
+class ThreadControlGuard
+{
+public:
         ThreadControlGuard(){
             
         }
@@ -49,14 +49,15 @@ namespace os
         void run_controller(){
 
         }
-        void set_signal_id(uint32_t id,bool fromISR=false){
+
+        osStatus set_signal_id(uint32_t id,bool fromISR=false){
             //std::lock_guard<rtos::Mutex> lck(_mtx);
             mail_control_t* mail =(mail_control_t*)_mail_box_control.alloc();
             mail->id =id;
             if(fromISR){
-                _mail_box_control.put_from_isr(mail);
+               return  _mail_box_control.put_from_isr(mail);
             }else{
-                _mail_box_control.put(mail);
+                return _mail_box_control.put(mail);
             }
         }
         
@@ -64,17 +65,20 @@ namespace os
             osEvent evt;
             do{
                 evt =  _mail_box_control.get();
-                if(evt.status = osEventMail){
+                if(evt.status == osEventMail){
                     mail_control_t* mail = (mail_control_t*)evt.value.p;
                     return mail->id;
+                }else{
+                    ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(100));  
                 }
             }while(evt.status != osEventMail);
+            return -1;
         }
-    private:
+private:
         rtos::Mail<mail_control_t, 16> _mail_box_control;
         rtos::Mutex _mtx;
-    };
-    struct thread_error:public std::exception
+};
+struct thread_error:public std::exception
     {
         thread_error(osStatus_t osStatus,const char* threadName=nullptr)
         {
@@ -85,17 +89,38 @@ namespace os
         const char* threadName;
         osStatus_t osStatus;
         const char* what() const throw(){
-            return osThread::get_error_cause(osStatus,threadName,ThisThread::get_name()).c_str() ;
+            return osThread::get_error_reason(osStatus,threadName,ThisThread::get_name()).c_str() ;
         }
-    };
+};
 }
 
+enum class MeasEventType : char{
+    EventSystemMeasure = 0,
+    EventServerMeasure,
+    EventWebAppOffset,
+    EventWebAppMeasure
+};
+
+struct RGB
+{
+    RGB(){
+        R.u16bit = 0;
+        G.u16bit = 0;
+        B.u16bit = 0;
+        IR.u16bit = 0;
+    }
+    reg_uint16_t R;
+    reg_uint16_t G;
+    reg_uint16_t B;
+    reg_uint16_t IR;
+    uint32_t h;
+    uint32_t s;
+    uint32_t l;
+};
 
 //#define NDEBUG 
 namespace platform_debug
 {
-
-
 struct DeviceInfo
 {   
     DeviceInfo(){
@@ -131,7 +156,7 @@ struct  UserProperties{
 struct WebProperties
     {   
         WebProperties(){
-            ap_ssid="Mitac IOT_GPS";
+            ap_ssid="STLB";
             ap_pass="Aa000000";
             http_user="admin";
             http_pass="admin";
@@ -152,25 +177,53 @@ struct WebProperties
             return *this;
         }
     };
+    struct RGBProperties
+    {   
+        RGBProperties(){
+            path ="/als_constant";
+            r_offset = 0;
+            g_offset = 0;
+            b_offset = 0;
+        }
+        String path;
+        uint16_t r_offset;
+        uint16_t g_offset;
+        uint16_t b_offset;
+
+        RGBProperties& operator=(const RGBProperties& properties){
+           this->path =  properties.path;
+           this->r_offset = properties.r_offset;
+           this->g_offset = properties.g_offset;
+           this->b_offset = properties.b_offset;
+           return *this;
+        }
+    };
+
 class Platform
 {
 public:
 
     Platform()=delete;
     ~Platform()=delete;
-    static DeviceInfo* getDeviceInfo(){
+    static DeviceInfo& getDeviceInfo(){
         static DeviceInfo deviceInfo;
-        return &deviceInfo;
+        return deviceInfo;
     }
-    static WebProperties* getWebProperties()
+    static WebProperties& getWebProperties()
     {
         static WebProperties webProperties;
-        return &webProperties;
+        return webProperties;
     }
-    static UserProperties* getUserProperties()
+    static UserProperties& getUserProperties()
     {
         static  UserProperties  userProperties;
-        return &userProperties;
+        return userProperties;
+    }
+
+    static RGBProperties& getRGBProperties()
+    {
+        static  RGBProperties  RGBproperties;
+        return RGBproperties;
     }
 
    
@@ -460,7 +513,7 @@ private:
 
     #if !defined(NDEBUG)
     rtos::Thread _thread;
-    rtos::Mail<mail_trace_t, 16>  _mail_box;
+    rtos::Mail<mail_trace_t, 8>  _mail_box;
     rtos::Mutex _mtx;
     #endif
 };

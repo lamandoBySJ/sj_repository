@@ -106,6 +106,7 @@ osStatus Thread::start(mbed::Callback<void()> task)
         _join_sem.release();
         return osErrorResource;
     }
+    _obj_mem.state = Running;
    _mutex.unlock();
     return osOK;
 }

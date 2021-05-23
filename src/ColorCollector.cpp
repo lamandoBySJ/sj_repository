@@ -1,24 +1,40 @@
 #include "ColorCollector.h"
 
-RGBProperties ColorCollector::rgb_properties;
-
+void ColorCollector::delegateMethodPostMail(MeasEventType measEventType,AsyncWebSocketClient *client)
+{   
+    mail_ws_t *mail = _mail_box_collection.alloc();
+    if(mail){
+        mail->client = client;
+        mail->eventType = measEventType;
+        _mail_box_collection.put(mail);
+    }
+}
+void  ColorCollector::startup()
+{   
+    osStatus  status = _thread.start(callback(this,&ColorCollector::run_task_collection));
+    (status!=osOK ? throw os::thread_error((osStatus_t)status,_thread.get_name()):NULL);
+}
 
 void ColorCollector::run_task_collection()
 {
+     RGB _rgb;
+    ColorSensor<BH1749NUC,rtos::Mutex>::getColorSensor()->init();
+    ColorSensor<BH1749NUC,rtos::Mutex>::getColorSensor()->attachMeasurementHook(std::bind(&ColorCollector::runCallbackWebSocketClientPostEvent,this,
+      std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
+
+
+   std::array<RGB,5> arrRGB;
+
     DynamicJsonDocument  doc(1024);
-    rtos::Mutex std_mtx;
-    ColorSensor<BH1749NUC,rtos::Mutex>  colorSensor(Wire1,4,15,std_mtx,2);
-    colorSensor.init();
-    colorSensor.attachMeasurementHook(std::bind(&ColorCollector::runCallbackWebSocketClientPostEvent,this,
-        std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
-     std::array<RGB,5> arrRGB;
+     platform_debug::TracePrinter::printTrace("----------------- ColorCollector -----------------");
     while(true){
-        osEvent evt= _mail_box_post.get();
+        // ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(30));
+        osEvent evt =  _mail_box_collection.get();
+         platform_debug::TracePrinter::printTrace("----------------- evt.status == osEventMail -----------------");
         if (evt.status == osEventMail) {
-            collector::mail_t *mail = (collector::mail_t *)evt.value.p;
-
-            colorSensor.loopMeasure(_rgb,Kernel::Clock::duration_milliseconds(200),arrRGB);
-
+            mail_ws_t *mail = (mail_ws_t *)evt.value.p;
+        
+            ColorSensor<BH1749NUC,rtos::Mutex>::getColorSensor()->loopMeasure(_rgb,Kernel::Clock::duration_milliseconds(200),arrRGB);
             _rgb.R.u16bit =  arrRGB[4].R.u16bit;
             _rgb.G.u16bit =  arrRGB[4].G.u16bit;
             _rgb.B.u16bit =  arrRGB[4].B.u16bit;
@@ -29,10 +45,9 @@ void ColorCollector::run_task_collection()
            
             doc.clear();
             JsonArray data = doc.createNestedArray("TowerColor");
-            _colorConverter.color(_rgb,data);
+            ColorConverter::getColorConverter().color(_rgb,data);
           
-          
-            doc["box_mac_id"] = Platform::getWebProperties()->ap_ssid;
+            doc["box_mac_id"] = Platform::getWebProperties().ap_ssid;
             doc["r_reg"] = _rgb.R.u16bit;
             doc["g_reg"] = _rgb.G.u16bit;
             doc["b_reg"] = _rgb.B.u16bit;
@@ -46,45 +61,45 @@ void ColorCollector::run_task_collection()
             {
                 case  MeasEventType::EventSystemMeasure:
                 {
-                    doc["r_offset"] = ColorCollector::rgb_properties.r_offset;
-                    doc["g_offset"] = ColorCollector::rgb_properties.g_offset;
-                    doc["b_offset"] = ColorCollector::rgb_properties.b_offset;
-                    MQTTNetwork::getNetworkClient()->publish("TowerColorMeasure/"+Platform::getWebProperties()->ap_ssid,doc.as<String>());
+                    doc["r_offset"] = Platform::getRGBProperties().r_offset;
+                    doc["g_offset"] = Platform::getRGBProperties().g_offset;
+                    doc["b_offset"] = Platform::getRGBProperties().b_offset;
+                    MQTTNetwork::getNetworkClient()->publish("TowerColorMeasure/"+Platform::getWebProperties().ap_ssid,doc.as<String>());
                 }
                 break;
                 case  MeasEventType::EventServerMeasure:
                 {
-                    doc["r_offset"] = ColorCollector::rgb_properties.r_offset;
-                    doc["g_offset"] = ColorCollector::rgb_properties.g_offset;
-                    doc["b_offset"] = ColorCollector::rgb_properties.b_offset;
-                    MQTTNetwork::getNetworkClient()->publish("TowerColor/"+Platform::getWebProperties()->ap_ssid,doc.as<String>());
+                    doc["r_offset"] = Platform::getRGBProperties().r_offset;
+                    doc["g_offset"] = Platform::getRGBProperties().g_offset;
+                    doc["b_offset"] = Platform::getRGBProperties().b_offset;
+                    MQTTNetwork::getNetworkClient()->publish("TowerColor/"+Platform::getWebProperties().ap_ssid,doc.as<String>());
                 }
                 break;
                 case  MeasEventType::EventWebAppOffset:
                 {   
                     
-                    int32_t red_diff = (_rgb.R.u16bit-ColorCollector::rgb_properties.r_offset);
-                    int32_t green_diff = (_rgb.G.u16bit-ColorCollector::rgb_properties.g_offset);
-                    int32_t blue_diff = (_rgb.B.u16bit-ColorCollector::rgb_properties.b_offset);
+                    int32_t red_diff = (_rgb.R.u16bit-Platform::getRGBProperties().r_offset);
+                    int32_t green_diff = (_rgb.G.u16bit-Platform::getRGBProperties().g_offset);
+                    int32_t blue_diff = (_rgb.B.u16bit-Platform::getRGBProperties().b_offset);
                     doc["r_diff"] =  abs(red_diff);
                     doc["g_diff"] =  abs(green_diff);
                     doc["b_diff"] =  abs(blue_diff);
 
-                    ColorCollector::rgb_properties.r_offset = _rgb.R.u16bit;
-                    ColorCollector::rgb_properties.g_offset = _rgb.G.u16bit;
-                    ColorCollector::rgb_properties.b_offset = _rgb.B.u16bit;
+                    Platform::getRGBProperties().r_offset = _rgb.R.u16bit;
+                    Platform::getRGBProperties().g_offset = _rgb.G.u16bit;
+                    Platform::getRGBProperties().b_offset = _rgb.B.u16bit;
 
-                    doc["r_offset"] = ColorCollector::rgb_properties.r_offset;
-                    doc["g_offset"] = ColorCollector::rgb_properties.g_offset;
-                    doc["b_offset"] = ColorCollector::rgb_properties.b_offset;
+                    doc["r_offset"] = Platform::getRGBProperties().r_offset;
+                    doc["g_offset"] = Platform::getRGBProperties().g_offset;
+                    doc["b_offset"] = Platform::getRGBProperties().b_offset;
                     doc["ws_evt_type"]="WS_EVT_DATA";
                     doc["msg"]="RgbOffset";
                      
-                    String text=String("{\"r_offset\":")+String(ColorCollector::rgb_properties.r_offset,DEC)
-                                 +String(",\"g_offset\":")+String(ColorCollector::rgb_properties.g_offset,DEC)
-                                 +String(",\"b_offset\":")+String(ColorCollector::rgb_properties.b_offset,DEC)+String("}");
+                    String text=String("{\"r_offset\":")+String(Platform::getRGBProperties().r_offset,DEC)
+                                 +String(",\"g_offset\":")+String(Platform::getRGBProperties().g_offset,DEC)
+                                 +String(",\"b_offset\":")+String(Platform::getRGBProperties().b_offset,DEC)+String("}");
                       
-                    if(FFatHelper::writeFile(FFat,ColorCollector::rgb_properties.path.c_str(),text)){
+                    if(FFatHelper::writeFile(FFat,Platform::getRGBProperties().path.c_str(),text)){
                         doc["file_write"]=true;
                     }else{
                         doc["file_write"]=false;
@@ -95,15 +110,15 @@ void ColorCollector::run_task_collection()
                 break;
                 case  MeasEventType::EventWebAppMeasure:
                 {
-                    int32_t red_diff = (_rgb.R.u16bit-ColorCollector::rgb_properties.r_offset);
-                    int32_t green_diff = (_rgb.G.u16bit-ColorCollector::rgb_properties.g_offset);
-                    int32_t blue_diff = (_rgb.B.u16bit-ColorCollector::rgb_properties.b_offset);
+                    int32_t red_diff = (_rgb.R.u16bit-Platform::getRGBProperties().r_offset);
+                    int32_t green_diff = (_rgb.G.u16bit-Platform::getRGBProperties().g_offset);
+                    int32_t blue_diff = (_rgb.B.u16bit-Platform::getRGBProperties().b_offset);
                     doc["r_diff"] =  abs(red_diff);
                     doc["g_diff"] =  abs(green_diff);
                     doc["b_diff"] =  abs(blue_diff);
-                    doc["r_offset"] = ColorCollector::rgb_properties.r_offset;
-                    doc["g_offset"] = ColorCollector::rgb_properties.g_offset;
-                    doc["b_offset"] = ColorCollector::rgb_properties.b_offset;
+                    doc["r_offset"] = Platform::getRGBProperties().r_offset;
+                    doc["g_offset"] = Platform::getRGBProperties().g_offset;
+                    doc["b_offset"] = Platform::getRGBProperties().b_offset;
                     doc["ws_evt_type"]="WS_EVT_DATA";
                     doc["msg"]="RgbMeasure";
                     runCallbackWebSocketClientText(mail->client,doc.as<String>());
@@ -112,10 +127,23 @@ void ColorCollector::run_task_collection()
                 break;
                 default: break;
             }
-             _mail_box_post.free(mail); 
-            
+            _mail_box_collection.free(mail); 
         }
+
     } 
 }
 
+void ColorCollector::runCallbackWebSocketClientPostEvent(int progress,const String& status , const String& event){
+         std::lock_guard<rtos::Mutex> lck(_mtx);
+         if(this->_cbWebSocketClientEvent!=nullptr){
+            this->_cbWebSocketClientEvent("{\"status\":\""+status+"\",\"progress\":"+String(progress,DEC)+"}",event,0,0);
+         }
+}
+
+void ColorCollector::runCallbackWebSocketClientText(AsyncWebSocketClient *client,const String& text){
+         std::lock_guard<rtos::Mutex> lck(_mtx);
+         if(this->_cbWebSocketClientText!=nullptr){
+           this->_cbWebSocketClientText(client,text); 
+         }
+}
 

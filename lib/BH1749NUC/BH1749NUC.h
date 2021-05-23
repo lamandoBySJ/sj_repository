@@ -43,43 +43,11 @@ public:
     }
     ~BH1749NUC();
     
-     BH1749NUC(const BH1749NUC& other):BH1749NUC(other._wire,other._sda,other._scl,100000)
-    {
-      if (this != &other) {
+    BH1749NUC(const BH1749NUC& other)=delete;
 
-            this->~BH1749NUC();
-            this->_data[0] = other._data[0];
-            this->_data[1] = other._data[1];
-            //this->_wire = other._wire;
-            this->_facturerId = other._facturerId;
-            //this->_sda = other._sda;
-           // this->_scl = other._scl;
-            this->_frequency = other._frequency;
-            this->_device_address = other._device_address;
-            this->_reg_value = other._reg_value;
-      }
-      
-    }
-
-    BH1749NUC(BH1749NUC&& other)=default;
-    BH1749NUC& operator = (const BH1749NUC& other)
-    {
-        if (this != &other) {
-
-            this->~BH1749NUC();
-            this->_data[0] = other._data[0];
-            this->_data[1] = other._data[1];
-            this->_wire = other._wire;
-            this->_facturerId = other._facturerId;
-            this->_sda = other._sda;
-            this->_scl = other._scl;
-            this->_frequency = other._frequency;
-            this->_device_address = other._device_address;
-            this->_reg_value = other._reg_value;
-
-        }
-        return *this;
-    }
+    BH1749NUC(BH1749NUC&& other)=delete;
+    BH1749NUC& operator = (const BH1749NUC& other)=delete;
+    
     bool begin();
     void sendCommand(uint8_t reg_address,uint8_t* data,int len);
     uint8_t getManufacturerId();

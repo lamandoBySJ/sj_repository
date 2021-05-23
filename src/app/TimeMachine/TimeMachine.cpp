@@ -1,21 +1,20 @@
 #include "TimeMachine.h"
 
-template<typename RTC,typename Mutex>
-TimeMachine<RTC,Mutex>::TimeMachine(Mutex& mutex,uint8_t sda,uint8_t scl):_rtc(Wire,sda,scl),_mtx(mutex),_rst(0)
+template<typename RTC,typename OSMutex>
+TimeMachine<RTC,OSMutex>::TimeMachine(TwoWire& wire,uint8_t sda,uint8_t scl,OSMutex &mutex):_rtc(wire,sda,scl),_mtx(mutex),_rst(0)
 {
     
 }
-template<typename RTC,typename Mutex>
-TimeMachine<RTC,Mutex>::TimeMachine(Mutex& mutex,uint8_t sda,uint8_t scl,uint8_t rst):_rtc(Wire,sda,scl),_mtx(mutex),_rst(rst)
+template<typename RTC,typename OSMutex>
+TimeMachine<RTC,OSMutex>::TimeMachine(TwoWire& wire,uint8_t sda,uint8_t scl,uint8_t rst,OSMutex &mutex):_rtc(wire,sda,scl),_mtx(mutex),_rst(rst)
 {
     
 }
 
-template<typename RTC,typename Mutex>
-void TimeMachine<RTC,Mutex>::startup(bool pwrEnable,const char* date,const  char* time)
+template<typename RTC,typename OSMutex>
+void TimeMachine<RTC,OSMutex>::init(bool pwrEnable,const char* date,const  char* time)
  {
-    std::unique_lock<Mutex> lck(_mtx, std::defer_lock);
-    lck.lock(); 
+    std::lock_guard<OSMutex> lck(_mtx);
     if(pwrEnable){
       pinMode(_rst,OUTPUT);
       digitalWrite(_rst,HIGH);
@@ -39,27 +38,24 @@ void TimeMachine<RTC,Mutex>::startup(bool pwrEnable,const char* date,const  char
     }else{
         digitalWrite(19,LOW);
     }
-    
  }
- template<typename RTC,typename Mutex>
- void TimeMachine<RTC,Mutex>::setDateTime(const char* date,const  char* time)
+ template<typename RTC,typename OSMutex>
+ void TimeMachine<RTC,OSMutex>::setDateTime(const char* date,const  char* time)
  {
-      std::unique_lock<Mutex> lck(_mtx, std::defer_lock);
+      std::unique_lock<OSMutex> lck(_mtx, std::defer_lock);
       lck.lock();
       _rtc.setDateTime(date,time);
  }
 
-template<typename RTC,typename Mutex>
-bool TimeMachine<RTC,Mutex>::selftest()
+template<typename RTC,typename OSMutex>
+bool TimeMachine<RTC,OSMutex>::selftest()
 {
     int timeout= 3;
     time_t val = 0;
     do
     {
         ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-   
         val = _rtc.getEpoch();
-      
         if(val !=0 ){
             return true;
         }
@@ -68,30 +64,27 @@ bool TimeMachine<RTC,Mutex>::selftest()
     return false;
 }
 
-template<typename RTC,typename Mutex>
-time_t TimeMachine<RTC,Mutex>::getEpoch()
+template<typename RTC,typename OSMutex>
+time_t TimeMachine<RTC,OSMutex>::getEpoch()
 {
-    std::unique_lock<Mutex> lck(_mtx, std::defer_lock);
-    lck.lock();
- 
+    std::lock_guard<OSMutex> lck(_mtx);
     if(_rtc.isRunning()){
        return _rtc.getEpoch();
     }
     return 0;
 }
-template<typename RTC,typename Mutex>
-void TimeMachine<RTC,Mutex>::setEpoch(time_t epoch)
+template<typename RTC,typename OSMutex>
+void TimeMachine<RTC,OSMutex>::setEpoch(time_t epoch)
 {
-    std::unique_lock<Mutex> lck(_mtx, std::defer_lock);
-    lck.lock();
+    std::lock_guard<OSMutex> lck(_mtx);
     _rtc.setEpoch(epoch);
 }
 
-template<typename RTC,typename Mutex>
-bool TimeMachine<RTC,Mutex>::getDateTime(String& datetime)
+template<typename RTC,typename OSMutex>
+bool TimeMachine<RTC,OSMutex>::getDateTime(String& datetime)
 {
-    std::unique_lock<Mutex> lck(_mtx, std::defer_lock);
-    lck.lock();
+
+    std::lock_guard<OSMutex> lck(_mtx);
     if(_rtc.isRunning()){
         datetime =  _rtc.getDateTime(true);
         return true;

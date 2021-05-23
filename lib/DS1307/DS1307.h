@@ -49,11 +49,9 @@ class DS1307 //: public RTCBase
 {
     public:
         DS1307() = delete;
-        DS1307(TwoWire& wire,uint8_t  sda,uint8_t scl,uint32_t frequency=100000):_wire(wire)
+        DS1307(TwoWire& wire,uint8_t  sda,uint8_t scl,uint32_t frequency=100000):_wire(wire),_sda(sda),_scl(scl),_frequency(frequency)
         {
-            this->_sda=sda;
-            this->_scl=scl;
-            this->_frequency =frequency;
+            
         }
     
         ~DS1307(){

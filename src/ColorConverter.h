@@ -4,18 +4,13 @@
 #include "ArduinoJson.h"
 #include "platform_debug.h"
 #include "ColorCollector.h"
-enum class MeasEventType : char{
-    EventSystemMeasure = 0,
-    EventServerMeasure,
-    EventWebAppOffset,
-    EventWebAppMeasure
-};
+using namespace platform_debug;
 
 class ColorConverter
 {
 public:
        
-    ColorConverter()=default;
+   
    void RGBToHSL(RGB& rgb_hsl){
         double _delta=0;
         double _cmax=0;
@@ -125,8 +120,12 @@ public:
 
         return data.size()!=0;
     }
+    static ColorConverter& getColorConverter(){
+        static ColorConverter colorConverter;
+        return colorConverter;
+    }
 private:
-   
+    ColorConverter()=default;
 };
 
 #endif

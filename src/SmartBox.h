@@ -85,6 +85,7 @@ public:
          vfileDownloaded.push_back(file);
       }
       _httpClient.end();
+      return success;
     }
 private:
     uint8_t buff[1024] = { 0 };
@@ -95,13 +96,11 @@ private:
     String _path;
 };
 
+
 class SmartBox
 {
 public:
-  SmartBox():_thread(osPriorityNormal,1024*6),_mtx(),
-    _timeMachine(_mtx,21,22,13),
-    _colorCollector(),
-    _webService()
+  SmartBox():colorCollector(nullptr),espWebService(nullptr)
   {
       str_map_type[String("als_measure")]   = RequestType::ALS_MEASURE;
       str_map_type[String("ota_cancel")]    = RequestType::OTA_CANCEL;
@@ -109,20 +108,19 @@ public:
       str_map_type[String("file_delete")]   = RequestType::FILE_DELETE;
       str_map_type[String("esp_restart")]   = RequestType::ESP_RESTART;
       str_map_type[String("manual_request")]= RequestType::MANUAL_REQUEST;
+      _topics.insert("SmartBox/TimeSync");
+      _topics.insert(Platform::getDeviceInfo().BoardID+"/ServerTime");
+      _topics.insert(Platform::getDeviceInfo().BoardID+"/ServerReq");
   }
 
   ~SmartBox()=default;
 
   void startup();
-
-  void run_core_task();
-
-  void start_web_task(){
-      _webService.setCallbackPostMailToCollector(callback(&_colorCollector,&ColorCollector::delegateMethodPostMail));
-      _colorCollector.setCallbackWebSocketClientEvent(callback(&_webService,&ESPWebService::delegateMethodWebSocketClientEvent));
-      _colorCollector.setCallbackWebSocketClientText(callback(&_webService,&ESPWebService::delegateMethodWebSocketClientText));
-      _webService.startup();
-  }
+  void task_mqtt_service();
+  void task_collection_service();
+  void task_web_service();
+  void start_core_task();
+  
   void start_http_update(const String& url);
   void start_https_update(const String& url);
   void onMqttConnect(bool sessionPresent);
@@ -130,17 +128,18 @@ public:
 
 private:
 
-  rtos::Thread _thread;
+  ColorCollector* colorCollector;
+  ESPWebService* espWebService;
   rtos::Mutex _mtx;
-  TimeMachine<DS1307,rtos::Mutex> _timeMachine;
-  
-  ColorCollector  _colorCollector;
-  ESPWebService  _webService;
+  rtos::Thread _threadCore;
+  rtos::Thread _threadCollection;
+  rtos::Thread _threadWeb;
+ 
   HTTPDownload _httpDownload;
   vector<String> _splitTopics;
   std::map<String,RequestType> str_map_type;
   rtos::Mail<mqtt::mail_mqtt_t, 16>  _mail_box_mqtt;
-
+  std::set<String>  _topics;
 };
 
 #endif

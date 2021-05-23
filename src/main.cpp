@@ -1,6 +1,5 @@
 #include <heltec.h>
 #include <app/TimeMachine/TimeMachine.h>
-#include <app/ColorSensor/ColorSensor.h>
 #include <ColorSensorBase.h>
 #include <SPI.h>
 #include <MFRC522.h>
@@ -22,10 +21,6 @@ extern "C" {
 #include <app/AsyncMqttClient/AsyncMqttClient.h>
 
 #include "MQTTNetwork.h"
-#include "LoRaNetwork.h"
-#include "LoRaGateway.h"
-#include "LoRaCollector.h"
-#include "LoRaBeacon.h"
 #include "esp_sleep.h"
 #include <cxxsupport/mstd_new.h>
 #include <new>
@@ -48,7 +43,12 @@ using namespace platform_debug;
 //python3 esptool.py --port COM20 --baud 115200 write_flash -fm dio -fs 16MB  0x410000 partitions.bin
 //C:\Users\Administrator\.platformio\packages\framework-arduinoespressif32\tools\partitions
 //DS1307 ds1307(Wire1,32,33); //ips
+rtos::Mutex stdMutex;
+std::mutex std_mutex;
 
+os::ThreadControlGuard threadControlGuard;
+
+SmartBox*  smartBox=new SmartBox();
 //#define OLEDSCREEN 
 void setup() {
  // put your setup code here, to run once:
@@ -109,12 +109,12 @@ void setup() {
   
   String mac_address=WiFi.macAddress();
   mac_address.replace(":","");
-  Platform::getWebProperties()->ap_ssid = WiFi.macAddress();
+  Platform::getWebProperties().ap_ssid = WiFi.macAddress();
   platform_debug::PlatformDebug::println("DeviceInfo::BoardID:"+mac_address);
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-  Platform::getDeviceInfo()->BoardID = mac_address;
-  Platform::getDeviceInfo()->Family = "k49a";
-  platform_debug::PlatformDebug::println(Platform::getDeviceInfo()->BoardID);
+  Platform::getDeviceInfo().BoardID = mac_address;
+  Platform::getDeviceInfo().Family = "k49a";
+  platform_debug::PlatformDebug::println(Platform::getDeviceInfo().BoardID);
 
 
   if(FFatHelper::init()){
@@ -135,64 +135,60 @@ void setup() {
   }
   
 
-  platform_debug::PlatformDebug::println("user_properties::path:"+Platform::getUserProperties()->path);
-  platform_debug::PlatformDebug::println("user_properties::ssid:"+Platform::getUserProperties()->ssid);
-  platform_debug::PlatformDebug::println("user_properties::pass:"+Platform::getUserProperties()->pass);
-  platform_debug::PlatformDebug::println("user_properties::host:"+Platform::getUserProperties()->host);
-  platform_debug::PlatformDebug::println(String(Platform::getUserProperties()->port,DEC));
-
- 
   DynamicJsonDocument  docProperties(1024);
   String text;
- if(FFatHelper::readFile(FFat,Platform::getUserProperties()->path,text)){
+ if(FFatHelper::readFile(FFat,Platform::getUserProperties().path,text)){
       platform_debug::PlatformDebug::println(text); 
       DeserializationError error = deserializeJson(docProperties, text);
       if(!error){
-          Platform::getUserProperties()->ssid =  docProperties["ssid"].as<String>();
-          Platform::getUserProperties()->pass =  docProperties["pass"].as<String>();
-          Platform::getUserProperties()->host =  docProperties["host"].as<String>();
-          Platform::getUserProperties()->port =  docProperties["port"].as<int>();
-          
-          platform_debug::PlatformDebug::println("user_properties::ssid:"+Platform::getUserProperties()->ssid);
-          platform_debug::PlatformDebug::println("user_properties::pass:"+Platform::getUserProperties()->pass);
-          platform_debug::PlatformDebug::println("user_properties::host:"+Platform::getUserProperties()->host);
-          platform_debug::PlatformDebug::println("user_properties::port:"+String(Platform::getUserProperties()->port,DEC));
+          Platform::getUserProperties().ssid =  docProperties["ssid"].as<String>();
+          Platform::getUserProperties().pass =  docProperties["pass"].as<String>();
+          Platform::getUserProperties().host =  docProperties["host"].as<String>();
+          Platform::getUserProperties().port =  docProperties["port"].as<int>();
       }
   }
 
-  if(FFatHelper::readFile(FFat,ColorCollector::rgb_properties.path,text)){
+  if(FFatHelper::readFile(FFat,Platform::getRGBProperties().path,text)){
       DeserializationError error= deserializeJson(docProperties, text);
       if(!error){
-          ColorCollector::rgb_properties.r_offset =  docProperties["r_offset"].as<uint16_t>();
-          ColorCollector::rgb_properties.g_offset =  docProperties["g_offset"].as<uint16_t>();
-          ColorCollector::rgb_properties.b_offset =  docProperties["b_offset"].as<uint16_t>();
-          platform_debug::PlatformDebug::println("rgb_properties::r_offset:"+String(ColorCollector::rgb_properties.r_offset));
-          platform_debug::PlatformDebug::println("rgb_properties::g_offset:"+String(ColorCollector::rgb_properties.g_offset));
-          platform_debug::PlatformDebug::println("rgb_properties::b_offset:"+String(ColorCollector::rgb_properties.b_offset));
+          Platform::getRGBProperties().r_offset =  docProperties["r_offset"].as<uint16_t>();
+          Platform::getRGBProperties().g_offset =  docProperties["g_offset"].as<uint16_t>();
+          Platform::getRGBProperties().b_offset =  docProperties["b_offset"].as<uint16_t>();
+          platform_debug::PlatformDebug::println("rgb_properties::r_offset:"+String(Platform::getRGBProperties().r_offset));
+          platform_debug::PlatformDebug::println("rgb_properties::g_offset:"+String(Platform::getRGBProperties().g_offset));
+          platform_debug::PlatformDebug::println("rgb_properties::b_offset:"+String(Platform::getRGBProperties().b_offset));
       }
   }
- 
-  platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
-  
-}
 
-SmartBox smartBox;
-os::ThreadControlGuard threadControlGuard;
-void loop() {
-  
- attachInterrupt(0,[&](){
-    detachInterrupt(0);
+  platform_debug::PlatformDebug::println("user_properties::path:"+Platform::getUserProperties().path);
+  platform_debug::PlatformDebug::println("user_properties::ssid:"+Platform::getUserProperties().ssid);
+  platform_debug::PlatformDebug::println("user_properties::pass:"+Platform::getUserProperties().pass);
+  platform_debug::PlatformDebug::println("user_properties::host:"+Platform::getUserProperties().host);
+  platform_debug::PlatformDebug::println(String(Platform::getUserProperties().port,DEC));
+
+
+  platform_debug::TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
+  attachInterrupt(0,[&](){
+    //detachInterrupt(0);
     threadControlGuard.set_signal_id(0,true);
   },FALLING);
- 
-  smartBox.startup();
+
+}
+
+void loop() {
+
+  smartBox->startup();
 
   while (true) {
-    //ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));    
-     switch (threadControlGuard.get_signal_id())
-     {
+    switch (threadControlGuard.get_signal_id())
+    {
      case 0:
-        smartBox.start_web_task();
+          {
+              smartBox->task_web_service();
+              String tm;
+              TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->getDateTime(tm);
+              platform_debug::TracePrinter::printTrace(tm);
+          }
        break;
      case 1:
       break;
@@ -206,6 +202,7 @@ void loop() {
   }
 }
 /*
+    //ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));  
 if( timeMachine.getDateTime(currentTime)){
             platform_debug::TracePrinter::printTrace(currentTime);
 }else{

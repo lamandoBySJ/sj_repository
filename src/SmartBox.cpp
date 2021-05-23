@@ -1,37 +1,61 @@
 #include "SmartBox.h"
 
-void  SmartBox::startup(){
- 
-      platform_debug::TracePrinter::printTrace(String(ESP.getFreeHeap(),DEC));
-      ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
 
-      UBaseType_t x =uxTaskGetStackHighWaterMark(NULL);
-      platform_debug::TracePrinter::printTrace("stack left:"+String((int)x,DEC));
-    
-      try{
-          MQTTNetwork::getNetworkClient()->startup();
-           platform_debug::PlatformDebug::pause();
-          _timeMachine.startup(true,__DATE__,__TIME__);
-          _colorCollector.startup();
-      }catch(const os::thread_error& e){
-        platform_debug::TracePrinter::printTrace(e.what());
-        platform_debug::PlatformDebug::pause();
+
+void  SmartBox::task_collection_service(){
+      platform_debug::TracePrinter::printTrace("(*collection_->startup()");
+      while(true){
+          ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));
       }
-      _thread.start(callback(this,&SmartBox::run_core_task));
+  }
+
+void  SmartBox::task_web_service()
+{
+    if(espWebService==nullptr){
+        espWebService=new ESPWebService();
+        colorCollector->setCallbackWebSocketClientText(callback(espWebService,&ESPWebService::delegateMethodWebSocketClientText));
+        colorCollector->setCallbackWebSocketClientEvent(callback(espWebService,&ESPWebService::delegateMethodWebSocketClientEvent));
+        espWebService->setCallbackPostMailToCollector(callback(colorCollector,&ColorCollector::delegateMethodPostMail));
+        espWebService->startup();
+    }
 }
 
-
-DynamicJsonDocument  doc(8192);
-void SmartBox::run_core_task(){
+void  SmartBox::startup(){
     
+    try{
+      
+       TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->init();  
+
+       MQTTNetwork::getNetworkClient()->addOnMqttConnectCallback(callback(this,&SmartBox::onMqttConnect));
+       MQTTNetwork::getNetworkClient()->addOnMessageCallback(callback(this,&SmartBox::onMessageMqttCallback));
+       
+       colorCollector=new ColorCollector();
+        
+       MQTTNetwork::getNetworkClient()->startup();
+
+      _threadCollection.start(callback(colorCollector,&ColorCollector::run_task_collection));
+     // _thread.start(callback(this,&SmartBox::start_core_task));
+    }catch(const os::thread_error& e){
+        platform_debug::TracePrinter::printTrace(e.what());
+        //platform_debug::PlatformDebug::pause();
+        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));  
+    }
+    
+}
+void SmartBox::start_core_task(){
+    DynamicJsonDocument  doc(8192);
+    platform_debug::TracePrinter::printTrace(String(ESP.getFreeHeap(),DEC));
+    ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+    //UBaseType_t x =uxTaskGetStackHighWaterMark(NULL);
+    //platform_debug::TracePrinter::printTrace("stack left:"+String((int)x,DEC));
   String event_type;
- 
+  platform_debug::TracePrinter::printTrace("----------- core task ---------------------");
   while(true)
   {
     osEvent evt=  _mail_box_mqtt.get();
     if (evt.status == osEventMail) {
         mqtt::mail_mqtt_t* mail= (mqtt::mail_mqtt_t*)evt.value.p;
-        DeserializationError error = deserializeJson(doc, mail->payload); 
+       /* DeserializationError error = deserializeJson(doc, mail->payload); 
         if (error){
             _mail_box_mqtt.free(mail);
             continue;
@@ -40,7 +64,7 @@ void SmartBox::run_core_task(){
               if (!error && doc.containsKey("unix_timestamp")) {
                     uint32_t ts =   doc["unix_timestamp"];
                     if (ts > 28800) {
-                      _timeMachine.setEpoch(ts);
+                     // _timeMachine.setEpoch(ts);
                     }
               }
         }else if(_splitTopics[0]=="ServerReq"){
@@ -51,12 +75,12 @@ void SmartBox::run_core_task(){
                               switch( str_map_type[event_type] ){
                                 case RequestType::ALS_MEASURE:
                                 {
-                                  _colorCollector.delegateMethodPostMail(MeasEventType::EventSystemMeasure,nullptr);
+                                  //ColorCollector::getColorCollector()->delegateMethodPostMail(MeasEventType::EventSystemMeasure,nullptr);
                                   break;
                                 }
                                 case RequestType::MANUAL_REQUEST:
                                 {
-                                  _colorCollector.delegateMethodPostMail(MeasEventType::EventServerMeasure,nullptr);
+                                 // ColorCollector::getColorCollector()->delegateMethodPostMail(MeasEventType::EventServerMeasure,nullptr);
                                   break;
                                 }
                                 case RequestType::OTA_CANCEL:
@@ -92,7 +116,7 @@ void SmartBox::run_core_task(){
                                 default:break;
                               }                  
               }
-        }
+        }*/
         _mail_box_mqtt.free(mail);  
     }
   }
@@ -111,10 +135,9 @@ void SmartBox::onMessageMqttCallback(const String& topic,const String& payload)
 void SmartBox::onMqttConnect(bool sessionPresent)
 {
     platform_debug::TracePrinter::printTrace("SmartBox::OK: Connected to MQTT.");
-    MQTTNetwork::getNetworkClient()->addSubscribeTopic("SmartBox/TimeSync");
-    MQTTNetwork::getNetworkClient()->addSubscribeTopic(Platform::getDeviceInfo()->BoardID+"/ServerTime");
-    MQTTNetwork::getNetworkClient()->addSubscribeTopic(Platform::getDeviceInfo()->BoardID+"/ServerReq");
-    MQTTNetwork::getNetworkClient()->addOnMessageCallback(callback(this,&SmartBox::onMessageMqttCallback));
+    for(auto topic:_topics){
+      MQTTNetwork::getNetworkClient()->subscribe( topic);
+    }
 }
 
 void SmartBox::start_http_update(const String& url){
