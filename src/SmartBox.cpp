@@ -64,7 +64,7 @@ void SmartBox::start_core_task(){
               if (!error && doc.containsKey("unix_timestamp")) {
                     uint32_t ts =   doc["unix_timestamp"];
                     if (ts > 28800) {
-                     // _timeMachine.setEpoch(ts);
+                       TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->setEpoch(ts);
                     }
               }
         }else if(_splitTopics[0]=="ServerReq"){
