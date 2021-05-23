@@ -85,7 +85,6 @@ void SmartBox::start_core_task(){
                                 }
                                 case RequestType::OTA_CANCEL:
                                 {
-                            
                                   break;
                                 }
                                 case RequestType::FILE_DOWNLOAD:
