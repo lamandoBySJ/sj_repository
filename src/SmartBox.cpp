@@ -49,7 +49,7 @@ void SmartBox::start_core_task(){
     //UBaseType_t x =uxTaskGetStackHighWaterMark(NULL);
     //platform_debug::TracePrinter::printTrace("stack left:"+String((int)x,DEC));
   String event_type;
-  platform_debug::TracePrinter::printTrace("----------- core task ---------------------");
+  platform_debug::TracePrinter::printTrace("----------- core task -----------------");
   while(true)
   {
     osEvent evt=  _mail_box_mqtt.get();
