@@ -39,9 +39,6 @@ public:
       str_map_type[String("file_delete")]   = RequestType::FILE_DELETE;
       str_map_type[String("esp_restart")]   = RequestType::ESP_RESTART;
       str_map_type[String("manual_request")]= RequestType::MANUAL_REQUEST;
-      _topics.insert("SmartBox/TimeSync");
-      _topics.insert(Platform::getDeviceInfo().BoardID+"/ServerTime");
-      _topics.insert(Platform::getDeviceInfo().BoardID+"/ServerReq");
   }
 
   ~SmartBox()=default;
@@ -51,23 +48,21 @@ public:
   void task_collection_service();
   void task_web_service();
   void start_core_task();
-  
+  void color_measure();
   void start_http_update(const String& url);
   void start_https_update(const String& url);
-  void onMqttConnect(bool sessionPresent);
-  void onMessageMqttCallback(const String& topic,const String& payload);
-
+  void onMqttConnectCallback(bool sessionPresent);
+  void onMqttMessageCallback(const String& topic,const String& payload);
+  void onMqttSubscribeCallback(uint16_t packetId, uint8_t qos);
 private:
-  rtos::Mail<mqtt::test_t, 6> _mail_box_test;
-  rtos::Mail<mqtt::test1_t, 6> _mail_box_test1;
-  rtos::Mail<mqtt::test2_t, 6> _mail_box_test2;
+
   MQTTNetwork mqttNetwork;
   ColorCollector colorCollector;
   ESPWebService espWebService;
     
   rtos::Mutex _mtx;
   rtos::Thread _threadCore;
-  rtos::Mail<mqtt::mail_mqtt_t, 16>  _mail_box_mqtt;
+  rtos::Mail<mqtt::mail_on_message_t, 8>  _mail_box_on_mqtt_message;
   std::set<String>  _topics;
   HTTPDownload _httpDownload;
   vector<String> _splitTopics;

@@ -9,11 +9,7 @@ namespace guard
         uint32_t counter=0; 
         uint32_t id=0;   
     }; 
-    struct mail_control_t{
-        uint32_t counter=0; 
-        uint32_t id=0;   
-    }; 
-
+ 
 class LoopTaskGuard
 {
 public:
@@ -55,7 +51,9 @@ public:
                 evt =  _mail_box_control.get();
                 if(evt.status == osEventMail){
                     guard::mail_control_t* mail = (guard::mail_control_t*)evt.value.p;
-                    return mail->id;
+                    int id=mail->id;
+                    _mail_box_control.free(mail);
+                    return id;
                 }else{
                     ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(100));  
                 }
@@ -66,8 +64,9 @@ public:
             static LoopTaskGuard loopTaskGuard;
             return loopTaskGuard;
         }
+  
 private:
-        rtos::Mail<guard::mail_control_t, 16> _mail_box_control;
+        rtos::Mail<guard::mail_control_t, 3> _mail_box_control;
         rtos::Mutex _mtx;
         rtos::Thread _thread;
 };

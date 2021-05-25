@@ -9,7 +9,7 @@
 */
 #include "DS1307.h"
 
-String DS1307::datetime ="";
+time_t DS1307::_epoch=0;
 
 bool DS1307::begin()
 {
@@ -602,22 +602,18 @@ setEpoch()
 
 void DS1307::setEpoch(time_t epoch)
 {
-  
-	time_t rawtime;
-	struct tm epoch_tm, * ptr_epoch_tm;
-	//uint16_t year;
-	rawtime = epoch;
-	ptr_epoch_tm = gmtime(&rawtime);
-	epoch_tm = *ptr_epoch_tm;
+	struct tm epoch_tm;
+	struct tm *_tm_zone = gmtime(&epoch);
+	epoch_tm = *_tm_zone;
 	setSeconds(epoch_tm.tm_sec); //0x00 - Seconds
 	setMinutes(epoch_tm.tm_min);
 	setHours(epoch_tm.tm_hour);
 	setWeek(epoch_tm.tm_wday+1);
 	setDay(epoch_tm.tm_mday);
-	setMonth(epoch_tm.tm_mon);
+	setMonth(epoch_tm.tm_mon+1);
 	setYear(epoch_tm.tm_year + 1900);
 	_wire.endTransmission();
- 
+  
 }
 
 /*-----------------------------------------------------------
@@ -625,39 +621,42 @@ getEpoch()
 -----------------------------------------------------------*/
 time_t DS1307::getEpoch()
 {
-  
-	time_t epoch;
 	struct tm epoch_tm;
 	epoch_tm.tm_sec = getSeconds();
 	epoch_tm.tm_min = getMinutes();
 	epoch_tm.tm_hour = getHours();
-	epoch_tm.tm_wday = getWeek();
+	epoch_tm.tm_wday = getWeek()-1;
 	epoch_tm.tm_mday = getDay();
-	epoch_tm.tm_mon = getMonth();
-	epoch_tm.tm_year = getYear();
-	epoch = mktime(&epoch_tm)+8*60*60;
-  datetime = String(epoch_tm.tm_year,DEC) + 
-          String("-")+ 
-          String(epoch_tm.tm_mon,DEC)+
-          String("-")+ 
-          String(epoch_tm.tm_mday,DEC)+
-          String(" ")+ 
-          String(epoch_tm.tm_hour,DEC)+
-          String(":")+ 
-          String(epoch_tm.tm_min,DEC)+
-          String(":")+ 
-          String(epoch_tm.tm_sec,DEC);
-	return (epoch);
+	epoch_tm.tm_mon = getMonth()-1;
+	epoch_tm.tm_year = getYear()-1900;
+
+  DS1307::_epoch = mktime(&epoch_tm);
+ 
+	return  DS1307::_epoch;
 }
 //placement new的好处：
 //）在已分配好的内存上进行对象的构建，构建速度快。
 //2）已分配好的内存可以反复利用，有效的避免内存碎片问题。
-String& DS1307::getDateTime(bool duplicate)
+void DS1307::getDateTime(String& datetime,bool duplicate)
 {
-  //if(duplicate){
+  if(duplicate){
     getEpoch();
- // }
-	return DS1307::datetime;
+  }
+  time_t epochTimeZone =  DS1307::_epoch+28800;
+
+  struct tm *_tm_zone = gmtime(&epochTimeZone);
+
+  datetime = String(_tm_zone->tm_year+1900,DEC) + 
+          String("-")+ 
+          String(_tm_zone->tm_mon+1,DEC)+
+          String("-")+ 
+          String(_tm_zone->tm_mday,DEC)+
+          String(" ")+ 
+          String(_tm_zone->tm_hour,DEC)+
+          String(":")+ 
+          String(_tm_zone->tm_min,DEC)+
+          String(":")+ 
+          String(_tm_zone->tm_sec,DEC);
 }
 /* NVRAM Functions */
 

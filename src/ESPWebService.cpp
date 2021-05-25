@@ -129,7 +129,7 @@ void ESPWebService::run_web_service()
 
     _server->on("/update", HTTP_POST, [](AsyncWebServerRequest *request) {
         bool result = Update.hasError();
-        AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", result ? "OK" : "FAIL");
+        AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", result ? "FAIL" : "OK");
         response->addHeader("Connection", "close");
         request->send(response);
         }, [](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final) {

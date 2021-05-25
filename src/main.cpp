@@ -187,11 +187,14 @@ void loop() {
     {
      case 0:
           {
+            guard::LoopTaskGuard::getLoopTaskGuard().loop_stop();
             smartBox->task_web_service();
           }
        break;
      case 1:
-            smartBox->task_web_service();
+          {
+              smartBox->color_measure();
+          }
       break;
      case 2:
       break;

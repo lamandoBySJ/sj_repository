@@ -81,12 +81,12 @@ void TimeMachine<RTC,OSMutex>::setEpoch(time_t epoch)
 }
 
 template<typename RTC,typename OSMutex>
-bool TimeMachine<RTC,OSMutex>::getDateTime(String& datetime)
+bool TimeMachine<RTC,OSMutex>::getDateTime(String& datetime,bool duplicate)
 {
 
     std::lock_guard<OSMutex> lck(_mtx);
     if(_rtc.isRunning()){
-        datetime =  _rtc.getDateTime(true);
+        _rtc.getDateTime(datetime,duplicate);
         return true;
     }else{
         return false;

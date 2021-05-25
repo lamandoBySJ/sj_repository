@@ -33,8 +33,8 @@ public:
     {
        
     }
-    void runCallbackWebSocketClientPostEvent(int progress,const String& status , const String& event);
-    void runCallbackWebSocketClientText(AsyncWebSocketClient *client,const String& text);
+    void invokeCallbackWebSocketClientPostEvent(int progress,const String& status , const String& event);
+    void invokeCallbackWebSocketClientText(AsyncWebSocketClient *client,const String& text);
     template<typename T, typename U, typename R, typename... ArgTs>
     void setCallbackWebSocketClientEvent(U *obj,R (T::*method)(ArgTs...)){
         std::lock_guard<rtos::Mutex> lck(_mtx);
@@ -55,7 +55,17 @@ public:
         std::lock_guard<rtos::Mutex> lck(_mtx);
         this->_cbWebSocketClientText=callback;
     }
-
+    void setCallbackMqttPublish(mbed::Callback<bool(const String&,const String&)> callback){
+        std::lock_guard<rtos::Mutex> lck(_mtx);
+        this->_cbMqttPublish=callback;
+    }
+    void invokeCallbackMqttPublish(const String &topic,const String &payload)
+    {
+        std::lock_guard<rtos::Mutex> lck(_mtx);
+        if(_cbMqttPublish!=nullptr){
+            _cbMqttPublish.call(topic,payload);
+        }
+    }
     void startup();
     void run_task_test();
     void run_task_collection();
@@ -67,6 +77,8 @@ private:
     rtos::Mail<collector::mail_ws_t, 8> _mail_box_collection;
     mbed::Callback<void(AsyncWebSocketClient*,const String&)>_cbWebSocketClientText;
     mbed::Callback<void(const String&, const String&,uint32_t,uint32_t)> _cbWebSocketClientEvent;
+    mbed::Callback<bool(const String&,const String&)> _cbMqttPublish;
+
     String text;
     DynamicJsonDocument  doc;
     RGB _rgb;

@@ -21,18 +21,18 @@ void ColorCollector::run_task_collection()
 {
    
     ColorSensor<BH1749NUC,rtos::Mutex>::getColorSensor()->init();
-    ColorSensor<BH1749NUC,rtos::Mutex>::getColorSensor()->attachMeasurementHook(std::bind(&ColorCollector::runCallbackWebSocketClientPostEvent,this,
+    ColorSensor<BH1749NUC,rtos::Mutex>::getColorSensor()->attachMeasurementHook(std::bind(&ColorCollector::invokeCallbackWebSocketClientPostEvent,this,
       std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
 
     uint32_t diff_red,diff_green,diff_blue;
     String timepoint;
-    TracePrinter::printTrace("----------------- ColorCollector -----------------");
+    String lastColor;
     while(true){
         // ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(30));
         osEvent evt =  _mail_box_collection.get();
         if (evt.status == osEventMail) {
             collector::mail_ws_t *mail = (collector::mail_ws_t *)evt.value.p;
-        
+
             ColorSensor<BH1749NUC,rtos::Mutex>::getColorSensor()->loopMeasure(_rgb,Kernel::Clock::duration_milliseconds(200),arrRGB);
             _rgb.R.u16bit =  arrRGB[4].R.u16bit;
             _rgb.G.u16bit =  arrRGB[4].G.u16bit;
@@ -52,10 +52,11 @@ void ColorCollector::run_task_collection()
             }else{
                 ColorConverter::getColorConverter().color(_rgb,data);
             }   
-            TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->getDateTime(timepoint);
+         
+            
             doc["unix_timestamp"]= TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->getEpoch();
+            TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->getDateTime(timepoint);
             doc["datetime"]= timepoint;    
-            doc["box_mac_id"] = Platform::getWebProperties().ap_ssid;
             doc["r_reg"] = _rgb.R.u16bit;
             doc["g_reg"] = _rgb.G.u16bit;
             doc["b_reg"] = _rgb.B.u16bit;
@@ -69,23 +70,29 @@ void ColorCollector::run_task_collection()
             {
                 case  MeasEventType::EventSystemMeasure:
                 {
+                    doc["SentFrom"] = Platform::getDeviceInfo().BoardID;
                     doc["r_offset"] = Platform::getRGBProperties().r_offset;
                     doc["g_offset"] = Platform::getRGBProperties().g_offset;
                     doc["b_offset"] = Platform::getRGBProperties().b_offset;
-                   // MQTTNetwork::getNetworkClient()->publish("TowerColorMeasure/"+Platform::getWebProperties().ap_ssid,doc.as<String>());
+                    TracePrinter::printTrace(doc["TowerColor"].as<String>());
+                    if(lastColor!=doc["TowerColor"].as<String>()){
+                        lastColor = doc["TowerColor"].as<String>();
+                        invokeCallbackMqttPublish("TowerColor/"+Platform::getDeviceInfo().BoardID,doc.as<String>());
+                    }
                 }
                 break;
                 case  MeasEventType::EventServerMeasure:
                 {
+                    doc["SentFrom"] = Platform::getDeviceInfo().BoardID;
                     doc["r_offset"] = Platform::getRGBProperties().r_offset;
                     doc["g_offset"] = Platform::getRGBProperties().g_offset;
                     doc["b_offset"] = Platform::getRGBProperties().b_offset;
-                    //MQTTNetwork::getNetworkClient()->publish("TowerColor/"+Platform::getWebProperties().ap_ssid,doc.as<String>());
+                    invokeCallbackMqttPublish("TowerColorMeasure/"+Platform::getDeviceInfo().BoardID,doc.as<String>());
                 }
                 break;
                 case  MeasEventType::EventWebAppOffset:
                 {   
-                    
+                    doc["box_mac_id"] = Platform::getWebProperties().ap_ssid;
                     int32_t red_diff = (_rgb.R.u16bit-Platform::getRGBProperties().r_offset);
                     int32_t green_diff = (_rgb.G.u16bit-Platform::getRGBProperties().g_offset);
                     int32_t blue_diff = (_rgb.B.u16bit-Platform::getRGBProperties().b_offset);
@@ -109,16 +116,18 @@ void ColorCollector::run_task_collection()
                     
                     if(FatHelper.writeFile(FFat,Platform::getRGBProperties().path.c_str(),text)){
                         doc["file_write"]=true;
-                        runCallbackWebSocketClientPostEvent(100,"done","progress");
-                        runCallbackWebSocketClientText(mail->client,doc.as<String>());
                     }else{
                         doc["file_write"]=false;
-                        runCallbackWebSocketClientPostEvent(80,"fail","progress");
+                    }
+                    if(mail->client!=nullptr){
+                        invokeCallbackWebSocketClientPostEvent(100,doc["file_write"].as<bool>()?"done":"fail","progress");
+                        invokeCallbackWebSocketClientText(mail->client,doc.as<String>());
                     }
                 }
                 break;
                 case  MeasEventType::EventWebAppMeasure:
                 {
+                    doc["box_mac_id"] = Platform::getWebProperties().ap_ssid;
                     int32_t red_diff = (_rgb.R.u16bit-Platform::getRGBProperties().r_offset);
                     int32_t green_diff = (_rgb.G.u16bit-Platform::getRGBProperties().g_offset);
                     int32_t blue_diff = (_rgb.B.u16bit-Platform::getRGBProperties().b_offset);
@@ -130,8 +139,10 @@ void ColorCollector::run_task_collection()
                     doc["b_offset"] = Platform::getRGBProperties().b_offset;
                     doc["ws_evt_type"]="WS_EVT_DATA";
                     doc["msg"]="RgbMeasure";
-                    runCallbackWebSocketClientText(mail->client,doc.as<String>());
-                    runCallbackWebSocketClientPostEvent(100,"done","progress");
+                    if(mail->client!=nullptr){
+                        invokeCallbackWebSocketClientText(mail->client,doc.as<String>());
+                        invokeCallbackWebSocketClientPostEvent(100,"done","progress");
+                    }
                 }
                 break;
                 default: break;
@@ -142,14 +153,14 @@ void ColorCollector::run_task_collection()
     } 
 }
 
-void ColorCollector::runCallbackWebSocketClientPostEvent(int progress,const String& status , const String& event){
+void ColorCollector::invokeCallbackWebSocketClientPostEvent(int progress,const String& status , const String& event){
          std::lock_guard<rtos::Mutex> lck(_mtx);
          if(this->_cbWebSocketClientEvent!=nullptr){
             this->_cbWebSocketClientEvent("{\"status\":\""+status+"\",\"progress\":"+String(progress,DEC)+"}",event,0,0);
          }
 }
 
-void ColorCollector::runCallbackWebSocketClientText(AsyncWebSocketClient *client,const String& text){
+void ColorCollector::invokeCallbackWebSocketClientText(AsyncWebSocketClient *client,const String& text){
          std::lock_guard<rtos::Mutex> lck(_mtx);
          if(this->_cbWebSocketClientText!=nullptr){
            this->_cbWebSocketClientText(client,text); 

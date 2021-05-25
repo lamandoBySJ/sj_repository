@@ -20,7 +20,7 @@ public:
     ~TimeMachine()=default;
     void init(bool pwrEnable=true,const char* date=nullptr,const  char* time=nullptr);
     time_t getEpoch();
-    bool getDateTime(String&);
+    bool getDateTime(String& datetime,bool duplicate=false);
     void setDateTime(const char* date,const  char* time);
     void setEpoch(time_t epoch);
 

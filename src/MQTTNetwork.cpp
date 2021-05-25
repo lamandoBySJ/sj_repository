@@ -6,8 +6,7 @@ uint16_t MQTT_PORT = 1883;
 const char* WIFI_SSID="Mitac IOT_GPS";
 const char* WIFI_PASSWORD="6789067890";
 
-void MQTTNetwork::runWiFiEventService(){
-     TracePrinter::printTrace("-----------------runWiFiEventService-----------------");
+void MQTTNetwork::task_system_event_service(){
     while(true){
         osEvent evt = _mailBoxWiFiEvent.get();
         if (evt.status == osEventMail) {
@@ -24,7 +23,10 @@ void MQTTNetwork::runWiFiEventService(){
             break;
             case SYSTEM_EVENT_STA_GOT_IP:
                 TracePrinter::printTrace("WiFi connected:SYSTEM_EVENT_STA_GOT_IP,IP address: "+WiFi.localIP().toString());
-                _client.connect();
+                
+                if(!_client.connected()&&_autoConnect){
+                    _client.connect();
+                }
                 TracePrinter::printTrace("MQTT Connecting...");
                 break;
             case SYSTEM_EVENT_STA_DISCONNECTED:
@@ -43,36 +45,59 @@ void MQTTNetwork::runWiFiEventService(){
     }
 }
 
-void MQTTNetwork::run_mail_box_topics_subscribed(){
-  TracePrinter::printTrace("-----------------run_mail_box_topics_subscribed-----------------");
+void MQTTNetwork::task_on_message_service(){
+  while(true){
+    osEvent evt= _mail_box_on_message.get();
+    if (evt.status == osEventMail) {
+        mqtt::mail_on_message_t *mail = (mqtt::mail_on_message_t *)evt.value.p;
+        for(auto& v:  _onMessageCallbacks){
+              v.call(mail->topic,mail->payload);
+        }
+        _mail_box_on_message.free(mail); 
+    }
+  }
+}
+
+void MQTTNetwork::task_on_connect_service()
+{
+  while(true){
+      osEvent evt= _mail_box_on_connect.get();
+      if (evt.status == osEventMail) {
+          mqtt::mail_on_connect_t *mail = (mqtt::mail_on_connect_t *)evt.value.p;
+          for(auto& v : _onMqttConnectCallbacks){
+              v.call(mail->sessionPresent);
+          }
+          _mail_box_on_connect.free(mail); 
+      }
+    }
+}
+
+void MQTTNetwork::task_on_subscribe_service(){
   while(true){
     osEvent evt= _mail_box_on_subscribe.get();
     if (evt.status == osEventMail) {
-        mqtt::mail_subscribe_t *mail = (mqtt::mail_subscribe_t *)evt.value.p;
-        for(auto& v : _onMqttConnectCallbacks){
-            v.call(mail->sessionPresent);
-        }
-        for(auto& v : _topics){
-            TracePrinter::printTrace("[*]subscribe: "+v);
-            if(!subscribe(v, 0)){
-              break;
-            }
+        mqtt::mail_on_subscribe_t *mail = (mqtt::mail_on_subscribe_t *)evt.value.p;
+        TracePrinter::printTrace("[OK]:Subscribe acknowledged.");
+        TracePrinter::printTrace("packetId: "+String(mail->packetId,DEC));
+        TracePrinter::printTrace("qos: "+String(mail->qos,DEC));
+        for(auto& v : _onMqttSubscribeCallbacks){
+            v.call(mail->packetId,mail->qos);
         }
         _mail_box_on_subscribe.free(mail); 
     }
   }
 }
-
-void MQTTNetwork::run_mail_box_on_message_arrived(){
-  TracePrinter::printTrace("----- run_mail_box_on_message_arrived --------");
+void MQTTNetwork::task_on_unsubscribe_service(){
   while(true){
-    osEvent evt= _mail_box_on_message.get();
+    osEvent evt= _mail_box_on_unsubscribe.get();
     if (evt.status == osEventMail) {
-        mqtt::mail_mqtt_t *mail = (mqtt::mail_mqtt_t *)evt.value.p;
-        for(auto& v:  _onMessageCallbacks){
-              v.call(mail->topic,mail->payload);
+        mqtt::mail_on_unsubscribe_t *mail = (mqtt::mail_on_unsubscribe_t *)evt.value.p;
+        TracePrinter::printTrace("[OK]:Unsubscribe acknowledged.");
+        TracePrinter::printTrace("packetId: "+String(mail->packetId,DEC));
+        for(auto& v : _onMqttUnsubscribeCallbacks){
+            v.call(mail->packetId);
         }
-        _mail_box_on_message.free(mail); 
+        _mail_box_on_unsubscribe.free(mail); 
     }
   }
 }
@@ -93,11 +118,7 @@ void MQTTNetwork::init()
       MQTT_PORT    = Platform::getUserProperties().port;
       WIFI_SSID    = Platform::getUserProperties().ssid.c_str();
       WIFI_PASSWORD= Platform::getUserProperties().pass.c_str();
-      
-      TracePrinter::printf("AsyncMqttClient:size:%d\n",sizeof(AsyncMqttClient));
-      TracePrinter::printf("_threadWiFiEvent:%p\n",&_threadWiFiEvent);
-      TracePrinter::printf("_threadOnMessage:%p\n",&_threadOnMessage);
-      TracePrinter::printf("_threadSubscribe:%p\n",&_threadSubscribe);
+
       TracePrinter::printTrace(String(MQTT_HOST)+":"+String(MQTT_PORT,DEC));
       
       _client.setWill("STLB_WILL",0,false,Platform::getDeviceInfo().BoardID.c_str(),Platform::getDeviceInfo().BoardID.length());
@@ -121,19 +142,34 @@ void MQTTNetwork::init()
 
  void MQTTNetwork::startup()  //throw (os::thread_error)
 {
-        osStatus status =  _threadWiFiEvent.start(callback(this,&MQTTNetwork::runWiFiEventService));
+        osStatus status =  _threadWiFiEvent.start(callback(this,&MQTTNetwork::task_system_event_service));
         (status!=osOK ? throw os::thread_error((osStatus_t)status,_threadWiFiEvent.get_name()):NULL);
-        status =  _threadOnMessage.start(callback(this,&MQTTNetwork::run_mail_box_on_message_arrived));
-        (status!=osOK ? throw os::thread_error((osStatus_t)status,_threadOnMessage.get_name()):NULL);
-        status =   _threadSubscribe.start(callback(this,&MQTTNetwork::run_mail_box_topics_subscribed));
-        (status!=osOK ? throw os::thread_error((osStatus_t)status,_threadSubscribe.get_name()):NULL);
         
+        status =  _threadOnMessage.start(callback(this,&MQTTNetwork::task_on_message_service));
+        (status!=osOK ? throw os::thread_error((osStatus_t)status,_threadOnMessage.get_name()):NULL);
+
+         status =   _threadOnSubscribe.start(callback(this,&MQTTNetwork::task_on_subscribe_service));
+        (status!=osOK ? throw os::thread_error((osStatus_t)status,_threadOnSubscribe.get_name()):NULL);
+
+         status =   _threadOnUnsubscribe.start(callback(this,&MQTTNetwork::task_on_unsubscribe_service));
+        (status!=osOK ? throw os::thread_error((osStatus_t)status,_threadOnUnsubscribe.get_name()):NULL);
+       
+        status =   _threadOnConnect.start(callback(this,&MQTTNetwork::task_on_connect_service));
+        (status!=osOK ? throw os::thread_error((osStatus_t)status,_threadOnConnect.get_name()):NULL);
         mqtt::mail_wifi_event_t* evt=_mailBoxWiFiEvent.alloc();
         evt->id=SYSTEM_EVENT_STA_STOP;
         _mailBoxWiFiEvent.put(evt);
-
 }
-
+void MQTTNetwork::terminate()
+{
+    std::lock_guard<rtos::Mutex> lck(_mtx);
+    _threadWiFiEvent.terminate();
+    _threadOnMessage.terminate();
+    _threadOnSubscribe.terminate();
+    _threadOnUnsubscribe.terminate();
+    _threadOnConnect.terminate();
+    _client.disconnect();
+}
 bool MQTTNetwork::connected(){
    std::lock_guard<rtos::Mutex> lck(_mtx);
   return _client.connected();
@@ -164,13 +200,16 @@ bool MQTTNetwork::unsubscribe(const String& topic)
     std::lock_guard<rtos::Mutex> lck(_mtx);
    return unsubscribe(topic.c_str());
 }
+
+
+
 void MQTTNetwork::onMqttConnect(bool sessionPresent)
 {
     TracePrinter::printTrace("OK: Connected to MQTT.");
-    mqtt::mail_subscribe_t *mail = _mail_box_on_subscribe.alloc();
+    mqtt::mail_on_connect_t *mail = _mail_box_on_connect.alloc();
     if(mail!=NULL){
         mail->sessionPresent = sessionPresent;
-        _mail_box_on_subscribe.put(mail) ;
+        _mail_box_on_connect.put(mail) ;
     }
 }
 void MQTTNetwork::onMqttDisconnect(AsyncMqttClientDisconnectReason reason) 
@@ -206,33 +245,38 @@ void MQTTNetwork::onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
   }
   #endif
 
-      for(auto& v : _onMqttDisconnectCallbacks){
+  for(auto& v : _onMqttDisconnectCallbacks){
         v.call(reason);
-      }
-      if (_autoConnect&&WiFi.isConnected()) {
-          mqtt::mail_wifi_event_t* evt=_mailBoxWiFiEvent.alloc();
-          evt->id=SYSTEM_EVENT_STA_GOT_IP;
-          _mailBoxWiFiEvent.put(evt);
-      }
+  }
+
+  if (WiFi.isConnected()) {
+      mqtt::mail_wifi_event_t* evt=_mailBoxWiFiEvent.alloc();
+      evt->id=SYSTEM_EVENT_STA_GOT_IP;
+      _mailBoxWiFiEvent.put(evt);
+  }
 }
     
 void MQTTNetwork::onMqttSubscribe(uint16_t packetId, uint8_t qos)
- {
-    TracePrinter::printTrace("[OK]:Subscribe acknowledged.");
-    TracePrinter::printTrace("packetId: "+String(packetId,DEC));
-    TracePrinter::printTrace("qos: "+String(qos,DEC));
+{
+    mqtt::mail_on_subscribe_t* evt=_mail_box_on_subscribe.alloc();
+    evt->packetId=packetId;
+    evt->qos;
+    _mail_box_on_subscribe.put(evt);
 }
 
 void MQTTNetwork::onMqttUnsubscribe(uint16_t packetId)
 {
     TracePrinter::printTrace("[OK]:Unsubscribe acknowledged.");
     TracePrinter::printTrace("packetId: "+String(packetId));
+    mqtt::mail_on_unsubscribe_t* evt=_mail_box_on_unsubscribe.alloc();
+    evt->packetId=packetId;
+    _mail_box_on_unsubscribe.put(evt);
 }
-  
+
 void MQTTNetwork::onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) 
 {
       
-      mqtt::mail_mqtt_t *mail = _mail_box_on_message.alloc();
+      mqtt::mail_on_message_t *mail = _mail_box_on_message.alloc();
       if(mail!=NULL){
         mail->topic = topic;
         mail->payload = String(payload).substring(0,len);
@@ -261,21 +305,20 @@ void MQTTNetwork::addOnMessageCallback(Callback<void(const String&,const String&
 {
     _onMessageCallbacks.push_back(func);
 }
-void MQTTNetwork::addSubscribeTopic(const String& topic,int qos)
-{
-    _topics.insert(topic);
-}
-void MQTTNetwork::addSubscribeTopics(std::vector<String>& vec)
-{
-  for(auto& v : vec){
-    _topics.insert(v);
-  }
-}
 void MQTTNetwork::addOnMqttConnectCallback(Callback<void(bool)> func)
 {
    _onMqttConnectCallbacks.push_back(func);
+}
+void MQTTNetwork::addOnMqttSubscribeCallback(mbed::Callback<void(uint16_t, uint8_t)> func)
+{
+   _onMqttSubscribeCallbacks.push_back(func);
+}
+void MQTTNetwork::addOnMqttUnsubscribeCallback(mbed::Callback<void(uint16_t)> func)
+{
+   _onMqttUnsubscribeCallbacks.push_back(func);  
 }
 void MQTTNetwork::addOnMqttDisonnectCallback(Callback<void(AsyncMqttClientDisconnectReason)> func)
 {
    _onMqttDisconnectCallbacks.push_back(func);
 }
+

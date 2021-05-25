@@ -7,10 +7,15 @@ void  SmartBox::task_collection_service(){
           ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));
       }
   }
-
+void  SmartBox::color_measure()
+{   
+    colorCollector.delegateMethodPostMail(MeasEventType::EventSystemMeasure,nullptr);
+    
+}
 void  SmartBox::task_web_service()
 {   
   if(!espWebService.isRunning()){
+    mqttNetwork.terminate();
     colorCollector.setCallbackWebSocketClientText(callback(&espWebService,&ESPWebService::delegateMethodWebSocketClientText));
     colorCollector.setCallbackWebSocketClientEvent(callback(&espWebService,&ESPWebService::delegateMethodWebSocketClientEvent));
     espWebService.setCallbackPostMailToCollector(callback(&colorCollector,&ColorCollector::delegateMethodPostMail));
@@ -21,13 +26,18 @@ void  SmartBox::task_web_service()
 void  SmartBox::startup(){
     
     try{
+       _topics.insert(Platform::getDeviceInfo().BoardID+"/ServerTime");
+       _topics.insert(Platform::getDeviceInfo().BoardID+"/ServerReq");
+
        TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->init();  
 
-       mqttNetwork.addOnMqttConnectCallback(callback(this,&SmartBox::onMqttConnect));
-       mqttNetwork.addOnMessageCallback(callback(this,&SmartBox::onMessageMqttCallback));
+       mqttNetwork.addOnMqttConnectCallback(callback(this,&SmartBox::onMqttConnectCallback));
+       mqttNetwork.addOnMessageCallback(callback(this,&SmartBox::onMqttMessageCallback));
+       mqttNetwork.addOnMqttSubscribeCallback(callback(this,&SmartBox::onMqttSubscribeCallback));
        mqttNetwork.init();
        mqttNetwork.startup();
 
+       colorCollector.setCallbackMqttPublish(callback(&mqttNetwork,&MQTTNetwork::delegateMethodPublish));
        colorCollector.startup();
       _threadCore.start(callback(this,&SmartBox::start_core_task));
 
@@ -44,24 +54,29 @@ void SmartBox::start_core_task(){
   //UBaseType_t x =uxTaskGetStackHighWaterMark(NULL);
   //TracePrinter::printTrace("stack left:"+String((int)x,DEC));
   String event_type;
-  TracePrinter::printTrace("----------- core task -----------------");
   while(true)
   {
-    osEvent evt=  _mail_box_mqtt.get();
+    osEvent evt=  _mail_box_on_mqtt_message.get();
     if (evt.status == osEventMail) {
-        mqtt::mail_mqtt_t* mail= (mqtt::mail_mqtt_t*)evt.value.p;
+        mqtt::mail_on_message_t* mail= (mqtt::mail_on_message_t*)evt.value.p;
         DeserializationError error = deserializeJson(doc, mail->payload); 
         if (error){
-            _mail_box_mqtt.free(mail);
+            _mail_box_on_mqtt_message.free(mail);
             continue;
         }
-        if(_splitTopics[0]=="ServerTime"){
-              if (!error && doc.containsKey("unix_timestamp")) {
-                    uint32_t ts =   doc["unix_timestamp"];
-                    if (ts > 28800) {
+        StringHelper::split(_splitTopics,mail->topic.c_str(),"/");
+        if(_splitTopics.size()!=2){
+            _mail_box_on_mqtt_message.free(mail);
+            continue;
+        }
+
+        if(_splitTopics[1]=="ServerTime"){
+              if (doc.containsKey("unix_timestamp")) {
+                  time_t ts =   doc["unix_timestamp"].as<uint32_t>();
+                  if (ts > 28800) {
                        TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->setEpoch(ts);
                        guard::LoopTaskGuard::getLoopTaskGuard().loop_start();
-                    }
+                  }
               }
         }else if(_splitTopics[0]=="ServerReq"){
               if (doc.containsKey("url")) {
@@ -76,7 +91,7 @@ void SmartBox::start_core_task(){
                                 }
                                 case RequestType::MANUAL_REQUEST:
                                 {
-                                 colorCollector.delegateMethodPostMail(MeasEventType::EventServerMeasure,nullptr);
+                                  colorCollector.delegateMethodPostMail(MeasEventType::EventServerMeasure,nullptr);
                                   break;
                                 }
                                 case RequestType::OTA_CANCEL:
@@ -112,32 +127,37 @@ void SmartBox::start_core_task(){
                               }                  
               }
         }
-        _mail_box_mqtt.free(mail);  
+        _mail_box_on_mqtt_message.free(mail);  
     }
   }
 }
 
-void SmartBox::onMessageMqttCallback(const String& topic,const String& payload)
+void SmartBox::onMqttMessageCallback(const String& topic,const String& payload)
 {   
-    StringHelper::split(_splitTopics,topic.c_str(),"/");
-    if(_splitTopics.size()==2){
-      mqtt::mail_mqtt_t* mail=  _mail_box_mqtt.alloc();
+      mqtt::mail_on_message_t* mail=  _mail_box_on_mqtt_message.alloc();
       mail->topic = topic;
       mail->payload = payload;
-      _mail_box_mqtt.put(mail);
-    }
+      _mail_box_on_mqtt_message.put(mail);
 }
-void SmartBox::onMqttConnect(bool sessionPresent)
+void SmartBox::onMqttConnectCallback(bool sessionPresent)
 {
     TracePrinter::printTrace("SmartBox::OK: Connected to MQTT.");
     for(auto topic:_topics){
-      mqttNetwork.subscribe( topic);
+      TracePrinter::printTrace("subscribe topic:"+topic);
+      mqttNetwork.subscribe(topic);
+      
     }
-     
-   String invoke_data=String("{\"DeviceID\":\"")+Platform::getDeviceInfo().BoardID+
-   String("\",\"version\":\"")+String(2.0,DEC)+String("\"}");
-   mqttNetwork.publish("SmartBox/TimeSync",invoke_data);
 }
+void SmartBox::onMqttSubscribeCallback(uint16_t packetId, uint8_t qos)
+{
+    if(packetId == _topics.size()){
+      String invoke_data=String("{\"DeviceID\":\"")+Platform::getDeviceInfo().BoardID+
+      String("\",\"version\":\"")+String(2.1)+String("\"}");
+      mqttNetwork.publish("SmartBox/TimeSync",invoke_data);
+    }
+}
+
+
 
 void SmartBox::start_http_update(const String& url){
       ESPhttpUpdate.rebootOnUpdate(false);
@@ -157,7 +177,6 @@ void SmartBox::start_http_update(const String& url){
       ThisThread::sleep_for(Kernel::Clock::duration_seconds(3));
       ESP.restart();
 }
-
 void SmartBox::start_https_update(const String& url){
       ESPhttpUpdate.rebootOnUpdate(false);
       t_httpUpdate_return ret =  ESPhttpUpdate.update(url);

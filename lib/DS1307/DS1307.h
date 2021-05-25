@@ -49,7 +49,8 @@ class DS1307 //: public RTCBase
 {
     public:
         DS1307() = delete;
-        DS1307(TwoWire& wire,uint8_t  sda,uint8_t scl,uint32_t frequency=100000):_wire(wire),_sda(sda),_scl(scl),_frequency(frequency)
+        DS1307(TwoWire& wire,uint8_t  sda,uint8_t scl,uint32_t frequency=100000):
+        _wire(wire),_sda(sda),_scl(scl),_frequency(frequency)
         {
             
         }
@@ -60,7 +61,7 @@ class DS1307 //: public RTCBase
         //void setDateTime(time_t timestamp);
        // time_t datetime(String& nowtime);
        // virtual time_t timestamp(String& nowtime) override;
-        String& getDateTime(bool duplicate=false);
+        void getDateTime(String& datetime,bool duplicate=false);
         bool begin();
 
         bool isRunning(void);
@@ -102,7 +103,8 @@ class DS1307 //: public RTCBase
         bool isSqweEnabled();
 
         
-        static String datetime;
+        static time_t _epoch;
+        
     private:
         TwoWire& _wire;
         uint8_t bin2bcd (uint8_t val);
@@ -110,6 +112,7 @@ class DS1307 //: public RTCBase
         uint8_t             _sda;
         uint8_t             _scl;
         uint32_t _frequency;
+       
 };
 
 class NVRAM

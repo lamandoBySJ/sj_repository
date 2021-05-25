@@ -402,10 +402,6 @@ public:
    
     void  startup(){
         #if !defined(NDEBUG)
-        Serial.printf("this:%p\n",this);
-        Serial.printf("_thread:%p\n",&_thread);
-        Serial.printf("_mail_box:%p\n", &_mail_box);
-        Serial.printf("_mtx;:%p\n", &_mtx);  
         if(_thread.get_state()!=Thread::Running){
             _thread.start(callback(this,&TracePrinter::run_trace_back));
         }
