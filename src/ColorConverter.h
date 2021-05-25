@@ -4,7 +4,7 @@
 #include "ArduinoJson.h"
 #include "platform_debug.h"
 #include "ColorCollector.h"
-using namespace platform_debug;
+
 
 class ColorConverter
 {
@@ -115,7 +115,7 @@ public:
           case 340:{data.add("Red");}break;
           case 350:{data.add("Red");}break;
           case 360:{data.add("Red");}break;
-          //default: break;
+          default: break;
         }
 
         return data.size()!=0;

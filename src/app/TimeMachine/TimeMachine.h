@@ -8,8 +8,8 @@
 #include "platform_debug.h"
 #include <mutex>
 using namespace rtos;
-extern rtos::Mutex stdMutex;
 extern std::mutex std_mutex;
+extern rtos::Mutex stdMutex;
 template<typename RTC,typename OSMutex>
 class TimeMachine
 {
@@ -30,6 +30,7 @@ public:
         static TimeMachine<RTC,rtos::Mutex>* rtc = new  TimeMachine<RTC,rtos::Mutex>(Wire,21,22,13,stdMutex);
         return rtc;
     }
+    
     template<class U = OSMutex, typename std::enable_if_t<std::is_same<U,std::mutex>::value,int> = 0>
     static TimeMachine<RTC,OSMutex>* getTimeMachine(){
         static TimeMachine<RTC,std::mutex>* rtc = new TimeMachine<RTC,std::mutex>(Wire,21,22,13,std_mutex);

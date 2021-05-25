@@ -13,11 +13,11 @@
 #include <array>
 #include <type_traits>
 
-using namespace platform_debug;
-using namespace rtos;
 
-extern rtos::Mutex stdMutex;
+using namespace rtos;
 extern std::mutex std_mutex;
+extern rtos::Mutex stdMutex;
+
 template<typename Sensor,typename OSMutex>
 class ColorSensor 
 {
@@ -72,15 +72,12 @@ public:
     void attachMeasurementHook(std::function<void(int,const String&, const String&)> measHook){
        _measurementHook = measHook;
     }
-
-   
- 
-
   template<class U = OSMutex, typename std::enable_if_t<std::is_same<U,rtos::Mutex>::value,int> = 0>
   static ColorSensor<Sensor,OSMutex>* getColorSensor(){
          static ColorSensor<Sensor,OSMutex>* colorSensor = new ColorSensor<Sensor,OSMutex>(Wire1,4,15,2,stdMutex);
          return colorSensor;
    }
+   
    template<class U = OSMutex, typename std::enable_if_t<std::is_same<U,std::mutex>::value,int> = 0>
    static ColorSensor<Sensor,OSMutex>* getColorSensor(){
            static ColorSensor<Sensor,OSMutex>* colorSensor = new ColorSensor<Sensor,OSMutex>(Wire1,4,15,2,std_mutex);

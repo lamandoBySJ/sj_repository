@@ -35,7 +35,7 @@ void ColorSensor<Sensor, OSMutex>::init(bool pwrEnable)
     if(! _sensor.begin()){
       digitalWrite(23,HIGH);
     }
-    platform_debug::TracePrinter::printTrace(String(__FILE__)+String(":")+String(__LINE__));
+    TracePrinter::printTrace(String(__FILE__)+String(":")+String(__LINE__));
 }
 
 template<typename Sensor,typename OSMutex>

@@ -80,17 +80,16 @@ osStatus Thread::start(mbed::Callback<void()> task)
         _mutex.unlock();
         return osErrorParameter;
     }
-
-    if (!_dynamic_stack) {
-       if (_attr.stack_mem == nullptr) {
-            _attr.stack_mem = new uint32_t[_attr.stack_size / sizeof(uint32_t)];
-             MBED_ASSERT(_attr.stack_mem != nullptr);
-        }
-        //Fill the stack with a magic word for maximum usage checking
-        for (uint32_t i = 0; i < (_attr.stack_size / sizeof(uint32_t)); i++) {
-             ((uint32_t *)_attr.stack_mem)[i] = osRtxStackMagicWord;
-        }
+    /*
+    if (_attr.stack_mem == nullptr) {
+        _attr.stack_mem = new uint32_t[_attr.stack_size / sizeof(uint32_t)];
+        MBED_ASSERT(_attr.stack_mem != nullptr);
     }
+
+    //Fill the stack with a magic word for maximum usage checking
+    for (uint32_t i = 0; i < (_attr.stack_size / sizeof(uint32_t)); i++) {
+        ((uint32_t *)_attr.stack_mem)[i] = osRtxStackMagicWord;
+    }*/
     _attr.cb_size = sizeof(_obj_mem);
     _attr.cb_mem = &_obj_mem;
     _task = task;
@@ -99,7 +98,7 @@ osStatus Thread::start(mbed::Callback<void()> task)
     if (_tid == nullptr) {
         if (_dynamic_stack) {
             // Cast before deallocation as delete[] does not accept void*
-          //  delete[] static_cast<uint32_t *>(_attr.stack_mem);
+           // delete[] static_cast<uint32_t *>(_attr.stack_mem);
           // _attr.stack_mem = nullptr;
         }
         _mutex.unlock();

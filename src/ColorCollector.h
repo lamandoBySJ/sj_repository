@@ -1,5 +1,5 @@
-#ifndef __COLOR_COLLECTOR_H
-#define __COLOR_COLLECTOR_H
+#ifndef COLOR_COLLECTOR_H
+#define COLOR_COLLECTOR_H
 #include "Arduino.h"
 #include "ArduinoJson.h"
 #include "ESPWebService.h"
@@ -15,25 +15,17 @@
 
 namespace collector
 {
-    
-    struct mail_t{
-        AsyncWebSocketClient *client;
-        MeasEventType eventType;
-    };
+
     struct mail_ws_t{
         uint32_t id;
         AsyncWebSocketClient *client;
         MeasEventType eventType;
     };
 }
-using namespace collector;
-using namespace platform_debug;
-
-
-class alignas(4) [[gnu::may_alias]]  ColorCollector
+class  ColorCollector
 {
 public:
-    ColorCollector()
+    ColorCollector():_thread(osPriorityNormal,1024*10),doc(1024)
     {
   
     }
@@ -71,11 +63,14 @@ public:
     void delegateMethodPostMail(MeasEventType measEventType,AsyncWebSocketClient *client);
 private:
     rtos::Thread _thread;
-    rtos::Thread _thread2;
     rtos::Mutex _mtx,mtx;
-    rtos::Mail<mail_ws_t, 8> _mail_box_collection;
-    alignas(128)  mbed::Callback<void(AsyncWebSocketClient*,const String&)>_cbWebSocketClientText;
-    alignas(128)  mbed::Callback<void(const String&, const String&,uint32_t,uint32_t)> _cbWebSocketClientEvent;
+    rtos::Mail<collector::mail_ws_t, 8> _mail_box_collection;
+    mbed::Callback<void(AsyncWebSocketClient*,const String&)>_cbWebSocketClientText;
+    mbed::Callback<void(const String&, const String&,uint32_t,uint32_t)> _cbWebSocketClientEvent;
+    String text;
+    DynamicJsonDocument  doc;
+    RGB _rgb;
+    std::array<RGB,5> arrRGB;
 };
 
 #endif

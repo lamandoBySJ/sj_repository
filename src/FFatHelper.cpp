@@ -1,14 +1,15 @@
 #include "FFatHelper.h"
+rtos::Mutex _mtx;
+FFatHelper<rtos::Mutex> FatHelper(_mtx);
 
-std::mutex FFatHelper::_mtx;
-bool FFatHelper::init(){
-    std::unique_lock<std::mutex> lck(FFatHelper::_mtx, std::defer_lock);
-    lck.lock();
+template<typename OSMutex>
+bool FFatHelper<OSMutex>::init(){
+    std::lock_guard<OSMutex> lck(_mtx);
     return FFat.begin(true);
 }
-bool FFatHelper::exists(String path){
-    std::unique_lock<std::mutex> lck(FFatHelper::_mtx, std::defer_lock);
-    lck.lock();
+template<typename OSMutex>
+bool FFatHelper<OSMutex>::exists(String path){
+    std::lock_guard<OSMutex> lck(_mtx);
     File file = FFat.open(path, "r");
     bool isExists=false;
     if(file.name()!=nullptr) {
@@ -17,10 +18,10 @@ bool FFatHelper::exists(String path){
     file.close();
     return isExists;
 }
-bool FFatHelper::isDirectory(fs::FS &fs, const String& path){
-    std::unique_lock<std::mutex> lck(FFatHelper::_mtx, std::defer_lock);
-    lck.lock();
-     bool isExists=false;
+template<typename OSMutex>
+bool FFatHelper<OSMutex>::isDirectory(fs::FS &fs, const String& path){
+    std::lock_guard<OSMutex> lck(_mtx);
+    bool isExists=false;
     File file = fs.open(path);
     if(file.isDirectory()){
           isExists=true;
@@ -28,10 +29,10 @@ bool FFatHelper::isDirectory(fs::FS &fs, const String& path){
     file.close();
     return isExists;
 }
-bool FFatHelper::readFile(fs::FS &fs,const String& path,String& text){
+template<typename OSMutex>
+bool FFatHelper<OSMutex>::readFile(fs::FS &fs,const String& path,String& text){
 
-    std::unique_lock<std::mutex> lck(FFatHelper::_mtx, std::defer_lock);
-    lck.lock();
+   std::lock_guard<OSMutex> lck(_mtx);
     char c[2]={0};
     int max =5000;
     bool success=false;
@@ -47,45 +48,43 @@ bool FFatHelper::readFile(fs::FS &fs,const String& path,String& text){
             }
         }
         file.close();
-        platform_debug::PlatformDebug::println(String("R:OK"));     
+        PlatformDebug::println(String("R:OK"));     
     }
            
     return success;
 }
-
-bool FFatHelper::writeFile(fs::FS &fs,const String& path,const String& text){
-    std::unique_lock<std::mutex> lck(FFatHelper::_mtx, std::defer_lock);
-    lck.lock();
-    File file = fs.open(path, FILE_WRITE);
+template<typename OSMutex>
+bool FFatHelper<OSMutex>::writeFile(fs::FS &fs,const String& path,const String& text){
+   std::lock_guard<OSMutex> lck(_mtx);
+   File file = fs.open(path, FILE_WRITE);
+   PlatformDebug::println("file.name:"+String(file.name()));
     if(file.name()!=nullptr){
         if(file.write((const uint8_t*)text.c_str(),text.length()) == text.length()){
             file.close();
-            platform_debug::PlatformDebug::println(String("W:OK"));
+            PlatformDebug::println(String("W:OK"));
             return true;
         }
     }
-    platform_debug::PlatformDebug::println(String("W:ERROR"));
+    PlatformDebug::println(String("W:ERROR"));
   return false;  
 }
-
-bool FFatHelper::writeFile(fs::FS &fs,const String& path,const uint8_t * text,size_t len){
-    std::unique_lock<std::mutex> lck(FFatHelper::_mtx, std::defer_lock);
-    lck.lock();
+template<typename OSMutex>
+bool FFatHelper<OSMutex>::writeFile(fs::FS &fs,const String& path,const uint8_t * text,size_t len){
+   std::lock_guard<OSMutex> lck(_mtx);
     File file = fs.open(path, FILE_WRITE);
     if(file.name()!=nullptr){
         if(file.write(text,len) == len){
             file.close();
-            platform_debug::PlatformDebug::println(String("W:OK"));
+            PlatformDebug::println(String("W:OK"));
             return true;
         }
     }
-    platform_debug::PlatformDebug::println(String("W:ERROR"));
+    PlatformDebug::println(String("W:ERROR"));
   return false;  
 }
-
-bool FFatHelper::appendFile(fs::FS &fs, const String& path, const String& text){
-    std::unique_lock<std::mutex> lck(FFatHelper::_mtx, std::defer_lock);
-    lck.lock();
+template<typename OSMutex>
+bool FFatHelper<OSMutex>::appendFile(fs::FS &fs, const String& path, const String& text){
+   std::lock_guard<OSMutex> lck(_mtx);
     File file = fs.open(path, FILE_APPEND);
     if(file.name()!=nullptr){
         if(file.write((const uint8_t *)text.c_str(),text.length()) == text.length()){
@@ -95,9 +94,9 @@ bool FFatHelper::appendFile(fs::FS &fs, const String& path, const String& text){
     }
     return false;
 }
-bool FFatHelper::appendFile(fs::FS &fs,const String& path,const uint8_t * text,size_t len){
-    std::unique_lock<std::mutex> lck(FFatHelper::_mtx, std::defer_lock);
-    lck.lock();
+template<typename OSMutex>
+bool FFatHelper<OSMutex>::appendFile(fs::FS &fs,const String& path,const uint8_t * text,size_t len){
+   std::lock_guard<OSMutex> lck(_mtx);
     File file = fs.open(path, FILE_APPEND);
     if(file.name()!=nullptr){
         if(file.write(text,len) == len){
@@ -107,53 +106,26 @@ bool FFatHelper::appendFile(fs::FS &fs,const String& path,const uint8_t * text,s
     }
     return false;
 }
-bool FFatHelper::renameFile(fs::FS &fs, const String& path1, const String& path2){
-    std::unique_lock<std::mutex> lck(FFatHelper::_mtx, std::defer_lock);
-    lck.lock();
+template<typename OSMutex>
+bool FFatHelper<OSMutex>::renameFile(fs::FS &fs, const String& path1, const String& path2){
+   std::lock_guard<OSMutex> lck(_mtx);
       if (fs.rename(path1, path2)) {
             return true;
       }
   return false;
 }
-
-bool FFatHelper::deleteFile(fs::FS &fs, const String& path){
-    std::unique_lock<std::mutex> lck(FFatHelper::_mtx, std::defer_lock);
-    lck.lock();
+template<typename OSMutex>
+bool FFatHelper<OSMutex>::deleteFile(fs::FS &fs, const String& path){
+   std::lock_guard<OSMutex> lck(_mtx);
     if(fs.remove(path)){
         return true;
     }
   return false;
 }
 
-
-bool FFatHelper::listDir(fs::FS &fs, const String& dirname, uint8_t levels){
-     std::unique_lock<std::mutex> lck(FFatHelper::_mtx, std::defer_lock);
-    lck.lock();
-
-    File root = fs.open(dirname);
-    if(root.name()==nullptr){
-        return false;
-    }
-    File file = root.openNextFile();
-    while(file.name()){
-        if(file.isDirectory()){
-            platform_debug::PlatformDebug::println("-List DiR:"+String(file.name()));
-            if(levels){
-                listDir(fs, file.name(), levels -1);
-            }
-        } else {
-            platform_debug::PlatformDebug::println("--List FILE:"+String(file.name()));
-        }
-        file = root.openNextFile();
-    }
-    file.close();
-
-   return true;
-}
-
-bool FFatHelper::deleteFiles(fs::FS &fs, const String& dirname, uint8_t levels){
-     std::unique_lock<std::mutex> lck(FFatHelper::_mtx, std::defer_lock);
-    lck.lock();
+template<typename OSMutex>
+bool FFatHelper<OSMutex>::listDir(fs::FS &fs, const String& dirname, uint8_t levels){
+    std::lock_guard<OSMutex> lck(_mtx);
 
     File root = fs.open(dirname);
     if(root.name()==nullptr){
@@ -162,14 +134,12 @@ bool FFatHelper::deleteFiles(fs::FS &fs, const String& dirname, uint8_t levels){
     File file = root.openNextFile();
     while(file.name()){
         if(file.isDirectory()){
-            platform_debug::PlatformDebug::println("-List DiR:"+String(file.name()));
+            PlatformDebug::println("-List DiR:"+String(file.name()));
             if(levels){
                 listDir(fs, file.name(), levels -1);
             }
         } else {
-            platform_debug::PlatformDebug::println("--List FILE:"+String(file.name()));
-            lck.unlock();
-            FFatHelper::deleteFile(fs,file.name());
+            PlatformDebug::println("--List FILE:"+String(file.name()));
         }
         file = root.openNextFile();
     }
@@ -177,21 +147,47 @@ bool FFatHelper::deleteFiles(fs::FS &fs, const String& dirname, uint8_t levels){
 
    return true;
 }
+template<typename OSMutex>
+bool FFatHelper<OSMutex>::deleteFiles(fs::FS &fs, const String& dirname, uint8_t levels){
+   
 
-bool FFatHelper::createDir(fs::FS &fs, const String&  path){
-    std::unique_lock<std::mutex> lck(FFatHelper::_mtx, std::defer_lock);
-    lck.lock();
+    File root = fs.open(dirname);
+    if(root.name()==nullptr){
+        return false;
+    }
+    File file = root.openNextFile();
+    while(file.name()){
+        if(file.isDirectory()){
+            PlatformDebug::println("-List DiR:"+String(file.name()));
+            if(levels){
+                listDir(fs, file.name(), levels -1);
+            }
+        } else {
+            PlatformDebug::println("--List FILE:"+String(file.name()));
+            deleteFile(fs,file.name());
+        }
+        file = root.openNextFile();
+    }
+    file.close();
+
+   return true;
+}
+template<typename OSMutex>
+bool FFatHelper<OSMutex>::createDir(fs::FS &fs, const String&  path){
+   std::lock_guard<OSMutex> lck(_mtx);
     if(fs.mkdir(path)){
         return true;
     }
    return false;
 }
-
-bool FFatHelper::removeDir(fs::FS &fs,  const String&  path){
-    std::unique_lock<std::mutex> lck(FFatHelper::_mtx, std::defer_lock);
-    lck.lock();
+template<typename OSMutex>
+bool FFatHelper<OSMutex>::removeDir(fs::FS &fs,  const String&  path){
+   std::lock_guard<OSMutex> lck(_mtx);
     if(fs.rmdir(path)){
         return true;
     }
    return false;
 }
+
+template class FFatHelper<rtos::Mutex>;
+template class FFatHelper<std::mutex>;

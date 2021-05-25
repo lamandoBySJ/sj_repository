@@ -115,12 +115,6 @@ public:
     T *alloc(MBED_UNUSED uint32_t millisec = 0)
     {
         return try_alloc();
-     /* T* t = try_alloc();
-      while(t == NULL){
-          delay(100);
-          t = try_alloc();
-      }*/
-     // return t;
     }
 
     /** Allocate a memory block of type T, without blocking.

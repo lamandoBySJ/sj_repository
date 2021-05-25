@@ -1,55 +1,51 @@
 #include "SmartBox.h"
 
-
-
+extern FFatHelper<rtos::Mutex> FatHelper;
 void  SmartBox::task_collection_service(){
-      platform_debug::TracePrinter::printTrace("(*collection_->startup()");
+      TracePrinter::printTrace("(*collection_->startup()");
       while(true){
           ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));
       }
   }
 
 void  SmartBox::task_web_service()
-{
-    if(espWebService==nullptr){
-        espWebService=new ESPWebService();
-        colorCollector->setCallbackWebSocketClientText(callback(espWebService,&ESPWebService::delegateMethodWebSocketClientText));
-        colorCollector->setCallbackWebSocketClientEvent(callback(espWebService,&ESPWebService::delegateMethodWebSocketClientEvent));
-        espWebService->setCallbackPostMailToCollector(callback(colorCollector,&ColorCollector::delegateMethodPostMail));
-        espWebService->startup();
-    }
+{   
+  if(!espWebService.isRunning()){
+    colorCollector.setCallbackWebSocketClientText(callback(&espWebService,&ESPWebService::delegateMethodWebSocketClientText));
+    colorCollector.setCallbackWebSocketClientEvent(callback(&espWebService,&ESPWebService::delegateMethodWebSocketClientEvent));
+    espWebService.setCallbackPostMailToCollector(callback(&colorCollector,&ColorCollector::delegateMethodPostMail));
+    espWebService.startup();  
+  }
 }
 
 void  SmartBox::startup(){
     
     try{
-
        TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->init();  
 
-       MQTTNetwork::getNetworkClient()->addOnMqttConnectCallback(callback(this,&SmartBox::onMqttConnect));
-       MQTTNetwork::getNetworkClient()->addOnMessageCallback(callback(this,&SmartBox::onMessageMqttCallback));
-       
-       colorCollector=new ColorCollector();
-        
-       MQTTNetwork::getNetworkClient()->startup();
+       mqttNetwork.addOnMqttConnectCallback(callback(this,&SmartBox::onMqttConnect));
+       mqttNetwork.addOnMessageCallback(callback(this,&SmartBox::onMessageMqttCallback));
+       mqttNetwork.init();
+       mqttNetwork.startup();
 
-      _threadCollection.start(callback(colorCollector,&ColorCollector::run_task_collection));
-     // _thread.start(callback(this,&SmartBox::start_core_task));
+       colorCollector.startup();
+     // _threadCore.start(callback(this,&SmartBox::start_core_task));
+
     }catch(const os::thread_error& e){
-        platform_debug::TracePrinter::printTrace(e.what());
-        //platform_debug::PlatformDebug::pause();
+        TracePrinter::printTrace(e.what());
+        //PlatformDebug::pause();
         ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));  
     }
-    
+
 }
 void SmartBox::start_core_task(){
     DynamicJsonDocument  doc(8192);
-    platform_debug::TracePrinter::printTrace(String(ESP.getFreeHeap(),DEC));
+    TracePrinter::printTrace(String(ESP.getFreeHeap(),DEC));
     ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
     //UBaseType_t x =uxTaskGetStackHighWaterMark(NULL);
-    //platform_debug::TracePrinter::printTrace("stack left:"+String((int)x,DEC));
+    //TracePrinter::printTrace("stack left:"+String((int)x,DEC));
   String event_type;
-  platform_debug::TracePrinter::printTrace("----------- core task -----------------");
+  TracePrinter::printTrace("----------- core task -----------------");
   while(true)
   {
     osEvent evt=  _mail_box_mqtt.get();
@@ -75,12 +71,12 @@ void SmartBox::start_core_task(){
                               switch( str_map_type[event_type] ){
                                 case RequestType::ALS_MEASURE:
                                 {
-                                  colorCollector->delegateMethodPostMail(MeasEventType::EventSystemMeasure,nullptr);
+                                  colorCollector.delegateMethodPostMail(MeasEventType::EventSystemMeasure,nullptr);
                                   break;
                                 }
                                 case RequestType::MANUAL_REQUEST:
                                 {
-                                 colorCollector->delegateMethodPostMail(MeasEventType::EventServerMeasure,nullptr);
+                                 colorCollector.delegateMethodPostMail(MeasEventType::EventServerMeasure,nullptr);
                                   break;
                                 }
                                 case RequestType::OTA_CANCEL:
@@ -105,8 +101,8 @@ void SmartBox::start_core_task(){
                                   if (doc.containsKey("file_list")) {
                                       JsonArray filelist=doc["file_list"].as<JsonArray>();
                                       for(String filename :  filelist){
-                                        if(FFatHelper::exists(filename) ){
-                                          FFatHelper::deleteFile(FFat,filename.c_str());
+                                        if(FatHelper.exists(filename) ){
+                                          FatHelper.deleteFile(FFat,filename.c_str());
                                         }
                                       }
                                   }
@@ -133,9 +129,9 @@ void SmartBox::onMessageMqttCallback(const String& topic,const String& payload)
 }
 void SmartBox::onMqttConnect(bool sessionPresent)
 {
-    platform_debug::TracePrinter::printTrace("SmartBox::OK: Connected to MQTT.");
+    TracePrinter::printTrace("SmartBox::OK: Connected to MQTT.");
     for(auto topic:_topics){
-      MQTTNetwork::getNetworkClient()->subscribe( topic);
+      mqttNetwork.subscribe( topic);
     }
 }
 
@@ -144,13 +140,13 @@ void SmartBox::start_http_update(const String& url){
       t_httpUpdate_return ret =  ESPhttpUpdate.update(url);
       switch(ret) {
         case HTTP_UPDATE_FAILED:
-            platform_debug::PlatformDebug::printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+            PlatformDebug::printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
             break;
          case HTTP_UPDATE_NO_UPDATES:
-            platform_debug::PlatformDebug::println("HTTP_UPDATE_NO_UPDATES");
+            PlatformDebug::println("HTTP_UPDATE_NO_UPDATES");
             break;
         case HTTP_UPDATE_OK:
-            platform_debug::PlatformDebug::println("HTTP_UPDATE_OK");
+            PlatformDebug::println("HTTP_UPDATE_OK");
             break;
         default:break;
       }
@@ -163,13 +159,13 @@ void SmartBox::start_https_update(const String& url){
       t_httpUpdate_return ret =  ESPhttpUpdate.update(url);
       switch(ret) {
         case HTTP_UPDATE_FAILED:
-            platform_debug::PlatformDebug::printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+            PlatformDebug::printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
             break;
          case HTTP_UPDATE_NO_UPDATES:
-            platform_debug::PlatformDebug::println("HTTP_UPDATE_NO_UPDATES");
+            PlatformDebug::println("HTTP_UPDATE_NO_UPDATES");
             break;
         case HTTP_UPDATE_OK:
-            platform_debug::PlatformDebug::println("HTTP_UPDATE_OK");
+            PlatformDebug::println("HTTP_UPDATE_OK");
             break;
         default:break;
       }

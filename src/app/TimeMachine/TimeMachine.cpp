@@ -15,6 +15,7 @@ template<typename RTC,typename OSMutex>
 void TimeMachine<RTC,OSMutex>::init(bool pwrEnable,const char* date,const  char* time)
  {
     std::lock_guard<OSMutex> lck(_mtx);
+     
     if(pwrEnable){
       pinMode(_rst,OUTPUT);
       digitalWrite(_rst,HIGH);
@@ -42,8 +43,7 @@ void TimeMachine<RTC,OSMutex>::init(bool pwrEnable,const char* date,const  char*
  template<typename RTC,typename OSMutex>
  void TimeMachine<RTC,OSMutex>::setDateTime(const char* date,const  char* time)
  {
-      std::unique_lock<OSMutex> lck(_mtx, std::defer_lock);
-      lck.lock();
+      std::lock_guard<OSMutex> lck(_mtx);
       _rtc.setDateTime(date,time);
  }
 
@@ -60,7 +60,7 @@ bool TimeMachine<RTC,OSMutex>::selftest()
             return true;
         }
     }while(--timeout > 0);
-    platform_debug::PlatformDebug::println(String("RTC")+String(__FILE__)+String(":")+String(__LINE__));
+    PlatformDebug::println(String("RTC")+String(__FILE__)+String(":")+String(__LINE__));
     return false;
 }
 

@@ -1,8 +1,10 @@
 #include "ColorCollector.h"
 
+
+extern FFatHelper<rtos::Mutex> FatHelper;
 void ColorCollector::delegateMethodPostMail(MeasEventType measEventType,AsyncWebSocketClient *client)
 {   
-    mail_ws_t *mail = _mail_box_collection.alloc();
+    collector::mail_ws_t *mail = _mail_box_collection.alloc();
     if(mail){
         mail->client = client;
         mail->eventType = measEventType;
@@ -17,28 +19,23 @@ void  ColorCollector::startup()
 
 void ColorCollector::run_task_collection()
 {
-     RGB _rgb;
+   
     ColorSensor<BH1749NUC,rtos::Mutex>::getColorSensor()->init();
     ColorSensor<BH1749NUC,rtos::Mutex>::getColorSensor()->attachMeasurementHook(std::bind(&ColorCollector::runCallbackWebSocketClientPostEvent,this,
       std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
 
-
-   std::array<RGB,5> arrRGB;
-
-    DynamicJsonDocument  doc(1024);
-     platform_debug::TracePrinter::printTrace("----------------- ColorCollector -----------------");
+    TracePrinter::printTrace("----------------- ColorCollector -----------------");
     while(true){
         // ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(30));
         osEvent evt =  _mail_box_collection.get();
-         platform_debug::TracePrinter::printTrace("----------------- evt.status == osEventMail -----------------");
         if (evt.status == osEventMail) {
-            mail_ws_t *mail = (mail_ws_t *)evt.value.p;
+            collector::mail_ws_t *mail = (collector::mail_ws_t *)evt.value.p;
         
             ColorSensor<BH1749NUC,rtos::Mutex>::getColorSensor()->loopMeasure(_rgb,Kernel::Clock::duration_milliseconds(200),arrRGB);
             _rgb.R.u16bit =  arrRGB[4].R.u16bit;
             _rgb.G.u16bit =  arrRGB[4].G.u16bit;
             _rgb.B.u16bit =  arrRGB[4].B.u16bit;
-            platform_debug::TracePrinter::printTrace(String(_rgb.R.u16bit,DEC)+": "+
+            TracePrinter::printTrace(String(_rgb.R.u16bit,DEC)+": "+
                                                               String(_rgb.G.u16bit,DEC)+": "+
                                                               String(_rgb.B.u16bit,DEC)+": "+
                                                               String(_rgb.IR.u16bit,DEC) ); 
@@ -64,7 +61,7 @@ void ColorCollector::run_task_collection()
                     doc["r_offset"] = Platform::getRGBProperties().r_offset;
                     doc["g_offset"] = Platform::getRGBProperties().g_offset;
                     doc["b_offset"] = Platform::getRGBProperties().b_offset;
-                    MQTTNetwork::getNetworkClient()->publish("TowerColorMeasure/"+Platform::getWebProperties().ap_ssid,doc.as<String>());
+                   // MQTTNetwork::getNetworkClient()->publish("TowerColorMeasure/"+Platform::getWebProperties().ap_ssid,doc.as<String>());
                 }
                 break;
                 case  MeasEventType::EventServerMeasure:
@@ -72,7 +69,7 @@ void ColorCollector::run_task_collection()
                     doc["r_offset"] = Platform::getRGBProperties().r_offset;
                     doc["g_offset"] = Platform::getRGBProperties().g_offset;
                     doc["b_offset"] = Platform::getRGBProperties().b_offset;
-                    MQTTNetwork::getNetworkClient()->publish("TowerColor/"+Platform::getWebProperties().ap_ssid,doc.as<String>());
+                    //MQTTNetwork::getNetworkClient()->publish("TowerColor/"+Platform::getWebProperties().ap_ssid,doc.as<String>());
                 }
                 break;
                 case  MeasEventType::EventWebAppOffset:
@@ -95,17 +92,18 @@ void ColorCollector::run_task_collection()
                     doc["ws_evt_type"]="WS_EVT_DATA";
                     doc["msg"]="RgbOffset";
                      
-                    String text=String("{\"r_offset\":")+String(Platform::getRGBProperties().r_offset,DEC)
+                    text=String("{\"r_offset\":")+String(Platform::getRGBProperties().r_offset,DEC)
                                  +String(",\"g_offset\":")+String(Platform::getRGBProperties().g_offset,DEC)
                                  +String(",\"b_offset\":")+String(Platform::getRGBProperties().b_offset,DEC)+String("}");
-                      
-                    if(FFatHelper::writeFile(FFat,Platform::getRGBProperties().path.c_str(),text)){
+                    
+                    if(FatHelper.writeFile(FFat,Platform::getRGBProperties().path.c_str(),text)){
                         doc["file_write"]=true;
+                        runCallbackWebSocketClientPostEvent(100,"done","progress");
+                        runCallbackWebSocketClientText(mail->client,doc.as<String>());
                     }else{
                         doc["file_write"]=false;
+                        runCallbackWebSocketClientPostEvent(80,"fail","progress");
                     }
-                    runCallbackWebSocketClientText(mail->client,doc.as<String>());
-                    runCallbackWebSocketClientPostEvent(100,"done","progress");
                 }
                 break;
                 case  MeasEventType::EventWebAppMeasure:

@@ -160,7 +160,7 @@ namespace mbed {
  * set the configuration parameter "platform.force-non-copyable-error" to true.
  */
 template<typename T>
-class NonCopyable {
+class [[gnu::may_alias]] NonCopyable {
 #ifndef DOXYGEN_ONLY
 protected:
     /**

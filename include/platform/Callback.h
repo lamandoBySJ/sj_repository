@@ -130,8 +130,9 @@ struct [[gnu::may_alias]] CallbackBase {
     // function, and an object pointer.
     struct _model_function_object {
         struct _class;
-        void (_class::*_methodfunc)(int);
         void *obj;
+        void (_class::*_methodfunc)(int);
+        
     };
 
     /* Notes on the [[gnu::may_alias]] attribute here.

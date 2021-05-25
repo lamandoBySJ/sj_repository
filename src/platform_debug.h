@@ -1,83 +1,44 @@
 #ifndef PLATFORM_DEBUG_H
 #define PLATFORM_DEBUG_H
 
-#include "arduino.h"
+
 #include "app/OLEDScreen/OLEDScreen.h"
+#include "BH1749NUC_REG/bh1749nuc_reg.h"
+#include "arduino.h"
 #include "platform/Callback.h"
 #include <stddef.h>
 #include <mutex>
 #include <thread>
 #include <stdarg.h>
 #include "heltec.h"
-#include "BH1749NUC_REG/bh1749nuc_reg.h"
 #include <map>
+#include "platform/mbed.h"
+#include "rtos/Thread.h"
+#include "rtos/Mail.h"
+#include "app/OLEDScreen/OLEDScreen.h"
+//#define NDEBUG 
+namespace os
+{ 
+
 struct osThread
 {
-   static String& get_error_reason(osStatus_t osStatus,const char* threadName,const char* thisThreadName=nullptr){
-        static String e;
-        static std::map<osStatus_t,String> _map;
-        if(_map.size()==0){
-            _map[osOK]="osOK";
-            _map[osErrorTimeout]="osErrorTimeout";
-            _map[osErrorParameter ]="osErrorParameter ";
-            _map[osErrorResource]="osErrorResource";
-            _map[osErrorNoMemory]="osErrorNoMemory";
-            _map[osErrorISR]="osErrorISR";
-            _map[osStatusReserved ]="osStatusReserved ";
-        }
-        e = "--- "+_map[osStatus]+"[ code:"+String((int)osStatus,DEC)+",Thread:"+String(threadName)+",ThisThread:"+String(thisThreadName)+" ]"+" ---";
-        return e;
-    }
-};
-
-namespace os
-{   
-struct mail_control_t{
-        uint32_t counter=0; 
-        uint32_t id=0;   
-};
-class ThreadControlGuard
-{
-public:
-        ThreadControlGuard(){
-            
-        }
-        void startup(){
-
-        }
-
-        void run_controller(){
-
-        }
-
-        osStatus set_signal_id(uint32_t id,bool fromISR=false){
-            //std::lock_guard<rtos::Mutex> lck(_mtx);
-            mail_control_t* mail =(mail_control_t*)_mail_box_control.alloc();
-            mail->id =id;
-            if(fromISR){
-               return  _mail_box_control.put_from_isr(mail);
-            }else{
-                return _mail_box_control.put(mail);
+    static String& get_error_reason(osStatus_t osStatus,const char* threadName,const char* thisThreadName=nullptr){
+            static String e;
+            static std::map<osStatus_t,String> _map;
+            if(_map.size()==0){
+                _map[osOK]="osOK";
+                _map[osErrorTimeout]="osErrorTimeout";
+                _map[osErrorParameter ]="osErrorParameter ";
+                _map[osErrorResource]="osErrorResource";
+                _map[osErrorNoMemory]="osErrorNoMemory";
+                _map[osErrorISR]="osErrorISR";
+                _map[osStatusReserved ]="osStatusReserved ";
             }
+            e = "--- "+_map[osStatus]+"[ code:"+String((int)osStatus,DEC)+",Thread:"+String(threadName)+",ThisThread:"+String(thisThreadName)+" ]"+" ---";
+            return e;
         }
-        
-        uint32_t get_signal_id(){
-            osEvent evt;
-            do{
-                evt =  _mail_box_control.get();
-                if(evt.status == osEventMail){
-                    mail_control_t* mail = (mail_control_t*)evt.value.p;
-                    return mail->id;
-                }else{
-                    ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(100));  
-                }
-            }while(evt.status != osEventMail);
-            return -1;
-        }
-private:
-        rtos::Mail<mail_control_t, 16> _mail_box_control;
-        rtos::Mutex _mtx;
-};
+ };
+
 struct thread_error:public std::exception
     {
         thread_error(osStatus_t osStatus,const char* threadName=nullptr)
@@ -92,14 +53,8 @@ struct thread_error:public std::exception
             return osThread::get_error_reason(osStatus,threadName,ThisThread::get_name()).c_str() ;
         }
 };
-}
 
-enum class MeasEventType : char{
-    EventSystemMeasure = 0,
-    EventServerMeasure,
-    EventWebAppOffset,
-    EventWebAppMeasure
-};
+}
 
 struct RGB
 {
@@ -118,9 +73,12 @@ struct RGB
     uint32_t l;
 };
 
-//#define NDEBUG 
-namespace platform_debug
-{
+enum class MeasEventType : char{
+        EventSystemMeasure = 0,
+        EventServerMeasure,
+        EventWebAppOffset,
+        EventWebAppMeasure
+};
 struct DeviceInfo
 {   
     DeviceInfo(){
@@ -228,7 +186,6 @@ public:
 
    
 };
-
 struct IPSProtocol
 {
     IPSProtocol(){
@@ -244,6 +201,8 @@ struct IPSProtocol
     String collector;
     String mode;
 };
+
+
 
 
 
@@ -294,6 +253,7 @@ public:
     
     void  init(){
       Serial.println(">>>>>>>>>>>>>>>> Terminal init done <<<<<<<<<<<<<<<<<<<<<<<");
+      
     }
 
     template <class T,class...Args>
@@ -308,8 +268,8 @@ public:
 
     static PlatformDebug* getInstance()
     { 
-        static PlatformDebug platformDebug;
-        return &platformDebug;
+        static PlatformDebug* platformDebug=new PlatformDebug();
+        return platformDebug;
     }
 
     static inline void printLogo() 
@@ -345,7 +305,7 @@ public:
     static inline void pause(){
         while(1){  Serial.println("pause");ThisThread::sleep_for(Kernel::Clock::duration_seconds(10));};
     }
-//protected:  
+protected:  
  
     void print(const String& data) 
     {   
@@ -412,7 +372,7 @@ public:
 
     ~PlatformDebug(){
         Serial.println("~platform_debug::PlatformDebug::pause():~PlatformDebug");
-        platform_debug::PlatformDebug::pause();
+        PlatformDebug::pause();
     }
 private:
     PlatformDebug(){}
@@ -423,18 +383,33 @@ private:
     rtos::Mutex _mtx;
 };
 
-typedef struct {
-    uint32_t counter=0;   
+struct [[gnu::may_alias]] mail_trace_t{
+    uint32_t id;
     String log;
-} mail_trace_t;
+};
 
 class TracePrinter
 {
 public:
-    
+    TracePrinter():_thread(osPriorityNormal,1024*6)
+    {
+
+    }
+     ~TracePrinter()
+    {
+        Serial.println("~platform_debug::PlatformDebug::pause():~TracePrinter");
+    }
+   
     void  startup(){
         #if !defined(NDEBUG)
-        _thread.start(callback(this,&TracePrinter::run_trace_back));
+        Serial.printf("this:%p\n",this);
+        Serial.printf("_thread:%p\n",&_thread);
+        Serial.printf("_mail_box:%p\n", &_mail_box);
+        Serial.printf("_mtx;:%p\n", &_mtx);  
+        if(_thread.get_state()!=Thread::Running){
+            _thread.start(callback(this,&TracePrinter::run_trace_back));
+        }
+        Serial.println("tracePrinter is Running:"+String(__FILE__));
         #endif
     }
  
@@ -443,7 +418,7 @@ public:
              osEvent evt=  _mail_box.get();
             if (evt.status == osEventMail) {
                 mail_trace_t *mail = (mail_trace_t *)evt.value.p;
-                 platform_debug::PlatformDebug::println(mail->log);
+                 PlatformDebug::println(mail->log);
                  TracePrinter::getInstance()->_mail_box.free(mail); 
             }
             //std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -493,33 +468,19 @@ public:
        #endif
     }
     static TracePrinter* getInstance(){
-        static TracePrinter *tracePrinter=nullptr;
-        if(tracePrinter==nullptr){
-            tracePrinter = new TracePrinter();
-        }
+       static TracePrinter *tracePrinter = new TracePrinter();
         return tracePrinter;
     }
-     ~TracePrinter()
-    {
-        Serial.println("~platform_debug::PlatformDebug::pause():~TracePrinter");
-        platform_debug::PlatformDebug::pause();
-    }
-private:
-
-    TracePrinter():_thread(osPriorityNormal,1024*6){}
+    
     TracePrinter&  operator=(const TracePrinter& other)=delete;
     TracePrinter&  operator=(TracePrinter&& other)=delete;
+    
+private:
     void println(const String& e);
-
     #if !defined(NDEBUG)
-    rtos::Thread _thread;
     rtos::Mail<mail_trace_t, 8>  _mail_box;
+    rtos::Thread _thread;
     rtos::Mutex _mtx;
     #endif
 };
-
-} // namespace platform_debug
-
-
-
 #endif

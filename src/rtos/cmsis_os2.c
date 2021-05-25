@@ -38,6 +38,7 @@
 #include "freertos/timers.h"
 #include "rtos/tasks.h"
 #include "rtos/timers.h"
+#include "rtos/internal/rtx_os.h"
 /*---------------------------------------------------------------------------*/
 //extern void vQueueAddToRegistry( QueueHandle_t xQueue, const char *pcName );
 //extern void vQueueUnregisterQueue( QueueHandle_t xQueue );

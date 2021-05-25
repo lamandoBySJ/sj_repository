@@ -7,7 +7,6 @@
 #include <string>
 #include "platform_debug.h"
 using namespace std;
-using namespace platform_debug;
 class StringHelper
 {
 public:

@@ -13,9 +13,10 @@
 #include "ColorCollector.h" 
 #include "app/TimeMachine/TimeMachine.h" 
 #include "StringHelper.h" 
-#include <vector>
+#include "HTTPDownload.h"
+
 using namespace std;
-using namespace platform_debug;
+
 
 enum class RequestType : uint8_t
 {
@@ -27,80 +28,10 @@ enum class RequestType : uint8_t
   ESP_RESTART
 };
 
-class HTTPDownload
+class  SmartBox
 {
 public:
-    HTTPDownload(){
-
-    }
-    void init(){
-      vfilelist.clear();
-      vfileDownloaded.clear();
-    }
-    ~HTTPDownload()=default;
-
-    bool execute(const String& url,const String& file)
-    {
-      _path =  String("/")+file; 
-      _httpClient.begin(url);
-      int httpCode = _httpClient.GET();
-       
-      if((httpCode != HTTP_CODE_OK)){
-        return false;
-      }
-             
-      bool success=true;
-      if(httpCode > 0 && httpCode == HTTP_CODE_OK) {
-          int len = _httpClient.getSize();
-          int buff_len = sizeof(buff);
-          // get tcp stream
-          WiFiClient* stream = _httpClient.getStreamPtr();
-          FFatHelper::writeFile(FFat,_path,"");   
-          // read all data from server
-          while( _httpClient.connected() && (len > 0 || len == -1)) {
-              // get available data size
-              size_t size = stream->available();
-              platform_debug::TracePrinter::printf("[HTTP] size : %d, len: %d\n",size,len);
-              if(size>0) {
-                // read up to 128 byte
-                if(size <= buff_len){
-                    buff_len=size;
-                }else{
-                    buff_len=sizeof(buff);
-                }
-                int c = stream->readBytes(buff, buff_len);
-                if(len > 0) {
-                    len -= c;
-                }
-                if(c == buff_len){
-                    FFatHelper::appendFile(FFat,_path,buff,c); 
-                }else{
-                    success=false;
-                break;
-              }
-          }
-        }
-      } 
-      if(success==true){
-         vfileDownloaded.push_back(file);
-      }
-      _httpClient.end();
-      return success;
-    }
-private:
-    uint8_t buff[1024] = { 0 };
-    HTTPClient _httpClient;
-    std::vector<String> vfilelist;
-    std::vector<String> vfileDownloaded;
-    String splitString;
-    String _path;
-};
-
-
-class SmartBox
-{
-public:
-  SmartBox():colorCollector(nullptr),espWebService(nullptr)
+  SmartBox()
   {
       str_map_type[String("als_measure")]   = RequestType::ALS_MEASURE;
       str_map_type[String("ota_cancel")]    = RequestType::OTA_CANCEL;
@@ -127,19 +58,20 @@ public:
   void onMessageMqttCallback(const String& topic,const String& payload);
 
 private:
-
-  ColorCollector* colorCollector;
-  ESPWebService* espWebService;
+  rtos::Mail<mqtt::test_t, 6> _mail_box_test;
+  rtos::Mail<mqtt::test1_t, 6> _mail_box_test1;
+  rtos::Mail<mqtt::test2_t, 6> _mail_box_test2;
+  MQTTNetwork mqttNetwork;
+  ColorCollector colorCollector;
+  ESPWebService espWebService;
+    
   rtos::Mutex _mtx;
   rtos::Thread _threadCore;
-  rtos::Thread _threadCollection;
-  rtos::Thread _threadWeb;
- 
+  rtos::Mail<mqtt::mail_mqtt_t, 16>  _mail_box_mqtt;
+  std::set<String>  _topics;
   HTTPDownload _httpDownload;
   vector<String> _splitTopics;
   std::map<String,RequestType> str_map_type;
-  rtos::Mail<mqtt::mail_mqtt_t, 16>  _mail_box_mqtt;
-  std::set<String>  _topics;
 };
 
 #endif

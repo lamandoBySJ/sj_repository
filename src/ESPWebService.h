@@ -21,15 +21,14 @@
 #include <platform/Callback.h>
 #include <ColorCollector.h>
 #include <rtos/Mutex.h>
-#include "rtos/Thread.h"
-#include "rtos/Mail.h"
 #include "rtos/cmsis_os.h"
 #include "rtos/ThisThread.h"
 #include <DNSServer.h>
+#include "rtos/Thread.h"
+#include "rtos/Mail.h"
 
-using namespace platform_debug;
-
-namespace web_server
+using namespace std;
+namespace web
 {    
     
     struct mail_t{
@@ -37,16 +36,13 @@ namespace web_server
          uint32_t message;
     };
 }
-using namespace std;
-using namespace web_server;
 
-class alignas(4) [[gnu::may_alias]] ESPWebService 
+class  ESPWebService
 {
 public:
-    ESPWebService():_thread(osPriorityNormal,1024*8),_mtx(),
-        _dnsServer(nullptr),_server(nullptr),_events(nullptr),_wss(nullptr),
-        _handler(nullptr),
-        running(false)
+    ESPWebService():_thread(osPriorityNormal,1024*8),
+    _dnsServer(nullptr),_server(nullptr),_events(nullptr),_wss(nullptr),
+        _handler(nullptr)
     {
          _events=new AsyncEventSource("/events");
          _wss =new AsyncWebSocket("/ws");
@@ -58,13 +54,26 @@ public:
             delete _handler;
         }
     }
-
-    void startup();
-    void shutdown();
+    void startup(){
+        std::lock_guard<rtos::Mutex> lck(_mtx);
+        if(_thread.get_state()!=Thread::Running){
+            _thread.start(callback(this,&ESPWebService::run_web_service));
+        }
+    }
+    void terminate(){
+        std::lock_guard<rtos::Mutex> lck(_mtx);
+        if(_thread.get_state()==Thread::Running){
+            _thread.terminate();
+        }
+    }
+    bool isRunning(){
+        std::lock_guard<rtos::Mutex> lck(_mtx);
+        return _thread.get_state()==Thread::Running;
+    }
     void run_web_service();
     void notFound(AsyncWebServerRequest *request);
     void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len) ;
-    bool isRunning();
+
 
     void setCallbackPostMailToCollector(mbed::Callback<void(MeasEventType,AsyncWebSocketClient*)> callback)
     {
@@ -78,13 +87,11 @@ public:
     void delegateMethodWebSocketClientText(AsyncWebSocketClient *client,const String& text);
     void delegateMethodWebSocketClientEvent(const String& message, const String& event, uint32_t id, uint32_t reconnect);
 
-    static ESPWebService* getESPWebService(){
-        static ESPWebService* ESPwebService=new ESPWebService();
-        return ESPwebService;
-    }
+ 
 private:
-    rtos::Thread _thread;
+
     rtos::Mutex _mtx;
+    rtos::Thread _thread;
     DNSServer* _dnsServer;
     AsyncWebServer* _server;
     AsyncEventSource* _events;
@@ -92,9 +99,8 @@ private:
     AsyncCallbackJsonWebHandler* _handler;
     AsyncWebSocketClient* _client;
     const char* PARAM_MESSAGE = "message";
-    bool running;
-
-    alignas(128) mbed::Callback<void(MeasEventType,AsyncWebSocketClient*)> _callback;
+ 
+    mbed::Callback<void(MeasEventType,AsyncWebSocketClient*)> _callback;
 };
 
 #endif

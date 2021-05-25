@@ -1,7 +1,5 @@
 #include "platform_debug.h"
-#include "app/OLEDScreen/OLEDScreen.h"
 
-using namespace platform_debug;
 
 void TracePrinter::println(const String& e){
         #if !defined(NDEBUG)
