@@ -35,7 +35,7 @@ extern "C" {
 #include "freertos/queue.h"
 #include "platform_debug.h"
 #include "SmartBox.h"
-#include "ThreadControlGuard.h"
+#include "LoopTaskGuard.h"
 
 
 using namespace std;
@@ -168,31 +168,30 @@ void setup() {
   TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
   
 }
-  rtos::Thread _thread1;
-  rtos::Thread _thread2;
-  rtos::Thread _thread3;
-ThreadControlGuard threadControlGuard;
+
+
 void loop() {
+  guard::LoopTaskGuard::getLoopTaskGuard();
+
   ThisThread::sleep_for(Kernel::Clock::duration_seconds(1)); 
   attachInterrupt(0,[&](){
     //detachInterrupt(0);
-    threadControlGuard.set_signal_id(0,true);
+    guard::LoopTaskGuard::getLoopTaskGuard().set_signal_id(0,true);
   },FALLING);
 
   smartBox->startup();
-  
+
   while (true) {
-    switch (threadControlGuard.get_signal_id())
+
+    switch (guard::LoopTaskGuard::getLoopTaskGuard().get_signal_id())
     {
      case 0:
           {
-              smartBox->task_web_service();
-              String tm;
-              TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->getDateTime(tm);
-              TracePrinter::printTrace(tm);
+            smartBox->task_web_service();
           }
        break;
      case 1:
+            smartBox->task_web_service();
       break;
      case 2:
       break;
@@ -203,18 +202,6 @@ void loop() {
     }
   }
 }
-/*
-    
-if( timeMachine.getDateTime(currentTime)){
-            TracePrinter::printTrace(currentTime);
-}else{
-            TracePrinter::printTrace("ERROR:currentTime");
-}
-bool ret =  MQTTNetwork::getClient()->publish("test",currentTime);
-if(!ret){
-            TracePrinter::printTrace("publish Fail");
-}
-*/
 //PlatformDebug::pause();
 //std::this_thread::sleep_for(chrono::seconds(10));
 //  std::unique_lock<rtos::Mutex> lck(_mtx, std::defer_lock);
