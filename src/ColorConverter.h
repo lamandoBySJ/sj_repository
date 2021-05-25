@@ -115,7 +115,7 @@ public:
           case 340:{data.add("Red");}break;
           case 350:{data.add("Red");}break;
           case 360:{data.add("Red");}break;
-          default: break;
+          default:{data.add("Black");}break;
         }
 
         return data.size()!=0;

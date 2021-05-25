@@ -1,5 +1,5 @@
 #include "ColorCollector.h"
-
+#include "app/TimeMachine/TimeMachine.h"
 
 extern FFatHelper<rtos::Mutex> FatHelper;
 void ColorCollector::delegateMethodPostMail(MeasEventType measEventType,AsyncWebSocketClient *client)
@@ -24,6 +24,8 @@ void ColorCollector::run_task_collection()
     ColorSensor<BH1749NUC,rtos::Mutex>::getColorSensor()->attachMeasurementHook(std::bind(&ColorCollector::runCallbackWebSocketClientPostEvent,this,
       std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
 
+    uint32_t diff_red,diff_green,diff_blue;
+    String timepoint;
     TracePrinter::printTrace("----------------- ColorCollector -----------------");
     while(true){
         // ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(30));
@@ -35,15 +37,24 @@ void ColorCollector::run_task_collection()
             _rgb.R.u16bit =  arrRGB[4].R.u16bit;
             _rgb.G.u16bit =  arrRGB[4].G.u16bit;
             _rgb.B.u16bit =  arrRGB[4].B.u16bit;
-            TracePrinter::printTrace(String(_rgb.R.u16bit,DEC)+": "+
-                                                              String(_rgb.G.u16bit,DEC)+": "+
-                                                              String(_rgb.B.u16bit,DEC)+": "+
-                                                              String(_rgb.IR.u16bit,DEC) ); 
-           
+            TracePrinter::printTrace(String(_rgb.R.u16bit,DEC)+": "+ String(_rgb.G.u16bit,DEC)+": "+
+                                     String(_rgb.B.u16bit,DEC)+": "+ String(_rgb.IR.u16bit,DEC) ); 
+
+            diff_red   = abs(Platform::getRGBProperties().r_offset-_rgb.R.u16bit);
+            diff_green = abs(Platform::getRGBProperties().g_offset-_rgb.G.u16bit);
+            diff_blue  = abs(Platform::getRGBProperties().b_offset-_rgb.B.u16bit);
             doc.clear();
             JsonArray data = doc.createNestedArray("TowerColor");
-            ColorConverter::getColorConverter().color(_rgb,data);
-          
+            if(_rgb.R.u16bit<10&&_rgb.G.u16bit<10&&_rgb.B.u16bit<10){
+                data.add("Black");
+            }else if(diff_red<10&&diff_green<10&&diff_blue<10){
+                 data.add("Black");
+            }else{
+                ColorConverter::getColorConverter().color(_rgb,data);
+            }   
+            TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->getDateTime(timepoint);
+            doc["unix_timestamp"]= TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->getEpoch();
+            doc["datetime"]= timepoint;    
             doc["box_mac_id"] = Platform::getWebProperties().ap_ssid;
             doc["r_reg"] = _rgb.R.u16bit;
             doc["g_reg"] = _rgb.G.u16bit;

@@ -29,21 +29,20 @@ void  SmartBox::startup(){
        mqttNetwork.startup();
 
        colorCollector.startup();
-     // _threadCore.start(callback(this,&SmartBox::start_core_task));
+      _threadCore.start(callback(this,&SmartBox::start_core_task));
 
     }catch(const os::thread_error& e){
         TracePrinter::printTrace(e.what());
-        //PlatformDebug::pause();
         ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));  
     }
 
 }
 void SmartBox::start_core_task(){
-    DynamicJsonDocument  doc(8192);
-    TracePrinter::printTrace(String(ESP.getFreeHeap(),DEC));
-    ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-    //UBaseType_t x =uxTaskGetStackHighWaterMark(NULL);
-    //TracePrinter::printTrace("stack left:"+String((int)x,DEC));
+  DynamicJsonDocument  doc(8192);
+  TracePrinter::printTrace(String(ESP.getFreeHeap(),DEC));
+  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+  //UBaseType_t x =uxTaskGetStackHighWaterMark(NULL);
+  //TracePrinter::printTrace("stack left:"+String((int)x,DEC));
   String event_type;
   TracePrinter::printTrace("----------- core task -----------------");
   while(true)
@@ -61,6 +60,7 @@ void SmartBox::start_core_task(){
                     uint32_t ts =   doc["unix_timestamp"];
                     if (ts > 28800) {
                        TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->setEpoch(ts);
+                       guard::LoopTaskGuard::getLoopTaskGuard().loop_start();
                     }
               }
         }else if(_splitTopics[0]=="ServerReq"){
@@ -133,6 +133,10 @@ void SmartBox::onMqttConnect(bool sessionPresent)
     for(auto topic:_topics){
       mqttNetwork.subscribe( topic);
     }
+     
+   String invoke_data=String("{\"DeviceID\":\"")+Platform::getDeviceInfo().BoardID+
+   String("\",\"version\":\"")+String(2.0,DEC)+String("\"}");
+   mqttNetwork.publish("SmartBox/TimeSync",invoke_data);
 }
 
 void SmartBox::start_http_update(const String& url){

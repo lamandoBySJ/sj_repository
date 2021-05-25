@@ -1,5 +1,5 @@
-#ifndef __SMART_BOX_H
-#define __SMART_BOX_H
+#ifndef SMART_BOX_H
+#define SMART_BOX_H
 #include "arduino.h"
 #include "platform_debug.h"
 #include <mutex>
@@ -14,7 +14,7 @@
 #include "app/TimeMachine/TimeMachine.h" 
 #include "StringHelper.h" 
 #include "HTTPDownload.h"
-
+#include "LoopTaskGuard.h" 
 using namespace std;
 
 
