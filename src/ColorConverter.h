@@ -4,7 +4,8 @@
 #include "ArduinoJson.h"
 #include "platform_debug.h"
 #include "ColorCollector.h"
-
+#include "product/product_stlb.h"
+#include "app/ColorSensor/ColorSensor.h"
 
 class ColorConverter
 {

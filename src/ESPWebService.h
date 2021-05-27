@@ -26,8 +26,9 @@
 #include <DNSServer.h>
 #include "rtos/Thread.h"
 #include "rtos/Mail.h"
-
+#include "product/product_stlb.h"
 using namespace std;
+
 namespace web
 {    
     

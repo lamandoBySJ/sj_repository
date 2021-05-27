@@ -12,6 +12,7 @@
 #include "rtos/ThisThread.h"
 #include "rtos/Mail.h"
 #include "platform/Callback.h"
+#include "product/product_stlb.h"
 
 namespace collector
 {

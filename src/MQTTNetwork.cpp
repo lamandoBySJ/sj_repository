@@ -116,17 +116,17 @@ void MQTTNetwork::WiFiEvent(system_event_id_t event, system_event_info_t info) {
 void MQTTNetwork::init()
 {
       std::lock_guard<rtos::Mutex> lck(_mtx);
-      MQTT_HOST    = Platform::get_user_properties().host.c_str();
-      MQTT_PORT    = Platform::get_user_properties().port;
-      WIFI_SSID    = Platform::get_user_properties().ssid.c_str();
-      WIFI_PASSWORD= Platform::get_user_properties().pass.c_str();
+      MQTT_HOST    = platformio::api::get_user_properties().host.c_str();
+      MQTT_PORT    = platformio::api::get_user_properties().port;
+      WIFI_SSID    = platformio::api::get_user_properties().ssid.c_str();
+      WIFI_PASSWORD= platformio::api::get_user_properties().pass.c_str();
 
       TracePrinter::printTrace(String(MQTT_HOST)+":"+String(MQTT_PORT,DEC));
       
-      _client.setWill("STLB_WILL",0,false,Platform::get_device_Info().BoardID.c_str(),Platform::get_device_Info().BoardID.length());
+      _client.setWill("STLB_WILL",0,false,platformio::api::get_device_info().BoardID.c_str(),platformio::api::get_device_info().BoardID.length());
       _client.setCleanSession(true);
       _client.setKeepAlive(120);
-      _client.setClientId(Platform::get_device_Info().BoardID);
+      _client.setClientId(platformio::api::get_device_info().BoardID);
       WiFi.onEvent(_wifiCB);
 
       _client.onConnect(callback(this,&MQTTNetwork::onMqttConnect));
