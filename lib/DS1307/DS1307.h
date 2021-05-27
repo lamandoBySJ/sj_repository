@@ -38,7 +38,6 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-#include <RTCBase.h>
 /*
  * DateTime Class
  * */

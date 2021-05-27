@@ -81,8 +81,8 @@ private:
 
     String text;
     DynamicJsonDocument  doc;
-    RGB _rgb;
-    std::array<RGB,5> arrRGB;
+    RGB _rgb_reg;
+    
 };
 
 #endif

@@ -34,11 +34,8 @@ void TimeMachine<RTC,OSMutex>::init(bool pwrEnable,const char* date,const  char*
      _rtc.startClock();
     
 
-    if(selftest()){
-        digitalWrite(19,HIGH);
-    }else{
-        digitalWrite(19,LOW);
-    }
+    selftest();
+       
  }
  template<typename RTC,typename OSMutex>
  void TimeMachine<RTC,OSMutex>::setDateTime(const char* date,const  char* time)
@@ -50,13 +47,17 @@ void TimeMachine<RTC,OSMutex>::init(bool pwrEnable,const char* date,const  char*
 template<typename RTC,typename OSMutex>
 bool TimeMachine<RTC,OSMutex>::selftest()
 {
-    int timeout= 3;
+    int timeout= 30;
     time_t val = 0;
     do
-    {
-        ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+    {   
+        LEDIndicator::getLEDIndicator().io_state_rtc(true);
+        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(200));
         val = _rtc.getEpoch();
-        if(val !=0 ){
+        if(val == 0 ){
+            LEDIndicator::getLEDIndicator().io_state_rtc(false);
+            ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(200));
+        }else{
             return true;
         }
     }while(--timeout > 0);

@@ -114,7 +114,7 @@ osStatus Thread::terminate()
 {
     osStatus_t ret = osOK;
     _mutex.lock();
-
+    _obj_mem.state = Thread::Deleted;
     // Set the Thread's tid to nullptr and
     // release the semaphore before terminating
     // since this thread could be terminating itself

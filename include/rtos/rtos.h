@@ -13,6 +13,9 @@
 #include "rtos/MemoryPool.h"
 #include "rtos/EventFlags.h"
 #include "rtos/internal/mbed_rtos1_types.h"
+#include "rtos/Queue.h"
+#include "rtos/cmsis_os2.h"
+#include <cxxsupport/mstd_new.h>
 //#include "rtos/Semaphore.h"
 //#include "rtos/Mail.h"
 //#include "rtos/MemoryPool.h"

@@ -5,10 +5,11 @@
 extern "C" {
 #endif
 
-MBED_NORETURN void mbed_assert_internal(const char *expr, const char *file, int line)
+//MBED_NORETURN 
+void mbed_assert_internal(const char *expr, const char *file, int line)
 {
     debug("mbed_assert_internal:file[%s],line[%d],expr:%s",file,line,expr);
-   // while(1);
+    //while(1);
 }
 #ifdef __cplusplus
 }

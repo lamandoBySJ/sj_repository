@@ -11,7 +11,7 @@ class ColorConverter
 public:
        
    
-   void RGBToHSL(RGB& rgb_hsl){
+   void RGBToHSL(RGB& rgb){
         double _delta=0;
         double _cmax=0;
         double _cmin=0;
@@ -22,15 +22,16 @@ public:
         double _s=0;
         double _l=0;
 
-        if(rgb_hsl.R.u16bit > 255  || rgb_hsl.G.u16bit > 255 || rgb_hsl.B.u16bit > 255){
-            uint16_t  base_max = max( max(rgb_hsl.R.u16bit, rgb_hsl.G.u16bit), rgb_hsl.G.u16bit);
-            _r = (uint16_t )(rgb_hsl.R.u16bit*255.0 / base_max);
-            _g = (uint16_t )(rgb_hsl.G.u16bit*255.0 / base_max);
-            _b = (uint16_t )(rgb_hsl.B.u16bit*255.0 / base_max);  
+        uint16_t  base_max = max( max(rgb.R.u16bit, rgb.G.u16bit), rgb.G.u16bit);
+
+        if(base_max > 255){
+            _r = (uint16_t )(rgb.R.u16bit*255.0 / base_max);
+            _g = (uint16_t )(rgb.G.u16bit*255.0 / base_max);
+            _b = (uint16_t )(rgb.B.u16bit*255.0 / base_max);  
         }else{
-            _r = rgb_hsl.R.u16bit/255.0;
-            _g = rgb_hsl.G.u16bit/255.0;
-            _b = rgb_hsl.B.u16bit/255.0; 
+            _r = rgb.R.u16bit/255.0;
+            _g = rgb.G.u16bit/255.0;
+            _b = rgb.B.u16bit/255.0; 
         }
 
         _cmax = max(_r,max(_g, _b));
@@ -61,9 +62,9 @@ public:
             _s = _delta/(2 - (_cmax+_cmin)); //(maxVal-minVal > 0)?
         }
             
-        rgb_hsl.h = _h;
-        rgb_hsl.s = _s*100;
-        rgb_hsl.l = _l*100;
+        rgb.h = _h;
+        rgb.s = _s*100;
+        rgb.l = _l*100;
     }
     bool color(RGB& rgb,JsonArray& data )
     {   

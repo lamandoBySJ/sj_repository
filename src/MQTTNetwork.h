@@ -5,16 +5,14 @@
 #include <app/AsyncMqttClient/AsyncMqttClient.h>
 #include <WiFiType.h>
 #include <WiFi.h>
-#include <rtos/rtos.h>
-#include "platform_debug.h"
 #include <map>
 #include <set>
 #include <new>
 #include <vector>
 #include <mutex>
 #include <thread>
-#include "platform/mbed.h"
-#include "rtos/Thread.h"
+#include <esp_event_legacy.h>
+#include "platform_debug.h"
 
 namespace mqtt
 {
@@ -54,7 +52,7 @@ public:
     _threadOnConnect(0,osPriorityNormal,1024*2,nullptr,"thdOnConnect"),
     _threadOnSubscribe(0,osPriorityNormal,1024*2,nullptr,"thdOnSubscribe"),
     _threadOnUnsubscribe(0,osPriorityNormal,1024*2,nullptr,"thdOnUnsubscribe"),
-    _autoConnect(true)
+    _autoConnect(true),_wifi_channel(random(0,11))
     {   
         _wifiCB=std::bind(&MQTTNetwork::WiFiEvent,this,std::placeholders::_1,std::placeholders::_2);
 
@@ -93,14 +91,13 @@ public:
 
 
     std::function<void(system_event_id_t event, system_event_info_t info)>  _wifiCB;
+    void connect();
     void disconnect(bool autoConnect=false);
     bool publish(const String& topic,const String& payload, uint8_t qos=0, bool retain=false,bool dup=true, uint16_t message_id=0);
     bool subscribe(const String& topic, uint8_t qos=0);
     bool unsubscribe(const String& topic);
    
     void WiFiEvent(system_event_id_t event, system_event_info_t info);
-    void addSubscribeTopic(const String& topic,int qos=0);
-    void addSubscribeTopics(std::vector<String>& vec);
     void addOnMessageCallback(mbed::Callback<void(const String&,const String&)> func);
     void addOnMqttConnectCallback(mbed::Callback<void(bool)> func);
     void addOnMqttDisonnectCallback(mbed::Callback<void(AsyncMqttClientDisconnectReason)> func);
@@ -116,6 +113,9 @@ public:
     void init();
     bool delegateMethodPublish(const String& topic,const String& payload){
        return publish(topic,payload);
+    }
+    int32_t getWiFiChannel(){
+        return _wifi_channel;
     }
 protected:
     
@@ -139,6 +139,7 @@ private:
     std::vector<mbed::Callback<void(uint16_t packetId)>>  _onMqttUnsubscribeCallbacks;
     AsyncMqttClient _client;
     bool _autoConnect;
+    int32_t _wifi_channel;
 };
 
 #endif

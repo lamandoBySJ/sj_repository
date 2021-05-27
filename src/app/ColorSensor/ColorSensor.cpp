@@ -32,8 +32,8 @@ void ColorSensor<Sensor, OSMutex>::init(bool pwrEnable)
     }
     ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
 
-    if(! _sensor.begin()){
-      digitalWrite(23,HIGH);
+    if( _sensor.begin()){
+      LEDIndicator::getLEDIndicator().io_state_als(true);
     }
     TracePrinter::printTrace(String(__FILE__)+String(":")+String(__LINE__));
 }

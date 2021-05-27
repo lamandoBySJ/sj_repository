@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 #include <Wire.h>
-#include <ColorSensorBase.h>
 #include <BH1749NUC_REG/bh1749nuc_reg.h>
 #include <array>
 //#include <platform/mbed_debug.h>

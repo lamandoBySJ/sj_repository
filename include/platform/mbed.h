@@ -8,8 +8,9 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 
+#include <rtos/rtos.h>
+#include "platform/Callback.h"
+#include "platform/mbed.h"
 #include "platform/mbed_debug.h"
-#include "rtos/ThisThread.h"
-#include "rtos/Thread.h"
-#include "rtos/Mutex.h"
+
 #endif

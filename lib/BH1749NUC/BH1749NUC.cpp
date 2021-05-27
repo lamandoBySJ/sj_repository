@@ -26,13 +26,13 @@ bool BH1749NUC::begin()
     _wire.begin(this->_sda, this->_scl,100000);
     _wire.beginTransmission(0x68);
     _wire.endTransmission() ;
-    /*
+    
     byte whoamI= getManufacturerId();
     
     if(whoamI == _facturerId){
         success=true;
         init(GainIR::X1, GainRGB::X1, MeasMode::Forbidden);
-    }*/
+    }
     return success;
 }
 bool BH1749NUC::init(GainIR gain_ir,GainRGB gain_rgb,MeasMode meas_mode)

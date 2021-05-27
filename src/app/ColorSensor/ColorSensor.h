@@ -6,13 +6,11 @@
 #include "Wire.h"
 #include <BH1749NUC.h>
 #include "BH1749NUC_REG/bh1749nuc_reg.h"
-#include <ColorSensorBase.h>
 #include <cxxsupport/mstd_type_traits.h>
-#include "platform_debug.h"
 #include <mutex>
 #include <array>
 #include <type_traits>
-
+#include "platform_debug.h"
 
 using namespace rtos;
 extern std::mutex std_mutex;

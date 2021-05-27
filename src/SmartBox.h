@@ -8,13 +8,16 @@
 #include <HTTPClient.h>
 #include <Esp32httpUpdate.h>
 #include <functional>
-#include "platform/mbed.h"
 #include "MQTTNetwork.h" 
 #include "ColorCollector.h" 
 #include "app/TimeMachine/TimeMachine.h" 
 #include "StringHelper.h" 
 #include "HTTPDownload.h"
 #include "LoopTaskGuard.h" 
+#include "MQTTNetwork.h"
+#include "LEDIndicator.h"
+#include "TimeoutChecker.h"
+
 using namespace std;
 
 
@@ -42,11 +45,11 @@ public:
   }
 
   ~SmartBox()=default;
-
+  void platformio_init();
   void startup();
   void task_mqtt_service();
   void task_collection_service();
-  void task_web_service();
+  void start_web_service();
   void start_core_task();
   void color_measure();
   void start_http_update(const String& url);
@@ -54,6 +57,7 @@ public:
   void onMqttConnectCallback(bool sessionPresent);
   void onMqttMessageCallback(const String& topic,const String& payload);
   void onMqttSubscribeCallback(uint16_t packetId, uint8_t qos);
+  void onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reason);
 private:
 
   MQTTNetwork mqttNetwork;

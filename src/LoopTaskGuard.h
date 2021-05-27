@@ -2,7 +2,7 @@
 #define LOOP_TASK_GUARD_H
 
 #include "platform_debug.h"
-
+#include "LEDIndicator.h"
 namespace guard
 {
     struct mail_control_t{
@@ -28,21 +28,25 @@ public:
         }
         void loop(){
             while(true){
-                ThisThread::sleep_for(Kernel::Clock::duration_seconds(6));
                 TracePrinter::printTrace("-- LoopTaskGuard --");
+                LEDIndicator::getLEDIndicator().io_state_sys(true);
+                ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
                 set_signal_id(1);
+                LEDIndicator::getLEDIndicator().io_state_sys(false);
+                ThisThread::sleep_for(Kernel::Clock::duration_seconds(3));
             }
         }
         void loop_start(){
-            std::lock_guard<rtos::Mutex> lck(_mtx);
            if(_thread.get_state()!=Thread::Running){
-               _thread.start(callback(this,&LoopTaskGuard::loop));
+               LEDIndicator::getLEDIndicator().io_state_sys(true);
+                _thread.start(callback(this,&LoopTaskGuard::loop));
            }
         }
         void loop_stop(){
-            std::lock_guard<rtos::Mutex> lck(_mtx);
             if(_thread.get_state()==Thread::Running){
                _thread.terminate();
+               ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(200));
+               LEDIndicator::getLEDIndicator().io_state_sys(false);
            }
         }
         uint32_t get_signal_id(){
@@ -64,7 +68,10 @@ public:
             static LoopTaskGuard loopTaskGuard;
             return loopTaskGuard;
         }
-  
+
+        static void set_signal_web_service(){
+            guard::LoopTaskGuard::getLoopTaskGuard().set_signal_id(0,true);
+        }
 private:
         rtos::Mail<guard::mail_control_t, 3> _mail_box_control;
         rtos::Mutex _mtx;

@@ -13,19 +13,19 @@ void ESPWebService::delegateMethodWebSocketClientEvent(const String& message, co
 
 void ESPWebService::run_web_service()
 {
-    TracePrinter::printTrace(Platform::getWebProperties().ap_ssid);
-    TracePrinter::printTrace(Platform::getWebProperties().ap_pass);
+    TracePrinter::printTrace(Platform::get_web_properties().ap_ssid);
+    TracePrinter::printTrace(Platform::get_web_properties().ap_pass);
     WiFi.mode(WIFI_OFF);
     
     WiFi.mode(WIFI_AP_STA);
     WiFi.enableAP(true);
     ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));
-    WiFi.softAP(Platform::getWebProperties().ap_ssid.c_str(), Platform::getWebProperties().ap_pass.c_str());
+    WiFi.softAP(Platform::get_web_properties().ap_ssid.c_str(), Platform::get_web_properties().ap_pass.c_str());
     _dnsServer->start(53, "*", WiFi.softAPIP());
     //server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
     
      //MDNS.addService("http","tcp",80);
-    _server->addHandler(new SPIFFSEditor(FFat, Platform::getWebProperties().http_user,Platform::getWebProperties().http_pass));
+    _server->addHandler(new SPIFFSEditor(FFat, Platform::get_web_properties().http_user,Platform::get_web_properties().http_pass));
     _server->on("/heap", HTTP_GET, [](AsyncWebServerRequest *request){
             request->send(200, "text/plain", String(ESP.getFreeHeap()));
     });
@@ -97,16 +97,16 @@ void ESPWebService::run_web_service()
 
 
     _server->on("/upload", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(200, "text/html",Platform::getWebProperties().server_upload_url);
+        request->send(200, "text/html",Platform::get_web_properties().server_upload_url);
     });
         
     _server->on("/getSTLB", HTTP_GET, [&](AsyncWebServerRequest *request) {
             DynamicJsonDocument  _docucment(600);
-            _docucment["box_mac_id"] = Platform::getWebProperties().ap_ssid;
-            _docucment["ssid"] = Platform::getUserProperties().ssid;
-            _docucment["pass"] = Platform::getUserProperties().pass;
-            _docucment["host"] = Platform::getUserProperties().host;
-            _docucment["port"] = Platform::getUserProperties().port;
+            _docucment["box_mac_id"] = Platform::get_web_properties().ap_ssid;
+            _docucment["ssid"] = Platform::get_user_properties().ssid;
+            _docucment["pass"] = Platform::get_user_properties().pass;
+            _docucment["host"] = Platform::get_user_properties().host;
+            _docucment["port"] = Platform::get_user_properties().port;
             request->send(200, "application/json", _docucment.as<String>());
     });   
      
@@ -162,11 +162,11 @@ void ESPWebService::run_web_service()
         
             String text=json.as<String>();
             
-            if(FatHelper.writeFile(FFat,Platform::getUserProperties().path.c_str(),text) ){
-                Platform::getUserProperties().ssid =  jsonObj["ssid"].as<String>();
-                Platform::getUserProperties().pass =  jsonObj["pass"].as<String>();
-                Platform::getUserProperties().host =  jsonObj["host"].as<String>(); 
-                Platform::getUserProperties().port =  jsonObj["port"].as<int>();
+            if(FatHelper.writeFile(FFat,Platform::get_user_properties().path.c_str(),text) ){
+                Platform::get_user_properties().ssid =  jsonObj["ssid"].as<String>();
+                Platform::get_user_properties().pass =  jsonObj["pass"].as<String>();
+                Platform::get_user_properties().host =  jsonObj["host"].as<String>(); 
+                Platform::get_user_properties().port =  jsonObj["port"].as<int>();
             }else{
                 DynamicJsonDocument  doc(200);
                 doc["ssid"] = "n/a";
@@ -185,7 +185,7 @@ void ESPWebService::run_web_service()
     _wss->onEvent(std::bind(&ESPWebService::onWsEvent,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3,std::placeholders::_4,std::placeholders::_5,std::placeholders::_6) );
     _server->addHandler(_wss);
 
-    _events->setAuthentication(Platform::getWebProperties().http_user.c_str(), Platform::getWebProperties().http_pass.c_str()); 
+    _events->setAuthentication(Platform::get_web_properties().http_user.c_str(), Platform::get_web_properties().http_pass.c_str()); 
     _events->onConnect([](AsyncEventSourceClient* client) {
             if (client->lastId()) {
                 TracePrinter::printf("Client reconnected! Last message ID that it gat is: %u\n", client->lastId());
@@ -217,11 +217,11 @@ void ESPWebService::onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient *cli
     if (type == WS_EVT_CONNECT) {
         TracePrinter::printf("ws[%s][%u] connect\n", server->url(), client->id());
         DynamicJsonDocument  doc(200);
-        doc["box_mac_id"] = Platform::getWebProperties().ap_ssid;
+        doc["box_mac_id"] = Platform::get_web_properties().ap_ssid;
         doc["ws_evt_type"] = "WS_EVT_CONNECT";
-        doc["r_offset"] = Platform::getRGBProperties().r_offset;
-        doc["g_offset"] = Platform::getRGBProperties().g_offset;
-        doc["b_offset"] = Platform::getRGBProperties().b_offset;
+        doc["r_offset"] = Platform::get_rgb_properties().r_offset;
+        doc["g_offset"] = Platform::get_rgb_properties().g_offset;
+        doc["b_offset"] = Platform::get_rgb_properties().b_offset;
         client->text(doc.as<String>().c_str());
         client->ping();
     } else if (type == WS_EVT_DISCONNECT) {
