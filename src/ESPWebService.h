@@ -1,5 +1,5 @@
-#ifndef __ESP_WEB_SERVICE_H
-#define __ESP_WEB_SERVICE_H
+#ifndef ESP_WEB_SERVICE_H
+#define ESP_WEB_SERVICE_H
 
 #include "Arduino.h"
 #include "WiFi.h"
@@ -15,28 +15,13 @@
 #include <FFat.h>
 #include "platform_debug.h"
 #include "FFatHelper.h"
-#include <thread>
 #include <mutex>
-#include <platform/mbed.h>
-#include <platform/Callback.h>
-#include <ColorCollector.h>
-#include <rtos/Mutex.h>
-#include "rtos/cmsis_os.h"
-#include "rtos/ThisThread.h"
-#include <DNSServer.h>
-#include "rtos/Thread.h"
-#include "rtos/Mail.h"
-#include "product/product_stlb.h"
-using namespace std;
 
-namespace web
-{    
-    
-    struct mail_t{
-       // uint32_t counter=0;   
-         uint32_t message;
-    };
-}
+#include <ColorCollector.h>
+#include <DNSServer.h>
+#include <ColorConverter.h>
+
+using namespace std;
 
 class  ESPWebService
 {
@@ -75,16 +60,12 @@ public:
     void notFound(AsyncWebServerRequest *request);
     void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len) ;
 
-
-    void setCallbackPostMailToCollector(mbed::Callback<void(MeasEventType,AsyncWebSocketClient*)> callback)
+    void addCallbackOnWsEvent(mbed::Callback<void(AsyncWebSocket*, AsyncWebSocketClient*, AwsEventType, void*, uint8_t*, size_t)> callback)
     {
         std::lock_guard<rtos::Mutex> lck(_mtx);
-        this->_callback= callback;
+        this->_callbacks.push_back(callback);
     }
-    void runCallbackPostMailToCollector(MeasEventType measEventType,AsyncWebSocketClient *client){
-        std::lock_guard<rtos::Mutex> lck(_mtx);
-        this->_callback(measEventType,client);
-    }
+
     void delegateMethodWebSocketClientText(AsyncWebSocketClient *client,const String& text);
     void delegateMethodWebSocketClientEvent(const String& message, const String& event, uint32_t id, uint32_t reconnect);
 
@@ -100,8 +81,9 @@ private:
     AsyncCallbackJsonWebHandler* _handler;
     AsyncWebSocketClient* _client;
     const char* PARAM_MESSAGE = "message";
- 
-    mbed::Callback<void(MeasEventType,AsyncWebSocketClient*)> _callback;
+    std::vector<mbed::Callback<void(AsyncWebSocket*, AsyncWebSocketClient*, AwsEventType, void*, uint8_t*, size_t)>> _callbacks;
+    
+    
 };
 
 #endif

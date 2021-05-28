@@ -11,8 +11,7 @@ void  SmartBox::task_collection_service(){
   }
 void  SmartBox::color_measure()
 {   
-    colorCollector.delegateMethodPostMail(MeasEventType::EventSystemMeasure,nullptr);
-    
+    colorCollector.post_mail_on_ws_event(MeasEventType::EventSystemMeasure,nullptr);
 }
 void  SmartBox::start_web_service()
 {   
@@ -23,7 +22,7 @@ void  SmartBox::start_web_service()
     mqttNetwork.terminate();
     colorCollector.setCallbackWebSocketClientText(callback(&espWebService,&ESPWebService::delegateMethodWebSocketClientText));
     colorCollector.setCallbackWebSocketClientEvent(callback(&espWebService,&ESPWebService::delegateMethodWebSocketClientEvent));
-    espWebService.setCallbackPostMailToCollector(callback(&colorCollector,&ColorCollector::delegateMethodPostMail));
+    espWebService.addCallbackOnWsEvent(callback(&colorCollector,&ColorCollector::delegateMethodOnWsEvent));
     espWebService.startup();  
   }
 }
@@ -31,8 +30,8 @@ void  SmartBox::start_web_service()
 void  SmartBox::startup(){
     
     try{
-       _topics.insert(platformio::api::get_device_info().BoardID+"/ServerTime");
-       _topics.insert(platformio::api::get_device_info().BoardID+"/ServerReq");
+       _topics.insert(platformio_api::get_device_info().BoardID+"/ServerTime");
+       _topics.insert(platformio_api::get_device_info().BoardID+"/ServerReq");
 
        TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->init();  
        mqttNetwork.addOnMqttDisonnectCallback(callback(this,&SmartBox::onMqttDisconnectCallback));
@@ -92,12 +91,12 @@ void SmartBox::start_core_task(){
                               switch( str_map_type[event_type] ){
                                 case RequestType::ALS_MEASURE:
                                 {
-                                  colorCollector.delegateMethodPostMail(MeasEventType::EventServerMeasure,nullptr);
+                                  colorCollector.post_mail_on_ws_event(MeasEventType::EventServerMeasure,nullptr);
                                   break;
                                 }
                                 case RequestType::MANUAL_REQUEST:
                                 {
-                                  colorCollector.delegateMethodPostMail(MeasEventType::EventSystemMeasure,nullptr);
+                                  colorCollector.post_mail_on_ws_event(MeasEventType::EventSystemMeasure,nullptr);
                                   break;
                                 }
                                 case RequestType::OTA_CANCEL:
@@ -161,8 +160,8 @@ void SmartBox::onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reason)
 void SmartBox::onMqttSubscribeCallback(uint16_t packetId, uint8_t qos)
 {
     if(packetId == _topics.size()){
-      String invoke_data=String("{\"DeviceID\":\"")+platformio::api::get_device_info().BoardID+
-      String("\",\"version\":\"")+platformio::api::get_version()+String("\",\"wifi_channel\":")+
+      String invoke_data=String("{\"DeviceID\":\"")+platformio_api::get_device_info().BoardID+
+      String("\",\"version\":\"")+platformio_api::get_version()+String("\",\"wifi_channel\":")+
       String(mqttNetwork.getWiFiChannel(),DEC)+String("}");
       mqttNetwork.publish("SmartBox/TimeSync",invoke_data);
     }
@@ -173,7 +172,7 @@ void SmartBox::onMqttSubscribeCallback(uint16_t packetId, uint8_t qos)
 void SmartBox::start_http_update(const String& url){
     std::lock_guard<rtos::Mutex> lck(_mtx);
       guard::LoopTaskGuard::getLoopTaskGuard().loop_stop();
-      mqttNetwork.publish("upgrade/status/"+platformio::api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_BEGIN\"}");
+      mqttNetwork.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_BEGIN\"}");
       ThisThread::sleep_for(Kernel::Clock::duration_seconds(2));
       mqttNetwork.disconnect(false);
 
@@ -189,15 +188,15 @@ void SmartBox::start_http_update(const String& url){
       switch(ret) {
         case HTTP_UPDATE_FAILED:
             PlatformDebug::printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-             mqttNetwork.publish("upgrade/status/"+platformio::api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
+             mqttNetwork.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
             break;
          case HTTP_UPDATE_NO_UPDATES:
             PlatformDebug::println("HTTP_UPDATE_NO_UPDATES");
-            mqttNetwork.publish("upgrade/status/"+platformio::api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
+            mqttNetwork.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
             break;
         case HTTP_UPDATE_OK:
             PlatformDebug::println("HTTP_UPDATE_OK");
-            mqttNetwork.publish("upgrade/status/"+platformio::api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_OK\"}");
+            mqttNetwork.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_OK\"}");
             break;
         default:break;
       }
@@ -210,15 +209,15 @@ void SmartBox::start_https_update(const String& url){
       switch(ret) {
         case HTTP_UPDATE_FAILED:
             PlatformDebug::printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-            mqttNetwork.publish("upgrade/status/"+platformio::api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
+            mqttNetwork.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
             break;
          case HTTP_UPDATE_NO_UPDATES:
             PlatformDebug::println("HTTP_UPDATE_NO_UPDATES");
-            mqttNetwork.publish("upgrade/status/"+platformio::api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
+            mqttNetwork.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
             break;
         case HTTP_UPDATE_OK:
             PlatformDebug::println("HTTP_UPDATE_OK");
-            mqttNetwork.publish("upgrade/status/"+platformio::api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_OK\"}");
+            mqttNetwork.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_OK\"}");
             break;
         default:break;
       }
@@ -268,12 +267,12 @@ void SmartBox::platformio_init()
 
     String mac_address=WiFi.macAddress();
     mac_address.replace(":","");
-    platformio::api::get_web_properties().ap_ssid = WiFi.macAddress();
+    platformio_api::get_web_properties().ap_ssid = WiFi.macAddress();
     PlatformDebug::println("DeviceInfo::BoardID:"+mac_address);
     ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-    platformio::api::get_device_info().BoardID = mac_address;
-    platformio::api::get_device_info().Family = "k49a";
-    PlatformDebug::println(platformio::api::get_device_info().BoardID);
+    platformio_api::get_device_info().BoardID = mac_address;
+    platformio_api::get_device_info().Family = "k49a";
+    PlatformDebug::println(platformio_api::get_device_info().BoardID);
 
     if(FatHelper.init()){
         PlatformDebug::println("OK:File system mounted");
@@ -295,34 +294,34 @@ void SmartBox::platformio_init()
 
     DynamicJsonDocument  docProperties(1024);
     String text;
-  if(FatHelper.readFile(FFat,platformio::api::get_user_properties().path,text)){
+  if(FatHelper.readFile(FFat,platformio_api::get_user_properties().path,text)){
         PlatformDebug::println(text); 
         DeserializationError error = deserializeJson(docProperties, text);
         if(!error){
-            platformio::api::get_user_properties().ssid =  docProperties["ssid"].as<String>();
-            platformio::api::get_user_properties().pass =  docProperties["pass"].as<String>();
-            platformio::api::get_user_properties().host =  docProperties["host"].as<String>();
-            platformio::api::get_user_properties().port =  docProperties["port"].as<int>();
+            platformio_api::get_user_properties().ssid =  docProperties["ssid"].as<String>();
+            platformio_api::get_user_properties().pass =  docProperties["pass"].as<String>();
+            platformio_api::get_user_properties().host =  docProperties["host"].as<String>();
+            platformio_api::get_user_properties().port =  docProperties["port"].as<int>();
         }
     }
 
-    if(FatHelper.readFile(FFat,product_stlb::api::get_rgb_properties().path,text)){
+    if(FatHelper.readFile(FFat,product_api::get_rgb_properties().path,text)){
         DeserializationError error= deserializeJson(docProperties, text);
         if(!error){
-            product_stlb::api::get_rgb_properties().r_offset =  docProperties["r_offset"].as<uint16_t>();
-            product_stlb::api::get_rgb_properties().g_offset =  docProperties["g_offset"].as<uint16_t>();
-            product_stlb::api::get_rgb_properties().b_offset =  docProperties["b_offset"].as<uint16_t>();
-            PlatformDebug::println("rgb_properties::r_offset:"+String(product_stlb::api::get_rgb_properties().r_offset));
-            PlatformDebug::println("rgb_properties::g_offset:"+String(product_stlb::api::get_rgb_properties().g_offset));
-            PlatformDebug::println("rgb_properties::b_offset:"+String(product_stlb::api::get_rgb_properties().b_offset));
+            product_api::get_rgb_properties().r_offset =  docProperties["r_offset"].as<uint16_t>();
+            product_api::get_rgb_properties().g_offset =  docProperties["g_offset"].as<uint16_t>();
+            product_api::get_rgb_properties().b_offset =  docProperties["b_offset"].as<uint16_t>();
+            PlatformDebug::println("rgb_properties::r_offset:"+String(product_api::get_rgb_properties().r_offset));
+            PlatformDebug::println("rgb_properties::g_offset:"+String(product_api::get_rgb_properties().g_offset));
+            PlatformDebug::println("rgb_properties::b_offset:"+String(product_api::get_rgb_properties().b_offset));
         }
     }
 
-    PlatformDebug::println("user_properties::path:"+platformio::api::get_user_properties().path);
-    PlatformDebug::println("user_properties::ssid:"+platformio::api::get_user_properties().ssid);
-    PlatformDebug::println("user_properties::pass:"+platformio::api::get_user_properties().pass);
-    PlatformDebug::println("user_properties::host:"+platformio::api::get_user_properties().host);
-    PlatformDebug::println(String(platformio::api::get_user_properties().port,DEC));
+    PlatformDebug::println("user_properties::path:"+platformio_api::get_user_properties().path);
+    PlatformDebug::println("user_properties::ssid:"+platformio_api::get_user_properties().ssid);
+    PlatformDebug::println("user_properties::pass:"+platformio_api::get_user_properties().pass);
+    PlatformDebug::println("user_properties::host:"+platformio_api::get_user_properties().host);
+    PlatformDebug::println(String(platformio_api::get_user_properties().port,DEC));
 
     TracePrinter::init();
 

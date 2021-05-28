@@ -2,20 +2,17 @@
 #define COLOR_SENSOR_H
 
 #include "Arduino.h"
-#include "rtos/rtos.h"
 #include "Wire.h"
 #include <BH1749NUC.h>
 #include "BH1749NUC_REG/bh1749nuc_reg.h"
-#include <cxxsupport/mstd_type_traits.h>
-#include <mutex>
 #include <array>
 #include <type_traits>
 #include "platform_debug.h"
-#include "product/product_stlb.h"
 
 using namespace rtos;
 extern std::mutex std_mutex;
 extern rtos::Mutex stdMutex;
+
 
 struct RGB
 {

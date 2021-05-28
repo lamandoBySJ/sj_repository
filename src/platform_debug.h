@@ -1,11 +1,10 @@
 #ifndef PLATFORM_DEBUG_H
 #define PLATFORM_DEBUG_H
 
-#include "platformio.h"
+#include "platformio_api.h"
 #include "app/OLEDScreen/OLEDScreen.h"
-
 #include "LEDIndicator.h"
-
+#include <platform/mbed.h>
 
 //#define NDEBUG 
 class PlatformDebug
@@ -178,8 +177,8 @@ private:
     PlatformDebug(){}
     PlatformDebug(const PlatformDebug&)=delete;
     PlatformDebug& operator=(const PlatformDebug&)=delete;
-    std::vector<Callback<size_t(const String& )>> _onPrintlnCallbacks;
-    std::vector<Callback<void()>> _onPrintLogoCallbacks;
+    std::vector<mbed::Callback<size_t(const String& )>> _onPrintlnCallbacks;
+    std::vector<mbed::Callback<void()>> _onPrintLogoCallbacks;
     rtos::Mutex _mtx;
     #endif
 };

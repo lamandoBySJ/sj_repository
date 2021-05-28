@@ -13,7 +13,7 @@
 #include <thread>
 #include <esp_event_legacy.h>
 #include "platform_debug.h"
-#include "platformio.h"
+#include "platformio_api.h"
 namespace mqtt
 {
 struct [[gnu::may_alias]] mail_wifi_event_t{

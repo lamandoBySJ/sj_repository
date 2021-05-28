@@ -8,21 +8,24 @@
 #include "MQTTNetwork.h"
 #include "AsyncWebSocket.h"
 #include <app/ColorSensor/ColorSensor.h>
-#include "rtos/Thread.h"
-#include "rtos/ThisThread.h"
-#include "rtos/Mail.h"
-#include "platform/Callback.h"
-#include "product/product_stlb.h"
+#include "app/TimeMachine/TimeMachine.h"
+#include "ColorConverter.h"
 
-namespace collector
+enum class MeasEventType : char{
+        EventSystemMeasure = 0,
+        EventServerMeasure,
+        EventWebAppOffset,
+        EventWebAppMeasure
+};
+namespace os
 {
-
     struct mail_ws_t{
         uint32_t id;
         AsyncWebSocketClient *client;
         MeasEventType eventType;
     };
 }
+
 class  ColorCollector
 {
 public:
@@ -70,12 +73,12 @@ public:
     void startup();
     void run_task_test();
     void run_task_collection();
-
-    void delegateMethodPostMail(MeasEventType measEventType,AsyncWebSocketClient *client);
+    void post_mail_on_ws_event(MeasEventType measEventType,AsyncWebSocketClient *client);
+    void delegateMethodOnWsEvent(AsyncWebSocket * server, AsyncWebSocketClient *client, AwsEventType type, void * arg, uint8_t *data, size_t len);
 private:
     rtos::Thread _thread;
     rtos::Mutex _mtx,mtx;
-    rtos::Mail<collector::mail_ws_t, 8> _mail_box_collection;
+    rtos::Mail<os::mail_ws_t, 8> _mail_box_collection;
     mbed::Callback<void(AsyncWebSocketClient*,const String&)>_cbWebSocketClientText;
     mbed::Callback<void(const String&, const String&,uint32_t,uint32_t)> _cbWebSocketClientEvent;
     mbed::Callback<bool(const String&,const String&)> _cbMqttPublish;
