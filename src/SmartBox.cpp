@@ -19,7 +19,11 @@ void  SmartBox::start_web_service()
   if(!espWebService.isRunning()){
     guard::LoopTaskGuard::getLoopTaskGuard().loop_stop();
     LEDIndicator::getLEDIndicator().io_state_web(true);
-    mqttNetwork.terminate();
+    mqttNetwork.set_system_event(SYSTEM_EVENT_MAX,99);
+    do{
+      ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+    }while(mqttNetwork.get_system_event_task_status()==Thread::Running);
+ 
     colorCollector.setCallbackWebSocketClientText(callback(&espWebService,&ESPWebService::delegateMethodWebSocketClientText));
     colorCollector.setCallbackWebSocketClientEvent(callback(&espWebService,&ESPWebService::delegateMethodWebSocketClientEvent));
     espWebService.addCallbackOnWsEvent(callback(&colorCollector,&ColorCollector::delegateMethodOnWsEvent));

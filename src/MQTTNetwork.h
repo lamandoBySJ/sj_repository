@@ -18,7 +18,7 @@ namespace mqtt
 {
 struct [[gnu::may_alias]] mail_wifi_event_t{
     system_event_id_t id;
-    uint32_t counter=0;
+    uint32_t signal_id=0;
 };
 struct [[gnu::may_alias]]  mail_on_connect_t {
     bool sessionPresent;  
@@ -104,7 +104,8 @@ public:
     void addOnMqttSubscribeCallback(mbed::Callback<void(uint16_t, uint8_t)> func);
     void addOnMqttUnsubscribeCallback(mbed::Callback<void(uint16_t)> func);
 
- 
+    bool get_system_event_task_status();
+    void set_system_event(system_event_id_t id,uint32_t signal_id=0);
     void task_system_event_service();
     void task_on_message_service();
     void task_on_connect_service();

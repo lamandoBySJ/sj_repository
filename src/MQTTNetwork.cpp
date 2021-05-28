@@ -6,7 +6,16 @@ const char* MQTT_HOST="10.86.3.147";
 uint16_t MQTT_PORT = 1883;
 const char* WIFI_SSID="Mitac IOT_GPS";
 const char* WIFI_PASSWORD="6789067890";
-
+bool MQTTNetwork::get_system_event_task_status()
+{
+  _threadWiFiEvent.get_state();
+}
+void MQTTNetwork::set_system_event(system_event_id_t id,uint32_t signal_id){
+    mqtt::mail_wifi_event_t* evt=_mailBoxWiFiEvent.alloc();
+    evt->id=id;
+    evt->signal_id = signal_id;
+    _mailBoxWiFiEvent.put(evt);
+}
 void MQTTNetwork::task_system_event_service(){
     while(true){
         osEvent evt = _mailBoxWiFiEvent.get();
@@ -37,6 +46,29 @@ void MQTTNetwork::task_system_event_service(){
                 break;
               case SYSTEM_EVENT_STA_CONNECTED:
                // TracePrinter::printTrace("WiFi connected:SYSTEM_EVENT_STA_CONNECTED"); 
+                break;
+            case SYSTEM_EVENT_MAX:
+                if(event->signal_id==99){
+                  _autoConnect=false;
+                  if(_client.connected()){
+                    _client.disconnect();
+                  }
+                 
+                  _threadOnMessage.terminate();
+                  _threadOnSubscribe.terminate();
+                  _threadOnUnsubscribe.terminate();
+                  _threadOnConnect.terminate();
+
+                  WiFi.mode(WIFI_OFF);
+                  WiFi.mode(WIFI_AP_STA);
+                  WiFi.enableAP(true);
+                  WiFi.begin();
+                  while(WiFi.status()==WL_NO_SHIELD){
+                    ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+                  }
+                  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+                  _threadWiFiEvent.terminate();
+                }
                 break;
             default:
              // TracePrinter::printTrace("WiFi Event Unknow"); 
@@ -158,19 +190,20 @@ void MQTTNetwork::init()
        
         status =   _threadOnConnect.start(callback(this,&MQTTNetwork::task_on_connect_service));
         (status!=osOK ? throw os::thread_error((osStatus_t)status,_threadOnConnect.get_name()):NULL);
-        mqtt::mail_wifi_event_t* evt=_mailBoxWiFiEvent.alloc();
-        evt->id=SYSTEM_EVENT_STA_STOP;
-        _mailBoxWiFiEvent.put(evt);
+
+        set_system_event(SYSTEM_EVENT_STA_STOP);
 }
 void MQTTNetwork::terminate()
 {
     std::lock_guard<rtos::Mutex> lck(_mtx);
+    if(_client.connected()){
+       _client.disconnect();
+    }
     _threadWiFiEvent.terminate();
     _threadOnMessage.terminate();
     _threadOnSubscribe.terminate();
     _threadOnUnsubscribe.terminate();
     _threadOnConnect.terminate();
-    _client.disconnect();
 }
 bool MQTTNetwork::connected(){
    std::lock_guard<rtos::Mutex> lck(_mtx);
@@ -252,9 +285,7 @@ void MQTTNetwork::onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
   }
 
   if (WiFi.isConnected()) {
-      mqtt::mail_wifi_event_t* evt=_mailBoxWiFiEvent.alloc();
-      evt->id=SYSTEM_EVENT_STA_GOT_IP;
-      _mailBoxWiFiEvent.put(evt);
+      set_system_event(SYSTEM_EVENT_STA_GOT_IP);
   }
 }
     

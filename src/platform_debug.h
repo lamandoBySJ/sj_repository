@@ -252,6 +252,9 @@ public:
         va_end(arg);
        // len = write((uint8_t*)temp, len);
         TracePrinter::getInstance()->println(temp);
+        if(temp != loc_buf){
+            free(temp);
+        }
         #endif
     }
     static inline void printTrace(const String& e)
@@ -291,7 +294,7 @@ private:
        static TracePrinter *tracePrinter = new TracePrinter();
         return tracePrinter;
     }
-    
+    //rtos::MemoryPool<char*,8> _buf;
     rtos::Mail<mail_trace_t, 8>  _mail_box;
     rtos::Thread *_thread;
     rtos::Mutex _mtx;
