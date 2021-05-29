@@ -26,13 +26,25 @@ public:
     
     template<class U = OSMutex, typename std::enable_if_t<std::is_same<U,rtos::Mutex>::value,int> = 0>
     static TimeMachine<RTC,OSMutex>* getTimeMachine(){
-        static TimeMachine<RTC,rtos::Mutex>* rtc = new  TimeMachine<RTC,rtos::Mutex>(Wire,21,22,13,stdMutex);
+        //static TimeMachine<RTC,rtos::Mutex>* rtc = new  TimeMachine<RTC,rtos::Mutex>(Wire,21,22,13,stdMutex);
+        static TimeMachine<RTC,rtos::Mutex>* rtc = new  TimeMachine<RTC,rtos::Mutex>
+        (platformio_api::I2C_BUS_NUM_RTC() == 0 ? Wire:Wire1
+        ,platformio_api::I2C_BUS_SCL_RTC()
+        ,platformio_api::I2C_BUS_SDA_RTC()
+        ,platformio_api::I2C_BUS_RST_RTC()
+        ,stdMutex);
         return rtc;
     }
     
     template<class U = OSMutex, typename std::enable_if_t<std::is_same<U,std::mutex>::value,int> = 0>
     static TimeMachine<RTC,OSMutex>* getTimeMachine(){
-        static TimeMachine<RTC,std::mutex>* rtc = new TimeMachine<RTC,std::mutex>(Wire,21,22,13,std_mutex);
+       // static TimeMachine<RTC,std::mutex>* rtc = new TimeMachine<RTC,std::mutex>(Wire,21,22,13,std_mutex);
+        static TimeMachine<RTC,std::mutex>* rtc = new  TimeMachine<RTC,std::mutex>
+        (platformio_api::I2C_BUS_NUM_RTC() == 0 ? Wire:Wire1
+        ,platformio_api::I2C_BUS_SCL_RTC()
+        ,platformio_api::I2C_BUS_SDA_RTC()
+        ,platformio_api::I2C_BUS_RST_RTC()
+        ,std_mutex);
         return rtc;
     }
 private:

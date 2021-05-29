@@ -8,7 +8,17 @@
 
 namespace platformio_api
 {
-
+#ifndef PROJECT_STLB
+struct I2C_BUS_NUM_RTC : public std::integral_constant<unsigned int, 1> {};
+struct I2C_BUS_SCL_RTC : public std::integral_constant<unsigned int, 32> {};
+struct I2C_BUS_SDA_RTC : public std::integral_constant<unsigned int, 33> {};
+struct I2C_BUS_RST_RTC : public std::integral_constant<unsigned int, 0> {};
+#else
+struct I2C_BUS_NUM_RTC : public std::integral_constant<unsigned int, 0> {};
+struct I2C_BUS_SCL_RTC : public std::integral_constant<unsigned int, 21> {};
+struct I2C_BUS_SDA_RTC : public std::integral_constant<unsigned int, 22> {};
+struct I2C_BUS_RST_RTC : public std::integral_constant<unsigned int, 13> {};
+#endif
 struct DeviceInfo
 {   
     DeviceInfo(){
