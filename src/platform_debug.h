@@ -20,8 +20,7 @@ public:
     }
 
     template <typename T,
-    typename std::enable_if_t<std::is_same<T,OLEDScreen<12>>::value ||
-     std::is_same<T,OLEDScreen<12>&>::value ,int> = 0 >
+    typename std::enable_if_t<std::is_same<std::remove_reference_t<T>,OLEDScreen<12>>::value,int> = 0 >
     static void SFINAE_init(T&& t)
     {   
         #if !defined(NDEBUG)
@@ -41,8 +40,7 @@ public:
     }
 
     template <typename T,
-    typename std::enable_if_t<std::is_same<T,HardwareSerial>::value ||
-       std::is_same<T,HardwareSerial&>::value ,int> = 0>
+    typename std::enable_if_t<std::is_same<std::remove_reference_t<T>,HardwareSerial>::value,int> = 0>
     static void SFINAE_init(T&& t)
     {  
         #if !defined(NDEBUG)
