@@ -9,18 +9,22 @@ extern "C" {
   #include "freertos/queue.h"
 }
 #include "esp_sleep.h"
-#include "SmartBox.h"
 #include "LoopTaskGuard.h"
 
 using namespace std;
 #define BAND    470E6 
 //python3 esptool.py --port COM20 --baud 115200 write_flash -fm dio -fs 16MB  0x410000 partitions.bin
 //C:\Users\Administrator\.platformio\packages\framework-arduinoespressif32\tools\partitions
-//DS1307 ds1307(Wire1,32,33); //ips
+
+
+/*libraries download:
+1.ESP32httpUpdate
+2.ESPAsyncWebServer
+*/
 std::mutex std_mutex;
 rtos::Mutex stdMutex;
-SmartBox* smartBox=new SmartBox();
-//#define OLEDSCREEN 
+
+#define OLEDSCREEN 
 void setup() {
  // put your setup code here, to run once:
   #ifdef NDEBUG
@@ -42,7 +46,7 @@ void setup() {
   #endif
   try
   {
-    smartBox->platformio_init();
+
   }catch(os::alloc_error& e){
     PlatformDebug::println(e.what());
     PlatformDebug::pause();
@@ -55,19 +59,19 @@ void setup() {
 
 void loop() {
   
-  PlatformDebug::println(" ----------- STLB ----------- ");
-  smartBox->startup();
+  PlatformDebug::println(" ----------- IPS ----------- ");
+
   while (true) {
     switch (guard::LoopTaskGuard::getLoopTaskGuard().get_signal_id())
     {
      case 0:
           {
-              smartBox->start_web_service();
+
           }
        break;
      case 1:
           { 
-              smartBox->color_measure();
+
           }
       break;
      case 2:
