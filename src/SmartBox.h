@@ -8,13 +8,12 @@
 #include <HTTPClient.h>
 #include <Esp32httpUpdate.h>
 #include <functional>
-#include "MQTTNetwork.h" 
+#include "NetworkService.h" 
 #include "ColorCollector.h" 
 #include "app/TimeMachine/TimeMachine.h" 
 #include "StringHelper.h" 
 #include "HTTPDownload.h"
 #include "LoopTaskGuard.h" 
-#include "MQTTNetwork.h"
 #include "LEDIndicator.h"
 #include "TimeoutChecker.h"
 
@@ -23,7 +22,8 @@ using namespace std;
 
 enum class RequestType : uint8_t
 {
-  ALS_MEASURE = 1,
+  SYSTEM_MEASURE = 1,
+  SERVER_MEASURE,
   MANUAL_REQUEST,
   OTA_CANCEL,
   FILE_DOWNLOAD,
@@ -36,12 +36,12 @@ class  SmartBox
 public:
   SmartBox()
   {
-      str_map_type[String("als_measure")]   = RequestType::ALS_MEASURE;
-      str_map_type[String("ota_cancel")]    = RequestType::OTA_CANCEL;
-      str_map_type[String("file_download")] = RequestType::FILE_DOWNLOAD;
-      str_map_type[String("file_delete")]   = RequestType::FILE_DELETE;
-      str_map_type[String("esp_restart")]   = RequestType::ESP_RESTART;
-      str_map_type[String("manual_request")]= RequestType::MANUAL_REQUEST;
+      str_map_type[String("server_measure")]  = RequestType::SERVER_MEASURE;
+      str_map_type[String("manual_request")]  = RequestType::MANUAL_REQUEST;
+      str_map_type[String("ota_cancel")]      = RequestType::OTA_CANCEL;
+      str_map_type[String("file_download")]   = RequestType::FILE_DOWNLOAD;
+      str_map_type[String("file_delete")]     = RequestType::FILE_DELETE;
+      str_map_type[String("esp_restart")]     = RequestType::ESP_RESTART;
   }
 
   ~SmartBox()=default;
@@ -58,9 +58,10 @@ public:
   void onMqttMessageCallback(const String& topic,const String& payload);
   void onMqttSubscribeCallback(uint16_t packetId, uint8_t qos);
   void onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reason);
+  void delegateMethodOnWiFiMode();
 private:
 
-  MQTTNetwork mqttNetwork;
+  NetworkService networkService;
   ColorCollector colorCollector;
   ESPWebService espWebService;
     

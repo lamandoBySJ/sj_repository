@@ -107,6 +107,7 @@ osStatus Thread::start(mbed::Callback<void()> task)
     }
     _obj_mem.state = Running;
    _mutex.unlock();
+   
     return osOK;
 }
 

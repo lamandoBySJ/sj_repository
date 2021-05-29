@@ -5,7 +5,6 @@
 #include "ESPWebService.h"
 #include "platform_debug.h"
 #include "ColorConverter.h"
-#include "MQTTNetwork.h"
 #include "AsyncWebSocket.h"
 #include <app/ColorSensor/ColorSensor.h>
 #include "app/TimeMachine/TimeMachine.h"
@@ -13,6 +12,7 @@
 
 enum class MeasEventType : char{
         EventSystemMeasure = 0,
+        EventManulRequest,
         EventServerMeasure,
         EventWebAppOffset,
         EventWebAppMeasure
@@ -73,7 +73,7 @@ public:
     void startup();
     void run_task_test();
     void run_task_collection();
-    void post_mail_on_ws_event(MeasEventType measEventType,AsyncWebSocketClient *client);
+    void post_mail_measure(MeasEventType measEventType,AsyncWebSocketClient *client);
     void delegateMethodOnWsEvent(AsyncWebSocket * server, AsyncWebSocketClient *client, AwsEventType type, void * arg, uint8_t *data, size_t len);
 private:
     rtos::Thread _thread;

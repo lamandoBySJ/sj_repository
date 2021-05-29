@@ -2,8 +2,6 @@
 #include <app/TimeMachine/TimeMachine.h>
 //#include <SPI.h>
 //#include <MFRC522.h>
-#include <chrono>
-
 extern "C" {
 	#include "freertos/FreeRTOS.h"
 	#include "freertos/timers.h"
@@ -11,15 +9,6 @@ extern "C" {
   #include "freertos/queue.h"
 }
 #include "esp_sleep.h"
-#include <new>
-#include <mutex>
-#include <thread>
-
-#include "FS.h"
-#include "FFat.h"
-#include "FFatHelper.h"
-
-#include "platform_debug.h"
 #include "SmartBox.h"
 #include "LoopTaskGuard.h"
 

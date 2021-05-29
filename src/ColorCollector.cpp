@@ -2,7 +2,7 @@
 
 
 extern FFatHelper<rtos::Mutex> FatHelper;
-void ColorCollector::post_mail_on_ws_event(MeasEventType measEventType,AsyncWebSocketClient *client)
+void ColorCollector::post_mail_measure(MeasEventType measEventType,AsyncWebSocketClient *client)
 {   
     os::mail_ws_t *mail = _mail_box_collection.alloc();
     if(mail){
@@ -76,6 +76,7 @@ void ColorCollector::run_task_collection()
                     doc["r_offset"] = product_api::get_rgb_properties().r_offset;
                     doc["g_offset"] = product_api::get_rgb_properties().g_offset;
                     doc["b_offset"] = product_api::get_rgb_properties().b_offset;
+                    doc["type"] = "system_measure";
                     TracePrinter::printTrace(doc["TowerColor"].as<String>());
                     if(lastColor!=doc["TowerColor"].as<String>()){
                         lastColor = doc["TowerColor"].as<String>();
@@ -89,9 +90,27 @@ void ColorCollector::run_task_collection()
                     doc["r_offset"] = product_api::get_rgb_properties().r_offset;
                     doc["g_offset"] = product_api::get_rgb_properties().g_offset;
                     doc["b_offset"] = product_api::get_rgb_properties().b_offset;
+                    doc["type"] = "server_measure";
                     invokeCallbackMqttPublish("TowerColorMeasure/"+platformio_api::get_device_info().BoardID,doc.as<String>());
                 }
                 break;
+                case  MeasEventType::EventManulRequest:
+                {
+                    doc["SentFrom"] = platformio_api::get_device_info().BoardID;
+                    doc["r_offset"] = product_api::get_rgb_properties().r_offset;
+                    doc["g_offset"] = product_api::get_rgb_properties().g_offset;
+                    doc["b_offset"] = product_api::get_rgb_properties().b_offset;
+                    doc["type"] = "manual_request";
+                    if(lastColor!=doc["TowerColor"].as<String>()){
+                        lastColor = doc["TowerColor"].as<String>();
+                        doc["data_override"] = false;
+                    }else{
+                        doc["data_override"] = true;
+                    }
+                    invokeCallbackMqttPublish("TowerColor/"+platformio_api::get_device_info().BoardID,doc.as<String>());
+                }
+                break;
+                
                 case  MeasEventType::EventWebAppOffset:
                 {   
                     doc["box_mac_id"] = platformio_api::get_web_properties().ap_ssid;
@@ -211,9 +230,9 @@ void ColorCollector::delegateMethodOnWsEvent(AsyncWebSocket * server, AsyncWebSo
             if (!error)
             {
                 if (doc["msg"].as<String>() == String("rgb_offset")) {
-                    post_mail_on_ws_event(MeasEventType::EventWebAppOffset,client);
+                    post_mail_measure(MeasEventType::EventWebAppOffset,client);
                 } else if (doc["msg"].as<String>() == String("rgb_measure")) {
-                    post_mail_on_ws_event(MeasEventType::EventWebAppMeasure,client);
+                    post_mail_measure(MeasEventType::EventWebAppMeasure,client);
                 }
             }
         }

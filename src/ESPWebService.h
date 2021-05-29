@@ -68,7 +68,10 @@ public:
 
     void delegateMethodWebSocketClientText(AsyncWebSocketClient *client,const String& text);
     void delegateMethodWebSocketClientEvent(const String& message, const String& event, uint32_t id, uint32_t reconnect);
-
+    void set_signal_wifi_mode(uint32_t flags=0)
+    {
+        _thread.flags_set(flags);
+    }
  
 private:
 

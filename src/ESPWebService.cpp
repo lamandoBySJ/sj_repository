@@ -15,7 +15,8 @@ void ESPWebService::run_web_service()
 {
     TracePrinter::printTrace(platformio_api::get_web_properties().ap_ssid);
     TracePrinter::printTrace(platformio_api::get_web_properties().ap_pass);
-    
+    LEDIndicator::getLEDIndicator().io_state_web(true);
+    ThisThread::flags_wait_all(1);
     WiFi.softAP(platformio_api::get_web_properties().ap_ssid.c_str(), platformio_api::get_web_properties().ap_pass.c_str());
     _dnsServer->start(53, "*", WiFi.softAPIP());
     //server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);

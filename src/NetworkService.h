@@ -1,5 +1,5 @@
-#ifndef MQTT_NETWORK_H
-#define MQTT_NETWORK_H
+#ifndef NETWORK_SERVICE_H
+#define NETWORK_SERVICE_H
 
 #include <arduino.h>
 #include <app/AsyncMqttClient/AsyncMqttClient.h>
@@ -43,10 +43,10 @@ struct [[gnu::may_alias]] mail_on_message_t {
 
 }
 
-class MQTTNetwork
+class NetworkService
 {
 public:
-    MQTTNetwork()try:
+    NetworkService()try:
     _threadWiFiEvent(0,osPriorityNormal,1024*2,nullptr,"thdWiFiEvent"),
     _threadOnMessage(0,osPriorityNormal,1024*2,nullptr,"thdOnMessage"),
     _threadOnConnect(0,osPriorityNormal,1024*2,nullptr,"thdOnConnect"),
@@ -54,7 +54,7 @@ public:
     _threadOnUnsubscribe(0,osPriorityNormal,1024*2,nullptr,"thdOnUnsubscribe"),
     _autoConnect(true),_wifi_channel(random(0,11))
     {   
-        _wifiCB=std::bind(&MQTTNetwork::WiFiEvent,this,std::placeholders::_1,std::placeholders::_2);
+        _wifiCB=std::bind(&NetworkService::WiFiEvent,this,std::placeholders::_1,std::placeholders::_2);
 
     }catch(const std::bad_alloc &e) {
         TracePrinter::printTrace(e.what());
@@ -64,13 +64,13 @@ public:
         PlatformDebug::pause();
     }
 
-     ~MQTTNetwork()=default;
-    MQTTNetwork(const MQTTNetwork& other)=default;
-    MQTTNetwork(MQTTNetwork&& other)=default;
+     ~NetworkService()=default;
+    NetworkService(const NetworkService& other)=default;
+    NetworkService(NetworkService&& other)=default;
    
 
-    MQTTNetwork& operator = (const MQTTNetwork& that)=default;
-    MQTTNetwork& operator = (MQTTNetwork&& that)=default;
+    NetworkService& operator = (const NetworkService& that)=default;
+    NetworkService& operator = (NetworkService&& that)=default;
 
     void onMqttConnect(bool sessionPresent);
     void onMqttDisconnect(AsyncMqttClientDisconnectReason reason);
@@ -82,11 +82,7 @@ public:
 
     void startup();  //throw (os::thread_error)
     void terminate();
-    void switchWiFiMode(wifi_mode_t mode){
-        std::lock_guard<rtos::Mutex> lck(_mtx);
-        WiFi.mode(mode);
-    }
-    
+    void switchToSoftAP();
     bool connected();
 
 
@@ -98,13 +94,13 @@ public:
     bool unsubscribe(const String& topic);
    
     void WiFiEvent(system_event_id_t event, system_event_info_t info);
-    void addOnMessageCallback(mbed::Callback<void(const String&,const String&)> func);
+    void addOnMqttMessageCallback(mbed::Callback<void(const String&,const String&)> func);
     void addOnMqttConnectCallback(mbed::Callback<void(bool)> func);
     void addOnMqttDisonnectCallback(mbed::Callback<void(AsyncMqttClientDisconnectReason)> func);
     void addOnMqttSubscribeCallback(mbed::Callback<void(uint16_t, uint8_t)> func);
     void addOnMqttUnsubscribeCallback(mbed::Callback<void(uint16_t)> func);
+    void addOnWiFiModeCallback(mbed::Callback<void(void)> func);
 
-    bool get_system_event_task_status();
     void set_system_event(system_event_id_t id,uint32_t signal_id=0);
     void task_system_event_service();
     void task_on_message_service();
@@ -138,6 +134,7 @@ private:
     std::vector<mbed::Callback<void(AsyncMqttClientDisconnectReason)>>  _onMqttDisconnectCallbacks;
     std::vector<mbed::Callback<void(uint16_t, uint8_t)>>  _onMqttSubscribeCallbacks;
     std::vector<mbed::Callback<void(uint16_t packetId)>>  _onMqttUnsubscribeCallbacks;
+    std::vector<mbed::Callback<void(void)>>  _onWiFiModeCallbacks;
     AsyncMqttClient _client;
     bool _autoConnect;
     int32_t _wifi_channel;
