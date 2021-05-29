@@ -52,10 +52,10 @@ void setup() {
   }
   
 }
+
 void loop() {
   
-  PlatformDebug::println(" ************ STLB ************ ");
-  //ThisThread::sleep_for(Kernel::Clock::duration_seconds(1)); 
+  PlatformDebug::println(" ----------- STLB ----------- ");
   smartBox->startup();
   while (true) {
     switch (guard::LoopTaskGuard::getLoopTaskGuard().get_signal_id())
@@ -67,13 +67,12 @@ void loop() {
        break;
      case 1:
           { 
-              
               smartBox->color_measure();
           }
       break;
      case 2:
           {
-            
+              
           }
       break;
      case 3:
