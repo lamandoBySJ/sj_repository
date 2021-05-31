@@ -55,7 +55,7 @@ void setup() {
 
 void loop() {
   
-  PlatformDebug::println(" ----------- STLB ----------- ");
+  PlatformDebug::println(" ----------- STLB2 ----------- ");
   smartBox->startup();
   while (true) {
     switch (guard::LoopTaskGuard::getLoopTaskGuard().get_signal_id())
