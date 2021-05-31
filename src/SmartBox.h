@@ -34,7 +34,7 @@ enum class RequestType : uint8_t
 class  SmartBox
 {
 public:
-  SmartBox()
+  SmartBox():_timeoutChecker(10)
   {
       str_map_type[String("server_measure")]  = RequestType::SERVER_MEASURE;
       str_map_type[String("manual_request")]  = RequestType::MANUAL_REQUEST;
@@ -60,7 +60,7 @@ public:
   void onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reason);
   void delegateMethodOnWiFiMode();
 private:
-
+  TimeoutChecker _timeoutChecker;
   NetworkService networkService;
   ColorCollector colorCollector;
   ESPWebService espWebService;
@@ -72,6 +72,7 @@ private:
   HTTPDownload _httpDownload;
   vector<String> _splitTopics;
   std::map<String,RequestType> str_map_type;
+  
 };
 
 #endif

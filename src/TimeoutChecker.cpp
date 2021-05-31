@@ -16,3 +16,4 @@ bool TimeoutChecker::makesDecision(uint32_t flags){
     _thread.flags_set(flags);
     return _decided;
 }
+

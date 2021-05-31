@@ -55,8 +55,7 @@ void ColorCollector::run_task_collection()
                 ColorConverter::getColorConverter().color(rgb,data);
             }   
          
-            
-            doc["unix_timestamp"]= TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->getEpoch();
+            doc["unix_timestamp"]= (uint32_t)TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->getEpoch();
             TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->getDateTime(timepoint);
             doc["datetime"]= timepoint;    
             doc["r_reg"] = _rgb_reg.R.u16bit;

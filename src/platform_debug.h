@@ -6,7 +6,7 @@
 #include "LEDIndicator.h"
 #include <platform/mbed.h>
 
-//#define NDEBUG 
+#define NDEBUG 
 class PlatformDebug
 {
 public:

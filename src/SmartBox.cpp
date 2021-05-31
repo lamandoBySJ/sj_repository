@@ -84,13 +84,13 @@ void SmartBox::start_core_task(){
               if (doc.containsKey("unix_timestamp")) {
                   time_t ts =   doc["unix_timestamp"].as<uint32_t>();
                   if (ts > 28800) {
-                       TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->setEpoch(ts);
-                       guard::LoopTaskGuard::getLoopTaskGuard().loop_start();
-                  }
+                      TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->setEpoch(ts);
+                      guard::LoopTaskGuard::getLoopTaskGuard().loop_start();
+                      _timeoutChecker.terminate();
+                  } 
               }
         }else if(_splitTopics[1]=="ServerReq"){
               if (doc.containsKey("url")) {
-                  
                   start_http_update(doc["url"].as<String>());
               }else if( doc.containsKey("event_type") ){
                   event_type=doc["event_type"].as<String>();
@@ -175,6 +175,7 @@ void SmartBox::onMqttSubscribeCallback(uint16_t packetId, uint8_t qos)
       String("\",\"version\":\"")+platformio_api::get_version()+String("\",\"wifi_channel\":")+
       String(networkService.getWiFiChannel(),DEC)+String("}");
       networkService.publish("SmartBox/TimeSync",invoke_data);
+      _timeoutChecker.startup();
     }
 }
 

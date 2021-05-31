@@ -16,6 +16,11 @@ public:
     void startup();
     void task_restart_countdown();
     bool makesDecision(uint32_t flags=0);
+    void terminate(){
+        if(_thread.get_state()==Thread::Running){
+            _thread.terminate();
+        }
+    }
 private:
     rtos::Thread _thread;
     uint32_t _timeout;
