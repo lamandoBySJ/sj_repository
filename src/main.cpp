@@ -85,8 +85,6 @@ void loop() {
     }
   }
 }
-//PlatformDebug::pause();
-//std::this_thread::sleep_for(chrono::seconds(10));
 //  std::unique_lock<rtos::Mutex> lck(_mtx, std::defer_lock);
 //  lck.lock();
 // std::lock_guard<rtos::Mutex> lck(_mtx);
