@@ -43,7 +43,7 @@ public:
     void startup(){
         std::lock_guard<rtos::Mutex> lck(_mtx);
         if(_thread.get_state()!=Thread::Running){
-            _thread.start(callback(this,&ESPWebService::run_web_service));
+            _thread.start(mbed::callback(this,&ESPWebService::run_web_service));
         }
     }
     void terminate(){
@@ -68,7 +68,7 @@ public:
 
     void delegateMethodWebSocketClientText(AsyncWebSocketClient *client,const String& text);
     void delegateMethodWebSocketClientEvent(const String& message, const String& event, uint32_t id, uint32_t reconnect);
-    void set_signal_wifi_mode(uint32_t flags=0)
+    void set_start_signal(uint32_t flags=0)
     {
         _thread.flags_set(flags);
     }

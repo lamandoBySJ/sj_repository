@@ -7,9 +7,9 @@
 #include "ColorConverter.h"
 #include "AsyncWebSocket.h"
 #include <app/ColorSensor/ColorSensor.h>
-#include "app/TimeMachine/TimeMachine.h"
+#include "app/RTC/RTC.h"
 #include "ColorConverter.h"
-
+#include "app/RTC/RTC.h"
 enum class MeasEventType : char{
         EventSystemMeasure = 0,
         EventManulRequest,
@@ -29,7 +29,10 @@ namespace os
 class  ColorCollector
 {
 public:
-    ColorCollector():_thread(osPriorityNormal,1024*10),doc(1024)
+    ColorCollector()=delete;
+explicit ColorCollector(RTC& rtc,ColorSensor& colorSensor):_rtc(rtc)
+    ,_colorSensor(colorSensor)
+    ,_thread(osPriorityNormal,1024*10),doc(1024)
     {
   
     }
@@ -76,17 +79,20 @@ public:
     void post_mail_measure(MeasEventType measEventType,AsyncWebSocketClient *client);
     void delegateMethodOnWsEvent(AsyncWebSocket * server, AsyncWebSocketClient *client, AwsEventType type, void * arg, uint8_t *data, size_t len);
 private:
+    RTC &_rtc;
+    ColorSensor &_colorSensor;
     rtos::Thread _thread;
-    rtos::Mutex _mtx,mtx;
+    rtos::Mutex _mtx;
     rtos::Mail<os::mail_ws_t, 8> _mail_box_collection;
+
     mbed::Callback<void(AsyncWebSocketClient*,const String&)>_cbWebSocketClientText;
     mbed::Callback<void(const String&, const String&,uint32_t,uint32_t)> _cbWebSocketClientEvent;
     mbed::Callback<bool(const String&,const String&)> _cbMqttPublish;
 
     String text;
-    DynamicJsonDocument  doc;
     RGB _rgb_reg;
-    
+    DynamicJsonDocument  doc;
+   
 };
 
 #endif

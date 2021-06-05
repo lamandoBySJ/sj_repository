@@ -35,11 +35,11 @@
 #endif
 
 // Do we compute ratio from frequency, or can we always get it from defines?
-#if MBED_CONF_TARGET_CUSTOM_TICKERS || (DEVICE_USTICKER && !defined US_TICKER_PERIOD_NUM) || (DEVICE_LPTICKER && !defined LP_TICKER_PERIOD_NUM)
+//#if MBED_CONF_TARGET_CUSTOM_TICKERS || (DEVICE_USTICKER && !defined US_TICKER_PERIOD_NUM) || (DEVICE_LPTICKER && !defined LP_TICKER_PERIOD_NUM)
 #define COMPUTE_RATIO_FROM_FREQUENCY 1
-#else
-#define COMPUTE_RATIO_FROM_FREQUENCY 0
-#endif
+//#else
+//#define COMPUTE_RATIO_FROM_FREQUENCY 0
+//#endif
 
 static void schedule_interrupt(const ticker_data_t *const ticker);
 static void update_present_time(const ticker_data_t *const ticker);
@@ -472,7 +472,6 @@ static void schedule_interrupt(const ticker_data_t *const ticker)
 void ticker_set_handler(const ticker_data_t *const ticker, ticker_event_handler handler)
 {
     initialize(ticker);
-
     core_util_critical_section_enter();
     set_handler(ticker, handler);
     core_util_critical_section_exit();
@@ -482,7 +481,7 @@ void ticker_irq_handler(const ticker_data_t *const ticker)
 {
     core_util_critical_section_enter();
     ticker_event_queue_t *queue = ticker->queue;
-
+    
     ticker->interface->clear_interrupt();
     if (queue->suspended) {
         core_util_critical_section_exit();

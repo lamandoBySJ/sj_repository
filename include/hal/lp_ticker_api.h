@@ -21,7 +21,7 @@
 #define MBED_LPTICKER_API_H
 
 //#include "device.h"
-#define DEVICE_LPTICKER 1
+//#define DEVICE_LPTICKER 0
 #if DEVICE_LPTICKER
 
 #include "hal/ticker_api.h"

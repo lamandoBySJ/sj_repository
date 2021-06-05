@@ -15,29 +15,40 @@
  * limitations under the License.
  */
 #include "platform/CriticalSectionLock.h"
-
 #include "platform/mbed_critical.h"
-
+#include "platform/mbed_debug.h"
+#include "rtos/Mutex.h"
 namespace mbed {
+
+static rtos::Mutex mtx;
 
 CriticalSectionLock::CriticalSectionLock()
 {
-    core_util_critical_section_enter();
+    //core_util_critical_section_enter();
+    mtx.lock();
+     debug("-- 1-- CriticalSectionLock\n");
 }
 
 CriticalSectionLock::~CriticalSectionLock()
 {
-    core_util_critical_section_exit();
+   // core_util_critical_section_exit();
+    debug("-- 2-- ~CriticalSectionLock\n");
+     mtx.unlock();
 }
 
 void CriticalSectionLock::enable()
 {
-    core_util_critical_section_enter();
+    mtx.lock();
+    debug("-- 3 -- enable()\n");
+   // core_util_critical_section_enter();
 }
 
 void CriticalSectionLock::disable()
 {
-    core_util_critical_section_exit();
+   
+    debug("-- 4 -- disable()\n");
+    //core_util_critical_section_exit();
+    mtx.unlock();
 }
 
 } // namespace mbed

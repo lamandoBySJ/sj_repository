@@ -1,5 +1,4 @@
 #include <heltec.h>
-#include <app/TimeMachine/TimeMachine.h>
 //#include <SPI.h>
 //#include <MFRC522.h>
 extern "C" {
@@ -11,7 +10,11 @@ extern "C" {
 #include "esp_sleep.h"
 #include "SmartBox.h"
 #include "LoopTaskGuard.h"
+#include <Arduino.h>
 
+#include <drivers/Timeout.h>
+#include <Ticker.h>
+#include "platform/mbed_critical.h"
 using namespace std;
 #define BAND    470E6 
 //python3 esptool.py --port COM20 --baud 115200 write_flash -fm dio -fs 16MB  0x410000 partitions.bin
@@ -52,11 +55,46 @@ void setup() {
   }
   
 }
+mbed::Timeout flipper;
+void flip()
+{
+    Serial.println("\n -----------flip ----------- \n");
+}
 
+volatile uint8_t state = LOW;
+
+
+void IRAM_ATTR onTimer(){
+   // blinker.detach();
+  us_ticker_irq_handler();
+  state=(state==LOW)?HIGH:LOW;
+  digitalWrite(23,state);
+  //blinker.attach_ms(1000,onTimer);
+}
+
+Ticker blinker;
 void loop() {
   
+   int64_t time_since_boot = esp_timer_get_time();
+   PlatformDebug::printf(" time_since_boot :%ld\n",time_since_boot);
   PlatformDebug::println(" ----------- STLB2 ----------- ");
-  smartBox->startup();
+  
+  //smartBox->startup();
+
+  flipper.attach(&flip, std::chrono::seconds(3));
+  //ThisThread::sleep_for(Kernel::Clock::duration_seconds(6));
+  /*Serial.println("------------------- TimeoutBase -----------------");
+  Countdown countdown(10);
+  */
+  
+  blinker.attach_ms(1,onTimer);
+
+  Serial.println("start timer");
+  attachInterrupt(0,[]{
+     guard::LoopTaskGuard::getLoopTaskGuard().set_signal_id(2,true);
+  }, RISING);
+
+ 
   while (true) {
     switch (guard::LoopTaskGuard::getLoopTaskGuard().get_signal_id())
     {
@@ -71,8 +109,12 @@ void loop() {
           }
       break;
      case 2:
-          {
-              
+          {   
+            if(state==LOW){
+              flipper.detach();
+            }else{
+              flipper.attach(&flip, std::chrono::seconds(3));
+            }
           }
       break;
      case 3:

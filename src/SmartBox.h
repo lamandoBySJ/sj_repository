@@ -10,12 +10,13 @@
 #include <functional>
 #include "NetworkService.h" 
 #include "ColorCollector.h" 
-#include "app/TimeMachine/TimeMachine.h" 
+#include "app/RTC/RTC.h" 
 #include "StringHelper.h" 
 #include "HTTPDownload.h"
 #include "LoopTaskGuard.h" 
 #include "LEDIndicator.h"
-#include "TimeoutChecker.h"
+#include "WiFiService.h"
+#include "Countdown.h"
 
 using namespace std;
 
@@ -34,7 +35,13 @@ enum class RequestType : uint8_t
 class  SmartBox
 {
 public:
-  SmartBox():_timeoutChecker(10)
+  SmartBox():_mtx(),_mtx_wire()
+  ,_rtc(_mtx_wire,Wire,13)
+  ,_colorSensor(_mtx_wire,Wire1,2)
+  ,colorCollector(_rtc,_colorSensor)
+
+  ,wifiService()
+  
   {
       str_map_type[String("server_measure")]  = RequestType::SERVER_MEASURE;
       str_map_type[String("manual_request")]  = RequestType::MANUAL_REQUEST;
@@ -58,20 +65,52 @@ public:
   void onMqttMessageCallback(const String& topic,const String& payload);
   void onMqttSubscribeCallback(uint16_t packetId, uint8_t qos);
   void onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reason);
-  void delegateMethodOnWiFiMode();
+  
+  void delegateMethodOnWiFiMode()
+  {
+    espWebService.set_start_signal(1);
+  }
+  void onWiFiServiceCallback(const mail_wifi_event_t& wifi_event){
+    
+      if(wifi_event.mode==WIFI_STA){
+          switch(wifi_event.event_id){
+              case SYSTEM_EVENT_STA_STOP:
+              break;
+              case SYSTEM_EVENT_STA_START:
+              break;
+              case SYSTEM_EVENT_STA_GOT_IP:
+                  networkService.connect();
+                  break;
+              case SYSTEM_EVENT_STA_DISCONNECTED:
+                    break;
+              case SYSTEM_EVENT_STA_CONNECTED:
+                    break;
+              default:
+              break;
+          } 
+      }
+  }
 private:
-  TimeoutChecker _timeoutChecker;
-  NetworkService networkService;
+
+  rtos::Mutex _mtx,_mtx_wire;
+  RTC _rtc;
+  ColorSensor _colorSensor;
   ColorCollector colorCollector;
+
+  //Countdown _countdownTimeSync;
+ // Countdown _countdown;
+  WiFiService wifiService;
+  NetworkService networkService;
   ESPWebService espWebService;
     
-  rtos::Mutex _mtx;
+ 
   rtos::Thread _threadCore;
   rtos::Mail<mqtt::mail_on_message_t, 8>  _mail_box_on_mqtt_message;
   std::set<String>  _topics;
   HTTPDownload _httpDownload;
   vector<String> _splitTopics;
   std::map<String,RequestType> str_map_type;
+ 
   
 };
 

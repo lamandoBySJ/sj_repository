@@ -39,7 +39,7 @@ public:
         void loop_start(){
            if(_thread.get_state()!=Thread::Running){
                LEDIndicator::getLEDIndicator().io_state_sys(true);
-                _thread.start(callback(this,&LoopTaskGuard::loop));
+                _thread.start(mbed::callback(this,&LoopTaskGuard::loop));
            }
         }
         void loop_stop(){

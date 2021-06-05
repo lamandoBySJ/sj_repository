@@ -13,15 +13,14 @@ void ColorCollector::post_mail_measure(MeasEventType measEventType,AsyncWebSocke
 }
 void  ColorCollector::startup()
 {   
-    osStatus  status = _thread.start(callback(this,&ColorCollector::run_task_collection));
+    osStatus  status = _thread.start(mbed::callback(this,&ColorCollector::run_task_collection));
     (status!=osOK ? throw os::thread_error((osStatus_t)status,_thread.get_name()):NULL);
 }
 
 void ColorCollector::run_task_collection()
 {
-   
-    ColorSensor<BH1749NUC,rtos::Mutex>::getColorSensor()->init();
-    ColorSensor<BH1749NUC,rtos::Mutex>::getColorSensor()->attachMeasurementHook(std::bind(&ColorCollector::invokeCallbackWebSocketClientPostEvent,this,
+
+    _colorSensor.attachMeasurementHook(std::bind(&ColorCollector::invokeCallbackWebSocketClientPostEvent,this,
       std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
 
     String timepoint;
@@ -29,12 +28,12 @@ void ColorCollector::run_task_collection()
     std::array<RGB,10> arrRGB;
     RGB rgb;
     while(true){
-        // ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(30));
+
         osEvent evt =  _mail_box_collection.get();
         if (evt.status == osEventMail) {
             os::mail_ws_t *mail = (os::mail_ws_t *)evt.value.p;
 
-            ColorSensor<BH1749NUC,rtos::Mutex>::getColorSensor()->loopMeasure(_rgb_reg,Kernel::Clock::duration_milliseconds(200),arrRGB);
+            _colorSensor.loopMeasure(_rgb_reg,Kernel::Clock::duration_milliseconds(200),arrRGB);
             _rgb_reg.R.u16bit =  arrRGB[arrRGB.size()-1].R.u16bit;
             _rgb_reg.G.u16bit =  arrRGB[arrRGB.size()-1].G.u16bit;
             _rgb_reg.B.u16bit =  arrRGB[arrRGB.size()-1].B.u16bit;
@@ -55,8 +54,8 @@ void ColorCollector::run_task_collection()
                 ColorConverter::getColorConverter().color(rgb,data);
             }   
          
-            doc["unix_timestamp"]= (uint32_t)TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->getEpoch();
-            TimeMachine<DS1307,rtos::Mutex>::getTimeMachine()->getDateTime(timepoint);
+            doc["unix_timestamp"]= (uint32_t)_rtc.getEpoch();
+            _rtc.getDateTime(timepoint);
             doc["datetime"]= timepoint;    
             doc["r_reg"] = _rgb_reg.R.u16bit;
             doc["g_reg"] = _rgb_reg.G.u16bit;

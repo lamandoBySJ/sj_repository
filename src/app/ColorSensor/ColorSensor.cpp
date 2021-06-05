@@ -1,30 +1,18 @@
 #include "ColorSensor.h"
 
-template<typename Sensor,typename OSMutex>
-ColorSensor<Sensor, OSMutex>::ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl, OSMutex &mtx): _sensor(wire,sda,scl),_mtx(mtx),_rst(0),_measurementHook(nullptr)
-{   
-    
-    ptrFuns[0]= &Sensor::red_data_get;
-    ptrFuns[1]= &Sensor::green_data_get;
-    ptrFuns[2]= &Sensor::blue_data_get;
-    ptrFuns[3]= &Sensor::ir_data_get;
-    _mode_control2.reg=0;
-}
-
-template<typename Sensor,typename OSMutex>
-ColorSensor<Sensor, OSMutex>::ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,uint8_t rst,OSMutex &mtx): _sensor(wire,sda,scl),_mtx(mtx),_rst(rst),_measurementHook(nullptr)
+ColorSensor::ColorSensor(rtos::Mutex &mtx,TwoWire& wire,uint8_t rst):_mtx(mtx),_bh1749nuc(wire),_rst(rst)
 {
-    ptrFuns[0]= &Sensor::red_data_get;
-    ptrFuns[1]= &Sensor::green_data_get;
-    ptrFuns[2]= &Sensor::blue_data_get;
-    ptrFuns[3]= &Sensor::ir_data_get;
+    ptrFuns[0]= &BH1749NUC::red_data_get;
+    ptrFuns[1]= &BH1749NUC::green_data_get;
+    ptrFuns[2]= &BH1749NUC::blue_data_get;
+    ptrFuns[3]= &BH1749NUC::ir_data_get;
     _mode_control2.reg=0;
 }
 
-template<typename Sensor,typename OSMutex>
-void ColorSensor<Sensor, OSMutex>::init(bool pwrEnable)
+
+bool ColorSensor::init(bool pwrEnable)
  {
-    std::unique_lock<OSMutex> lck(_mtx, std::defer_lock);
+    std::unique_lock<rtos::Mutex> lck(_mtx, std::defer_lock);
     lck.lock();
     if(pwrEnable){
       pinMode(this->_rst, OUTPUT);
@@ -32,41 +20,40 @@ void ColorSensor<Sensor, OSMutex>::init(bool pwrEnable)
     }
     ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
 
-    if( _sensor.begin()){
-      LEDIndicator::getLEDIndicator().io_state_als(true);
+    if( _bh1749nuc.begin()){
+      return true;
+    }else{
+      return false;
     }
     TracePrinter::printTrace(String(__FILE__)+String(":")+String(__LINE__));
 }
 
-template<typename Sensor,typename OSMutex>
-void ColorSensor<Sensor, OSMutex>::measurementModeActive()
+
+void ColorSensor::measurementModeActive()
 {
-   _sensor.measurement_active();
-}
-template<typename Sensor,typename OSMutex>
-void ColorSensor<Sensor, OSMutex>::measurementModeInactive()
-{
-   _sensor.measurement_inactive();
+   _bh1749nuc.measurement_active();
 }
 
-template<typename Sensor,typename OSMutex>
-bool ColorSensor<Sensor, OSMutex>::getRGB(RGB& rgb)
+void ColorSensor::measurementModeInactive()
+{
+   _bh1749nuc.measurement_inactive();
+}
+
+
+bool ColorSensor::getRGB(RGB& rgb)
 {
   int timeout=3000;
   do{
-        _sensor.mode_control2_get(&_mode_control2.reg);
+        _bh1749nuc.mode_control2_get(&_mode_control2.reg);
        if(--timeout==0){
          return false;
        }
        delay(1);
   } while (!_mode_control2.bitfield.valid);
 
- return ( _sensor.*ptrFuns[0])(rgb.R) &&
-  ( _sensor.*ptrFuns[1])(rgb.G)&&
-  ( _sensor.*ptrFuns[2])(rgb.B)&&
-  ( _sensor.*ptrFuns[3])(rgb.IR);
+ return ( _bh1749nuc.*ptrFuns[0])(rgb.R) &&
+  ( _bh1749nuc.*ptrFuns[1])(rgb.G)&&
+  ( _bh1749nuc.*ptrFuns[2])(rgb.B)&&
+  ( _bh1749nuc.*ptrFuns[3])(rgb.IR);
  
 }
-
-template class ColorSensor<BH1749NUC,std::mutex>;
-template class ColorSensor<BH1749NUC,rtos::Mutex>;

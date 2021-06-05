@@ -21,7 +21,18 @@
             "list.h": "c",
             "timers.h": "c",
             "inc_task.h": "c",
-            "tasks.h": "c"
+            "tasks.h": "c",
+            "nrf_nvic.h": "c",
+            "lp_ticker_api.h": "c",
+            "us_ticker_api.h": "c",
+            "mbed_error.h": "c",
+            "cyhal_timer.h": "c",
+            "cy_result.h": "c",
+            "cyhal_hw_resources.h": "c",
+            "mbed_debug.h": "c",
+            "mbed_critical.h": "c",
+            "mbed_assert.h": "c",
+            "esp_timer.h": "c"
         }
     }
 }

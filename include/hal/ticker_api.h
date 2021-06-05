@@ -165,7 +165,7 @@ void ticker_set_handler(const ticker_data_t *const ticker, ticker_event_handler 
  *
  * @param ticker The ticker object.
  */
-void ticker_irq_handler(const ticker_data_t *const ticker);
+void  ticker_irq_handler(const ticker_data_t *const ticker);
 
 /** Remove an event from the queue
  *

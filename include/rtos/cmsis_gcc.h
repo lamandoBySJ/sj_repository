@@ -143,11 +143,11 @@ __STATIC_FORCEINLINE __NO_RETURN  void __cmsis_start(void)
     uint32_t  wlen;
   }  __zero_table_t;
  
-  extern const __copy_table_t __copy_table_start__;
-  extern const __copy_table_t __copy_table_end__;
-  extern const __zero_table_t __zero_table_start__;
-  extern const __zero_table_t __zero_table_end__;
-
+  //extern const __copy_table_t __copy_table_start__;
+  //extern const __copy_table_t __copy_table_end__;
+  //extern const __zero_table_t __zero_table_start__;
+  //extern const __zero_table_t __zero_table_end__;
+/*
   for (__copy_table_t const* pTable = &__copy_table_start__; pTable < &__copy_table_end__; ++pTable) {
     for(uint32_t i=0u; i<pTable->wlen; ++i) {
       pTable->dest[i] = pTable->src[i];
@@ -159,7 +159,7 @@ __STATIC_FORCEINLINE __NO_RETURN  void __cmsis_start(void)
       pTable->dest[i] = 0u;
     }
   }
- 
+ */
   _start();
 }
   

@@ -33,8 +33,9 @@ typedef enum class MeasMode : uint8_t{
  {
 public:
     BH1749NUC()=delete;
-    BH1749NUC(TwoWire& wire,uint8_t  sda,uint8_t scl,uint32_t frequency=100000):_wire(wire),_sda(sda),
-        _scl(scl),_frequency(frequency),_facturerId(0xE0),_device_address(0x39)
+    BH1749NUC(TwoWire& wire):_wire(wire)
+    ,_facturerId(0xE0)
+    ,_device_address(0x39)
     {
         _data[0] = 0;
         _data[1] = 1;
@@ -73,14 +74,11 @@ public:
     bool ir_data_get(reg_uint16_t& rgb);  
     //bool data_get(uint16_t& data);
 
-//private:
+
     bool platform_write(uint8_t reg_address, uint8_t* data,uint8_t len);
     bool platform_read(uint8_t reg_address, uint8_t* data,uint8_t len);
-    
+private: 
     TwoWire& _wire;
-    uint8_t _sda;
-    uint8_t _scl;
-    uint32_t _frequency;
     byte _facturerId;
     uint8_t _device_address;
     std::array<char,2> _data;

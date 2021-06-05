@@ -33,11 +33,7 @@
 #define SQW32kHz 32
 
 #include <Arduino.h>
-#include <time.h>
 #include <Wire.h>
-#include <iostream>
-#include <iomanip>
-#include <sstream>
 /*
  * DateTime Class
  * */
@@ -48,8 +44,7 @@ class DS1307 //: public RTCBase
 {
     public:
         DS1307() = delete;
-        DS1307(TwoWire& wire,uint8_t  sda,uint8_t scl,uint32_t frequency=100000):
-        _wire(wire),_sda(sda),_scl(scl),_frequency(frequency)
+        explicit DS1307(TwoWire& wire):_wire(wire),_timezone_offset(0)
         {
             
         }
@@ -57,7 +52,7 @@ class DS1307 //: public RTCBase
         ~DS1307(){
           
         }
-        //void setDateTime(time_t timestamp);
+
        // time_t datetime(String& nowtime);
        // virtual time_t timestamp(String& nowtime) override;
         void getDateTime(String& datetime,bool duplicate=false);
@@ -103,15 +98,12 @@ class DS1307 //: public RTCBase
 
         
         static time_t _epoch;
-        
-    private:
-        TwoWire& _wire;
+protected:
         uint8_t bin2bcd (uint8_t val);
-        uint8_t bcd2bin (uint8_t val);
-        uint8_t             _sda;
-        uint8_t             _scl;
-        uint32_t _frequency;
-       
+        uint8_t bcd2bin (uint8_t val);    
+private:
+        TwoWire& _wire;
+        int32_t _timezone_offset;
 };
 
 class NVRAM

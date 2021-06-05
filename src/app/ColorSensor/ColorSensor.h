@@ -4,7 +4,6 @@
 #include "Arduino.h"
 #include "Wire.h"
 #include <BH1749NUC.h>
-#include "BH1749NUC_REG/bh1749nuc_reg.h"
 #include <array>
 #include <type_traits>
 #include "platform_debug.h"
@@ -30,15 +29,14 @@ struct RGB
     uint32_t s;
     uint32_t l;
 };
-template<typename Sensor,typename OSMutex>
+
 class ColorSensor 
 {
 public:
     ColorSensor()=delete;
-    ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,OSMutex &mtx);
-    ColorSensor(TwoWire& wire,uint8_t  sda,uint8_t scl,uint8_t rst,OSMutex &mtx);
+    ColorSensor(rtos::Mutex &mtx,TwoWire& wire,uint8_t rst=0);
     ~ColorSensor()=default;
-    void init(bool pwrEnable=true);
+    bool init(bool pwrEnable=true);
     bool getRGB(RGB& rgb);
     void measurementModeActive();
     void measurementModeInactive();
@@ -79,29 +77,20 @@ public:
         rgb.B.u16bit=_rgbTemp[count-1].B.u16bit;
         rgb.IR.u16bit=_rgbTemp[count-1].IR.u16bit;
     }
-    using callbackFun=bool(Sensor::*)(reg_uint16_t& value);
+    using callbackFun=bool(BH1749NUC::*)(reg_uint16_t& value);
 
     void attachMeasurementHook(std::function<void(int,const String&, const String&)> measHook){
        _measurementHook = measHook;
     }
-  template<class U = OSMutex, typename std::enable_if_t<std::is_same<U,rtos::Mutex>::value,int> = 0>
-  static ColorSensor<Sensor,OSMutex>* getColorSensor(){
-         static ColorSensor<Sensor,OSMutex>* colorSensor = new ColorSensor<Sensor,OSMutex>(Wire1,4,15,2,stdMutex);
-         return colorSensor;
-   }
-   
-   template<class U = OSMutex, typename std::enable_if_t<std::is_same<U,std::mutex>::value,int> = 0>
-   static ColorSensor<Sensor,OSMutex>* getColorSensor(){
-           static ColorSensor<Sensor,OSMutex>* colorSensor = new ColorSensor<Sensor,OSMutex>(Wire1,4,15,2,std_mutex);
-         return colorSensor;
-   }
+
 private:
-    Sensor _sensor;
-    OSMutex &_mtx;
+    rtos::Mutex &_mtx;
+    BH1749NUC _bh1749nuc;
     uint8_t _rst;
+    std::function<void(int,const String&, const String&)> _measurementHook;
     std::array<callbackFun, 4> ptrFuns;
     bh1749nuc_mode_control2_t _mode_control2;
-    std::function<void(int,const String&, const String&)> _measurementHook;
+    
 };
 
 #endif

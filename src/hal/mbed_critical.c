@@ -20,12 +20,15 @@
 
 #define __STDC_LIMIT_MACROS
 #include "hal/critical_section_api.h"
-
+#include "platform/mbed_debug.h"
 #include "platform/mbed_assert.h"
 #include "platform/mbed_critical.h"
-
+#include "freertos/semphr.h"
 static uint32_t critical_section_reentrancy_counter = 0;
 
+
+
+/*
 bool core_util_are_interrupts_enabled(void)
 {
 #if defined(__CORTEX_A9)
@@ -33,12 +36,13 @@ bool core_util_are_interrupts_enabled(void)
 #else
    // return ((__get_PRIMASK() & 0x1) == 0);
 #endif
-return true;
+return false;
 }
+
 
 bool core_util_is_isr_active(void)
 {
-    /*
+
 #if defined(__CORTEX_A9)
     switch (__get_CPSR() & 0x1FU) {
         case CPSR_M_USR:
@@ -50,28 +54,30 @@ bool core_util_is_isr_active(void)
     }
 #else
     return (__get_IPSR() != 0U);
-#endif*/
-return true;
-}
+#endif
+//return hal_in_critical_section();
+return false;
+}*/
 
 bool core_util_in_critical_section(void)
 {
     return hal_in_critical_section();
 }
 
-void core_util_critical_section_enter(void)
-{
-    hal_critical_section_enter();
 
+void core_util_critical_section_enter(void)
+{   
+    hal_critical_section_enter();
+       
     // If the reentrancy counter overflows something has gone badly wrong.
    // MBED_ASSERT(critical_section_reentrancy_counter < UINT32_MAX);
 
     ++critical_section_reentrancy_counter;
+
 }
 
 void core_util_critical_section_exit(void)
 {
-
     // If critical_section_enter has not previously been called, do nothing
     if (critical_section_reentrancy_counter == 0) {
         return;
@@ -81,5 +87,5 @@ void core_util_critical_section_exit(void)
 
     if (critical_section_reentrancy_counter == 0) {
         hal_critical_section_exit();
-    }
+    } 
 }
