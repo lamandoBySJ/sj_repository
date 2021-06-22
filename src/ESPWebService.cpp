@@ -16,8 +16,8 @@ void ESPWebService::run_web_service()
     TracePrinter::printTrace(platformio_api::get_web_properties().ap_ssid);
     TracePrinter::printTrace(platformio_api::get_web_properties().ap_pass);
 
+    ThisThread::flags_wait_all(0x0);
     
-    ThisThread::flags_wait_all(1);
     WiFi.softAP(platformio_api::get_web_properties().ap_ssid.c_str(), platformio_api::get_web_properties().ap_pass.c_str());
     _dnsServer->start(53, "*", WiFi.softAPIP());
     //server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
@@ -55,7 +55,7 @@ void ESPWebService::run_web_service()
                 TracePrinter::printf("_CONTENT_TYPE: %s\n", request->contentType().c_str());
                 TracePrinter::printf("_CONTENT_LENGTH: %u\n", request->contentLength());
             }
-       
+            /*
             int headers = request->headers();
             int i;
              for(i=0;i<headers;i++){
@@ -74,7 +74,7 @@ void ESPWebService::run_web_service()
                 } else {
                   //  TracePrinter::printf("_GET[%s]: %s\n", p->name().c_str(), p->value().c_str());
                 }
-            }
+            }*/
             request->send(200, "text/plain", "OK");
         },[](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
                 String path = String("/data/")+filename;

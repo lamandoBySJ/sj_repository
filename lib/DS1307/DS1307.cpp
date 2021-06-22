@@ -2,9 +2,6 @@
 #include "DS1307.h"
 #include <time.h>
 
-time_t DS1307::_epoch=0;
-
-
 bool DS1307::begin()
 {
   bool success=true;
@@ -16,22 +13,18 @@ bool DS1307::begin()
 
 bool DS1307::isRunning(void)
 {
-  uint8_t data;
-  bool flag;
-  
-       _wire.beginTransmission(DS1307_ADDR);
-       _wire.write(0x00);
-      _wire.endTransmission();
+  _wire.beginTransmission(DS1307_ADDR);
+  _wire.write(0x00);
+  _wire.endTransmission();
        
-        _wire.requestFrom(DS1307_ADDR, 1);
-        data = _wire.read();
-        flag = bitRead(data, 7);
+  _wire.requestFrom(DS1307_ADDR, 1);
+  uint8_t data = _wire.read();
+  bool flag = bitRead(data, 7);
 	return (!flag);
 }
 
 void DS1307::startClock(void)
 {
-       
   _wire.beginTransmission(DS1307_ADDR);
   _wire.write(0x00);
   _wire.endTransmission();
@@ -302,8 +295,6 @@ getYear (Completed)
 -----------------------------------------------------------*/
 uint16_t DS1307::getYear()
 {
-	
- 
   _wire.beginTransmission(DS1307_ADDR);
   _wire.write(0x06);  // Year Register
   _wire.endTransmission();
@@ -372,10 +363,10 @@ setDateTime()
 Taken from https://github.com/adafruit/RTClib/
 -----------------------------------------------------------*/
 
-void DS1307::setDateTime(const char* date,const char* time)
+bool DS1307::setDateTime(const char* date,const char* time)
 {
 	uint8_t day, month, hour, minute, second;
-
+  struct tm tm_zone;
 	// sample input: date = "Dec 26 2009", time = "12:34:56"
 	uint16_t year = atoi(date + 9);
 	setYear(year);
@@ -400,7 +391,37 @@ void DS1307::setDateTime(const char* date,const char* time)
 	setMinutes(minute);
 	second = atoi(time + 6);
 	setSeconds(second);
-  _timezone_offset=0;
+
+ 
+  tm_zone.tm_sec = second;
+	tm_zone.tm_min = minute;
+  tm_zone.tm_hour = hour;
+	tm_zone.tm_wday = getWeek()-1;
+	tm_zone.tm_mday = day;
+	tm_zone.tm_mon = month-1;
+	tm_zone.tm_year =2000 + year -1900; //ds1307 从2000年开始加
+
+  time_t epoch = Convert::ToEpoch(&tm_zone);
+  setEpoch(epoch-28800);
+
+  if(year!= getYear()%100){
+      return false;
+  }
+  if(hour!= getHours()+8){
+      return false;
+  }
+
+  std::array<uint16_t,4> assert_date;
+  assert_date[0]= second;
+  assert_date[1]= minute;
+  assert_date[2]= day;
+  assert_date[3]= month;
+  auto func=ptrFuns.begin();
+  bool ok =  std::all_of(assert_date.begin(),assert_date.end(),[this,&func](uint16_t val)->bool{
+      return val == (this->**func++)();
+  });
+  return ok;
+
 }
 /*-----------------------------------------------------------
 setEpoch()
@@ -408,18 +429,16 @@ setEpoch()
 
 void DS1307::setEpoch(time_t epoch)
 {
-	struct tm epoch_tm;
-	struct tm *_tm_zone = gmtime(&epoch);
-	epoch_tm = *_tm_zone;
-	setSeconds(epoch_tm.tm_sec); //0x00 - Seconds
-	setMinutes(epoch_tm.tm_min);
-	setHours(epoch_tm.tm_hour);
-	setWeek(epoch_tm.tm_wday+1);
-	setDay(epoch_tm.tm_mday);
-	setMonth(epoch_tm.tm_mon+1);
-	setYear(epoch_tm.tm_year + 1900);
+	struct tm *epoch_tm = gmtime(&epoch);
+	setSeconds(epoch_tm->tm_sec); //0x00 - Seconds
+	setMinutes(epoch_tm->tm_min);
+	setHours(epoch_tm->tm_hour);
+	setWeek(epoch_tm->tm_wday+1);
+	setDay(epoch_tm->tm_mday);
+	setMonth(epoch_tm->tm_mon+1);
+	setYear(epoch_tm->tm_year + 1900);
 	_wire.endTransmission();
-  _timezone_offset=28800;
+
 }
 
 /*-----------------------------------------------------------
@@ -435,36 +454,20 @@ time_t DS1307::getEpoch()
 	epoch_tm.tm_mday = getDay();
 	epoch_tm.tm_mon = getMonth()-1;
 	epoch_tm.tm_year = getYear()-1900;
-
-  DS1307::_epoch = mktime(&epoch_tm);
- 
-	return  DS1307::_epoch;
+	return  mktime(&epoch_tm);
 }
-//placement new的好处：
-//）在已分配好的内存上进行对象的构建，构建速度快。
-//2）已分配好的内存可以反复利用，有效的避免内存碎片问题。
-void DS1307::getDateTime(String& datetime,bool duplicate)
+
+
+void DS1307::getDateTime(String& datetime)
 {
-  if(duplicate){
-    getEpoch();
-  }
-  time_t epochTimeZone =  DS1307::_epoch+ _timezone_offset;
-
-  struct tm *_tm_zone = gmtime(&epochTimeZone);
-
-  datetime = String(_tm_zone->tm_year+1900,DEC) + 
-          String("-")+ 
-          String(_tm_zone->tm_mon+1,DEC)+
-          String("-")+ 
-          String(_tm_zone->tm_mday,DEC)+
-          String(" ")+ 
-          String(_tm_zone->tm_hour,DEC)+
-          String(":")+ 
-          String(_tm_zone->tm_min,DEC)+
-          String(":")+ 
-          String(_tm_zone->tm_sec,DEC);
-
+  time_t epochTimeZone = getEpoch();
+  Convert::ToDateTime(epochTimeZone,datetime);
 }
+
+/*placement new benefit：
+1）在已分配好的内存上进行对象的构建，构建速度快。
+2）已分配好的内存可以反复利用，有效的避免内存碎片问题。
+*/
 /* NVRAM Functions */
 
 bool NVRAM::begin()

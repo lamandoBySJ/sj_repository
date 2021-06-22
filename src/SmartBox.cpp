@@ -2,7 +2,6 @@
 #include "FS.h"
 #include "FFat.h"
 #include "FFatHelper.h"
-//extern String& platformio::api::version(const char* date,const char* time);
 
 extern FFatHelper<rtos::Mutex> FatHelper;
 
@@ -111,15 +110,36 @@ void SmartBox::platformio_init()
 
     attachInterrupt(0,&guard::LoopTaskGuard::set_signal_web_service,FALLING);
 
-    Wire.begin(21,22);
-    Wire1.begin(4,15);
-    bool ok;
-    ok = _rtc.init(true,CLOCK_H24); 
-    LEDIndicator::getLEDIndicator().io_state_rtc(ok);
-
-    ok = _colorSensor.init(true);
+    
+    _colorSensor.power_on();
+    Wire1.begin(4,15,100000);
+    bool  ok = _colorSensor.init();
     LEDIndicator::getLEDIndicator().io_state_als(ok);
     
+     _rtc.power_on();
+    char retry_count=3;
+    do
+    {   
+        ok = Wire.begin(21,22,100000);
+        if(ok){
+            ok = _rtc.init(CLOCK_H24); 
+        }else{
+            Logger::error(__PRETTY_FUNCTION__,__LINE__);
+        }
+        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(200));
+        if(ok){
+            ok = _rtc.setDateTime(__DATE__,__TIME__);
+        }else{
+            Logger::error(__PRETTY_FUNCTION__,__LINE__);
+        }
+        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(200));
+
+    }while(ok==false && retry_count-- > 0);
+
+    ok?Logger::cleanup_errors():Logger::error(__PRETTY_FUNCTION__,__LINE__);
+
+    LEDIndicator::getLEDIndicator().io_state_rtc(ok);
+
     TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
 }
 
@@ -131,40 +151,46 @@ void  SmartBox::task_collection_service(){
           ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));
       }
   }
-void SmartBox::color_measure()
+
+void SmartBox::color_measure(MeasEventType type)
 {   
-    colorCollector.post_mail_measure(MeasEventType::EventSystemMeasure,nullptr);
+    colorCollector.post_mail_measure(type,nullptr);
 }
-
-
 
 void  SmartBox::startup(){
     
     try{
-      // _countdownTimeSync.startup();
+      _topicTimeSync = "{\"DeviceID\":\""+platformio_api::get_device_info().BoardID;
+      _topicTimeSync+="\",\"version\":\""+platformio_api::get_version();
+      _topicTimeSync+="\",\"wifi_channel\":"+String(wifiService.getWiFiChannel(),DEC)+"}";
+
+
+      _boot_flipper.attach(mbed::callback(this,&SmartBox::restart), std::chrono::seconds(30));
+      _timeout_flipper.attach(mbed::callback(this,&SmartBox::restart), std::chrono::seconds(30));
+
+      colorCollector.setCallbackMqttPublish(mbed::callback(&_asyncMqttClientService,&AsyncMqttClientService::delegateMethodPublish));
+      colorCollector.startup();
+
+
+      _topics.insert(platformio_api::get_device_info().BoardID+"/ServerTime");
+      _topics.insert(platformio_api::get_device_info().BoardID+"/ServerReq");
+
+       
+      _asyncMqttClientService.addOnMqttDisonnectCallback(mbed::callback(this,&SmartBox::onMqttDisconnectCallback));
+      _asyncMqttClientService.addOnMqttConnectCallback(mbed::callback(this,&SmartBox::onMqttConnectCallback));
+      _asyncMqttClientService.addOnMqttMessageCallback(mbed::callback(this,&SmartBox::onMqttMessageCallback));
+      _asyncMqttClientService.addOnMqttSubscribeCallback(mbed::callback(this,&SmartBox::onMqttSubscribeCallback));
+      _asyncMqttClientService.startup();
 
       
-       _topics.insert(platformio_api::get_device_info().BoardID+"/ServerTime");
-       _topics.insert(platformio_api::get_device_info().BoardID+"/ServerReq");
-
-       wifiService.addOnWiFiServiceCallback(mbed::callback(this,&SmartBox::onWiFiServiceCallback));
-       networkService.addOnMqttDisonnectCallback(mbed::callback(this,&SmartBox::onMqttDisconnectCallback));
-       networkService.addOnMqttConnectCallback(mbed::callback(this,&SmartBox::onMqttConnectCallback));
-       networkService.addOnMqttMessageCallback(mbed::callback(this,&SmartBox::onMqttMessageCallback));
-       networkService.addOnMqttSubscribeCallback(mbed::callback(this,&SmartBox::onMqttSubscribeCallback));
-       networkService.init();
-       networkService.startup();
-
-       colorCollector.setCallbackMqttPublish(mbed::callback(&networkService,&NetworkService::delegateMethodPublish));
-       colorCollector.startup();
-
-       wifiService.startup();
+      wifiService.addOnWiFiServiceCallback(mbed::callback(this,&SmartBox::onWiFiServiceCallback));
+      wifiService.startup();
        
       _threadCore.start(mbed::callback(this,&SmartBox::start_core_task));
 
     }catch(const os::thread_error& e){
         TracePrinter::printTrace(e.what());
-        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(3000));  
+        Logger::error(__FUNCTION__,__LINE__);
     }
     
 }
@@ -175,6 +201,8 @@ void SmartBox::start_core_task(){
   //UBaseType_t x =uxTaskGetStackHighWaterMark(NULL);
   //TracePrinter::printTrace("stack left:"+String((int)x,DEC));
   String event_type;
+  unsigned long time_sync_interval=0;
+
   while(true)
   {
     osEvent evt=  _mail_box_on_mqtt_message.get();
@@ -192,39 +220,47 @@ void SmartBox::start_core_task(){
         }
 
         if(_splitTopics[1]=="ServerTime"){
-              if (doc.containsKey("unix_timestamp")) {
-                  time_t ts =   doc["unix_timestamp"].as<uint32_t>();
-                  if (ts > 28800) {
-                      _rtc.setEpoch(ts);
-                      guard::LoopTaskGuard::getLoopTaskGuard().loop_start();
-                    //  _countdownTimeSync.shutdown();
-                  } 
+              if( (millis() - time_sync_interval) > 3000){
+                  if (doc.containsKey("unix_timestamp")) {
+                    time_t ts = doc["unix_timestamp"].as<uint32_t>();
+                    time_t tm_rtc = _rtc.getEpoch();
+                    if(abs(ts - tm_rtc) > 2){
+                        _rtc.setEpoch(ts);
+                        RTC::TimeSyncEpoch() = ts;
+                        ++RTC::TimeSyncCountup();
+                    }
+                  }
               }
+
+              if( guard::LoopTaskGuard::getLoopTaskGuard().get_thread_state()!=Thread::Running){
+                  guard::LoopTaskGuard::getLoopTaskGuard().loop_start();        
+                  _boot_flipper.detach();
+                  _timeout_measure_flipper.attach(mbed::callback(this,&SmartBox::timeout_measure),std::chrono::seconds(43200));
+              }
+              time_sync_interval=millis();
+              
+
         }else if(_splitTopics[1]=="ServerReq"){
               if (doc.containsKey("url")) {
-                  start_http_update(doc["url"].as<String>());
+                mbed::Timeout _update_timeout;
+                _update_timeout.attach(mbed::callback([]{
+                    ESP.restart();
+                }),std::chrono::seconds(300));
+                start_http_update(doc["url"].as<String>());
               }else if( doc.containsKey("event_type") ){
                   event_type=doc["event_type"].as<String>();
                               switch( str_map_type[event_type] ){
                                 case RequestType::SYSTEM_MEASURE:
-                                {
-                                  colorCollector.post_mail_measure(MeasEventType::EventSystemMeasure,nullptr);
-                                  break;
-                                }
-                                 case RequestType::SERVER_MEASURE:
-                                {
-                                  colorCollector.post_mail_measure(MeasEventType::EventServerMeasure,nullptr);
-                                  break;
-                                }
+                                colorCollector.post_mail_measure(MeasEventType::EventSystemMeasure,nullptr);
+                                break;
+                                case RequestType::SERVER_MEASURE:
+                                colorCollector.post_mail_measure(MeasEventType::EventServerMeasure,nullptr);
+                                break;
                                 case RequestType::MANUAL_REQUEST:
-                                {
-                                  colorCollector.post_mail_measure(MeasEventType::EventManulRequest,nullptr);
-                                  break;
-                                }
+                                colorCollector.post_mail_measure(MeasEventType::EventManulRequest,nullptr);
+                                break;
                                 case RequestType::OTA_CANCEL:
-                                {
-                                  break;
-                                }
+                                break;
                                 case RequestType::FILE_DOWNLOAD:
                                 {
                                   if (doc.containsKey("file_url")) {
@@ -237,7 +273,8 @@ void SmartBox::start_core_task(){
                                         }                          
                                     }                  
                                   }
-                                }break;
+                                }
+                                break;
                                 case RequestType::FILE_DELETE:
                                 {
                                   if (doc.containsKey("file_list")) {
@@ -248,8 +285,12 @@ void SmartBox::start_core_task(){
                                         }
                                       }
                                   }
-                                  break;
+                                  
                                 }
+                                break;
+                                case RequestType::ESP_RESTART:
+                                ESP.restart();
+                                break;
                                 default:break;
                               }                  
               }
@@ -268,56 +309,64 @@ void SmartBox::onMqttMessageCallback(const String& topic,const String& payload)
 }
 void SmartBox::onMqttConnectCallback(bool sessionPresent)
 {
-    
-    TracePrinter::printTrace("SmartBox::OK: Connected to MQTT.");
     LEDIndicator::getLEDIndicator().io_state_mqtt(true);
     for(auto topic:_topics){
       TracePrinter::printTrace("subscribe topic:"+topic);
-      networkService.subscribe(topic);
+      _asyncMqttClientService.subscribe(topic);
     }
-    //_countdown.shutdown();
+    _timeout_flipper.detach();
+     guard::LoopTaskGuard::getLoopTaskGuard().set_loop_state(Thread::Running);
 }
 void SmartBox::onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reason)
 {
     LEDIndicator::getLEDIndicator().io_state_mqtt(false);
-    guard::LoopTaskGuard::getLoopTaskGuard().loop_stop();
-  //  _countdown.startup();
-    wifiService.switch_wifi_mode(WIFI_STA,SYSTEM_EVENT_STA_DISCONNECTED);
+    guard::LoopTaskGuard::getLoopTaskGuard().set_loop_state(Thread::Ready);
+    _timeout_flipper.attach(mbed::callback(this,&SmartBox::restart), std::chrono::seconds(30));
+    if(wifiService.isConnected()){
+         _asyncMqttClientService.connect();
+    }
 }
 void SmartBox::onMqttSubscribeCallback(uint16_t packetId, uint8_t qos)
 {
     if(packetId == _topics.size()){
-      String invoke_data=String("{\"DeviceID\":\"")+platformio_api::get_device_info().BoardID+
-      String("\",\"version\":\"")+platformio_api::get_version()+String("\",\"wifi_channel\":")+
-      String(wifiService.getWiFiChannel(),DEC)+String("}");
-      networkService.publish("SmartBox/TimeSync",invoke_data);
+        _asyncMqttClientService.publish("SmartBox/TimeSync",_topicTimeSync);
     }
 }
-
-
 void  SmartBox::start_web_service()
 {   
-  std::lock_guard<rtos::Mutex> lck(_mtx);
+  
   if(!espWebService.isRunning()){
+    _boot_flipper.detach();
+    _timeout_flipper.detach();
     LEDIndicator::getLEDIndicator().io_state_web(true);
-    networkService.cleanupCallbacks();
-    guard::LoopTaskGuard::getLoopTaskGuard().loop_stop();
-    
 
+    wifiService.cleanupCallbacks();
+    wifiService.shutdown();
+
+    _asyncMqttClientService.cleanupCallbacks();
+    _asyncMqttClientService.shutdown();
+    _asyncMqttClientService.disconnect();
+    
+    guard::LoopTaskGuard::getLoopTaskGuard().set_loop_state(Thread::Ready);
+    
     colorCollector.setCallbackWebSocketClientText(mbed::callback(&espWebService,&ESPWebService::delegateMethodWebSocketClientText));
     colorCollector.setCallbackWebSocketClientEvent(mbed::callback(&espWebService,&ESPWebService::delegateMethodWebSocketClientEvent));
+    
     espWebService.addCallbackOnWsEvent(mbed::callback(&colorCollector,&ColorCollector::delegateMethodOnWsEvent));
     espWebService.startup();  
-    wifiService.switch_wifi_mode(WIFI_AP_STA);
+
+    wifiService.switch_wifi_mode_to_AP();
+    espWebService.set_start_signal();
   }
 }
 void SmartBox::start_http_update(const String& url){
-      std::lock_guard<rtos::Mutex> lck(_mtx);
-      guard::LoopTaskGuard::getLoopTaskGuard().loop_stop();
+      
+      guard::LoopTaskGuard::getLoopTaskGuard().set_loop_state(Thread::Ready);
 
-      networkService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_BEGIN\"}");
+      _asyncMqttClientService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_BEGIN\"}");
       ThisThread::sleep_for(Kernel::Clock::duration_seconds(2));
-      networkService.shutdown();
+      _asyncMqttClientService.cleanupCallbacks();
+      _asyncMqttClientService.shutdown();
  
 
       //Countdown timeoutChecker("http_update",90);
@@ -325,24 +374,24 @@ void SmartBox::start_http_update(const String& url){
       ESPhttpUpdate.rebootOnUpdate(false);
       t_httpUpdate_return ret =  ESPhttpUpdate.update(url);
       PlatformDebug::printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-      networkService.connect();
+      _asyncMqttClientService.connect();
       do{
         ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
         
-      }while(!networkService.connected());
+      }while(!_asyncMqttClientService.connected());
 
       switch(ret) {
         case HTTP_UPDATE_FAILED:
             PlatformDebug::printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-             networkService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
+             _asyncMqttClientService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
             break;
          case HTTP_UPDATE_NO_UPDATES:
             PlatformDebug::println("HTTP_UPDATE_NO_UPDATES");
-            networkService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
+            _asyncMqttClientService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
             break;
         case HTTP_UPDATE_OK:
             PlatformDebug::println("HTTP_UPDATE_OK");
-            networkService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_OK\"}");
+            _asyncMqttClientService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_OK\"}");
             break;
         default:break;
       }
@@ -355,15 +404,15 @@ void SmartBox::start_https_update(const String& url){
       switch(ret) {
         case HTTP_UPDATE_FAILED:
             PlatformDebug::printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-            networkService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
+            _asyncMqttClientService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
             break;
          case HTTP_UPDATE_NO_UPDATES:
             PlatformDebug::println("HTTP_UPDATE_NO_UPDATES");
-            networkService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
+            _asyncMqttClientService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
             break;
         case HTTP_UPDATE_OK:
             PlatformDebug::println("HTTP_UPDATE_OK");
-            networkService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_OK\"}");
+            _asyncMqttClientService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_OK\"}");
             break;
         default:break;
       }

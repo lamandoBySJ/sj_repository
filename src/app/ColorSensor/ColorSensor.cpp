@@ -9,17 +9,19 @@ ColorSensor::ColorSensor(rtos::Mutex &mtx,TwoWire& wire,uint8_t rst):_mtx(mtx),_
     _mode_control2.reg=0;
 }
 
-
-bool ColorSensor::init(bool pwrEnable)
- {
-    std::unique_lock<rtos::Mutex> lck(_mtx, std::defer_lock);
-    lck.lock();
-    if(pwrEnable){
-      pinMode(this->_rst, OUTPUT);
-      digitalWrite(this->_rst,HIGH);
-    }
+void ColorSensor::power_on()
+{
+    std::lock_guard<rtos::Mutex> lck(_mtx);
+    pinMode(_rst,OUTPUT);
+    digitalWrite(_rst,LOW);
     ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-
+    digitalWrite(_rst,HIGH);
+    ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(500));
+}
+bool ColorSensor::init()
+ {
+    std::lock_guard<rtos::Mutex> lck(_mtx);
+    
     if( _bh1749nuc.begin()){
       return true;
     }else{

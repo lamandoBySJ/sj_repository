@@ -16,7 +16,7 @@
  */
 #include "drivers/Timeout.h"
 //#include "drivers/LowPowerTimeout.h"
-#include "HighResClock.h"
+#include "drivers/HighResClock.h"
 //#include "drivers/LowPowerClock.h"
 #include "drivers/RealTimeClock.h"
 #include "platform_debug.h"

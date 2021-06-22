@@ -3,60 +3,61 @@
 #include "platform_debug.h"
 #include <WiFiType.h>
 #include <WiFi.h>
+#include <drivers/Timeout.h>
+#include "LEDIndicator.h"
 
 struct [[gnu::may_alias]] mail_wifi_event_t{
     system_event_id_t event_id;
-    wifi_mode_t mode;
 };
 
 class WiFiService
 {
 public:
     //std::function<void(system_event_id_t event, system_event_info_t info)>  _wifiCB;
-    explicit WiFiService():_wifi_channel(random(0,11))
+    explicit WiFiService():_wifi_channel(random(0,11)),_connected(false)
     {
         //_wifiCB=std::bind(&NetworkService::WiFiEvent,this,std::placeholders::_1,std::placeholders::_2);
-        WiFi.onEvent(std::bind(&WiFiService::WiFiEvent,this,std::placeholders::_1,std::placeholders::_2));
+       wifi_event_id = WiFi.onEvent(std::bind(&WiFiService::WiFiEvent,this,std::placeholders::_1));
+    }
+    void shutdown(){
+        std::lock_guard<rtos::Mutex> lck(_mtx);
+        _threadWiFiEvent.terminate();
     }
     void startup(){
          osStatus status =  _threadWiFiEvent.start(mbed::callback(this,&WiFiService::task_system_event_service));
         (status!=osOK ? throw os::thread_error((osStatus_t)status,_threadWiFiEvent.get_name()):NULL);
     }
-    void init();
-
-    void switch_wifi_mode(wifi_mode_t mode,system_event_id_t event=SYSTEM_EVENT_STA_DISCONNECTED){
-        mail_wifi_event_t* mail=_mailBoxWiFiEvent.alloc();
-        if(mail){
-            mail->mode = mode;
-            mail->event_id=event;
-            _mailBoxWiFiEvent.put(mail);
-        }
+    void switch_wifi_mode_to_AP(){
+        _mtx.lock();
+        WiFi.removeEvent( wifi_event_id );
+        WiFi.mode(WIFI_MODE_AP);
+        WiFi.enableAP(true);
+        /* we never unlock this mtx */
+        //_mtx.unlock();
+        
+       /* mbed::Timeout flipper;
+        flipper.attach([]{ESP.restart();},std::chrono::seconds(30));
+        do{
+            ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(200));
+            LEDIndicator::getLEDIndicator().io_state_wifi(true);
+            ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(200));
+            LEDIndicator::getLEDIndicator().io_state_wifi(false);
+            Serial.println(String((int)WiFi.status(),DEC));
+        }while(WiFi.status()!=WL_CONNECTED);
+        flipper.detach();*/
     }
 
-    void WiFiEvent(system_event_id_t event, system_event_info_t info)
+    void WiFiEvent(system_event_id_t event)
     {
-        _onWiFiEventCallback.call(event,info);
+        mail_wifi_event_t* wifi_event=_mailBoxWiFiEvent.alloc();
+        wifi_event->event_id=event;
+        _mailBoxWiFiEvent.put(wifi_event);
     }
     void task_system_event_service();
   
     int32_t getWiFiChannel(){
         return _wifi_channel;
     }
-      /*
-    void removeOnWiFiModeCallbacks(){
-        _onWiFiEventCallbacks.clear();
-    }
-    void addOnWiFiEventCallback(mbed::Callback<void(system_event_id_t id,system_event_info_t)> func){
-        _onWiFiEventCallbacks.push_back(func);
-    }*/
-    /*
-    void delegateMethodWiFiEvent(system_event_id_t event, system_event_info_t info){
-        mail_wifi_event_t* evt=_mailBoxWiFiEvent.alloc();
-        if(evt!=NULL){
-        evt->event_id=event;
-        _mailBoxWiFiEvent.put(evt);
-        }
-    }*/
 
     void cleanupCallbacks(){
         std::lock_guard<rtos::Mutex> lck(_mtx);
@@ -72,12 +73,22 @@ public:
             v.call(wifi_event);
         } 
     }
+     bool isConnected(){
+        std::lock_guard<rtos::Mutex> lck(_mtx_connected);
+        return _connected;
+    }
+protected:
+    void init();
 private:
     rtos::Mail<mail_wifi_event_t, 8> _mailBoxWiFiEvent;
     rtos::Thread _threadWiFiEvent;
     rtos::Mutex _mtx;
-    mbed::Callback<void(system_event_id_t,system_event_info_t)> _onWiFiEventCallback;
+    rtos::Mutex _mtx_connected;
+   //mbed::Callback<void(system_event_id_t,system_event_info_t)> _onWiFiEventCallback;
     //std::vector<mbed::Callback<void(system_event_id_t,system_event_info_t)>>  _onWiFiEventCallbacks;
     std::vector<mbed::Callback<void(const mail_wifi_event_t&)>>  _onWiFiServiceCallbacks;
+   
+    wifi_event_id_t wifi_event_id;
     int32_t _wifi_channel;
+    bool _connected;
 };

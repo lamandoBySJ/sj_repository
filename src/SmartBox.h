@@ -1,6 +1,6 @@
 #ifndef SMART_BOX_H
 #define SMART_BOX_H
-#include "arduino.h"
+#include <Arduino.h>
 #include "platform_debug.h"
 #include <mutex>
 #include <thread>
@@ -8,7 +8,7 @@
 #include <HTTPClient.h>
 #include <Esp32httpUpdate.h>
 #include <functional>
-#include "NetworkService.h" 
+#include "AsyncMqttClientService.h" 
 #include "ColorCollector.h" 
 #include "app/RTC/RTC.h" 
 #include "StringHelper.h" 
@@ -16,7 +16,8 @@
 #include "LoopTaskGuard.h" 
 #include "LEDIndicator.h"
 #include "WiFiService.h"
-#include "Countdown.h"
+#include <drivers/Timeout.h>
+#include "Logger.h"
 
 using namespace std;
 
@@ -36,7 +37,7 @@ class  SmartBox
 {
 public:
   SmartBox():_mtx(),_mtx_wire()
-  ,_rtc(_mtx_wire,Wire,13)
+  ,_rtc(_mtx,Wire,13)
   ,_colorSensor(_mtx_wire,Wire1,2)
   ,colorCollector(_rtc,_colorSensor)
 
@@ -58,7 +59,7 @@ public:
   void task_collection_service();
   void start_web_service();
   void start_core_task();
-  void color_measure();
+  void color_measure(MeasEventType type=MeasEventType::EventSystemMeasure);
   void start_http_update(const String& url);
   void start_https_update(const String& url);
   void onMqttConnectCallback(bool sessionPresent);
@@ -71,47 +72,58 @@ public:
     espWebService.set_start_signal(1);
   }
   void onWiFiServiceCallback(const mail_wifi_event_t& wifi_event){
-    
-      if(wifi_event.mode==WIFI_STA){
-          switch(wifi_event.event_id){
-              case SYSTEM_EVENT_STA_STOP:
-              break;
-              case SYSTEM_EVENT_STA_START:
-              break;
-              case SYSTEM_EVENT_STA_GOT_IP:
-                  networkService.connect();
-                  break;
-              case SYSTEM_EVENT_STA_DISCONNECTED:
-                    break;
-              case SYSTEM_EVENT_STA_CONNECTED:
-                    break;
-              default:
-              break;
-          } 
-      }
+    switch(wifi_event.event_id){
+      case SYSTEM_EVENT_STA_STOP:
+        break;
+      case SYSTEM_EVENT_STA_START:
+        break;
+      case SYSTEM_EVENT_STA_GOT_IP:
+        LEDIndicator::getLEDIndicator().io_state_wifi(true);
+        _asyncMqttClientService.connect();
+        TracePrinter::printTrace("MQTT Connecting...");
+        break;
+      case SYSTEM_EVENT_STA_DISCONNECTED:
+          LEDIndicator::getLEDIndicator().io_state_wifi(false);
+        break;
+      case SYSTEM_EVENT_STA_CONNECTED:
+        break;
+      default:
+        break;
+    } 
+  }
+  void restart(){
+    ESP.restart();
+  }
+  void timeout_measure(){
+    _asyncMqttClientService.publish("SmartBox/TimeSync",_topicTimeSync);
+    ThisThread::sleep_for(Kernel::Clock::duration_seconds(2));
+    guard::LoopTaskGuard::getLoopTaskGuard().set_signal_id(2);
+    _timeout_measure_flipper.attach(mbed::callback(this,&SmartBox::timeout_measure),std::chrono::seconds(43200));
   }
 private:
+  rtos::Mutex _mtx;
+  rtos::Mutex _mtx_wire;
+  rtos::Thread _threadCore;
+  rtos::Mail<mqtt::mail_on_message_t, 64>  _mail_box_on_mqtt_message;
 
-  rtos::Mutex _mtx,_mtx_wire;
   RTC _rtc;
   ColorSensor _colorSensor;
   ColorCollector colorCollector;
 
-  //Countdown _countdownTimeSync;
- // Countdown _countdown;
   WiFiService wifiService;
-  NetworkService networkService;
+  AsyncMqttClientService _asyncMqttClientService;
   ESPWebService espWebService;
-    
- 
-  rtos::Thread _threadCore;
-  rtos::Mail<mqtt::mail_on_message_t, 8>  _mail_box_on_mqtt_message;
+
+  HTTPDownload _httpDownload; 
+
   std::set<String>  _topics;
-  HTTPDownload _httpDownload;
   vector<String> _splitTopics;
   std::map<String,RequestType> str_map_type;
- 
   
+  mbed::Timeout _boot_flipper;
+  mbed::Timeout _timeout_flipper;
+  mbed::Timeout _timeout_measure_flipper;
+  String _topicTimeSync;
 };
 
 #endif

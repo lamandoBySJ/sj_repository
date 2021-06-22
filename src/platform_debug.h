@@ -5,7 +5,7 @@
 #include "app/OLEDScreen/OLEDScreen.h"
 #include <platform/mbed.h>
 
-//#define NDEBUG 
+#define NDEBUG 
 class PlatformDebug
 {
 public:
@@ -25,12 +25,10 @@ public:
         #if !defined(NDEBUG)
         Serial.println("T is OLEDScreen");
         if( std::is_lvalue_reference<decltype(t)>::value){
-            Serial.println("OLEDScreen--------------->LLLLLLLLLLLLLL");
             getInstance()->_onPrintlnCallbacks.push_back(mbed:: Callback<size_t(const String&)>(&t,&std::remove_reference_t<T>::println));
             getInstance()->_onPrintLogoCallbacks.push_back(mbed::Callback<void()>(&t,&std::remove_reference_t<T>::logo));
            // getInstance()._onPrintfCallbacks.push_back(Callback<size_t(const char*, ...)>(&t,&std::remove_reference_t<T>::printf));
         }else{
-            Serial.println("OLEDScreen--------------->RRRRRRRRRRRRRR");
             static OLEDScreen<12>* oled_ = new OLEDScreen<12>(std::forward<decltype(t)>(t));
             getInstance()->_onPrintlnCallbacks.push_back( mbed::Callback<size_t(const String&)>(oled_,&std::remove_reference_t<T>::println));
             getInstance()->_onPrintLogoCallbacks.push_back(mbed::Callback<void()>(oled_,&std::remove_reference_t<T>::logo));

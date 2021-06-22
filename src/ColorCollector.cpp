@@ -1,5 +1,7 @@
 #include "ColorCollector.h"
-
+#include "Logger.h"
+#include "ColorConverter.h"
+#include "ArduinoJson.h"
 
 extern FFatHelper<rtos::Mutex> FatHelper;
 void ColorCollector::post_mail_measure(MeasEventType measEventType,AsyncWebSocketClient *client)
@@ -13,20 +15,22 @@ void ColorCollector::post_mail_measure(MeasEventType measEventType,AsyncWebSocke
 }
 void  ColorCollector::startup()
 {   
-    osStatus  status = _thread.start(mbed::callback(this,&ColorCollector::run_task_collection));
+    osStatus  status = _thread.start(mbed::callback(this,&ColorCollector::task_collection));
     (status!=osOK ? throw os::thread_error((osStatus_t)status,_thread.get_name()):NULL);
 }
 
-void ColorCollector::run_task_collection()
+void ColorCollector::task_collection()
 {
 
     _colorSensor.attachMeasurementHook(std::bind(&ColorCollector::invokeCallbackWebSocketClientPostEvent,this,
       std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
 
-    String timepoint;
+    String time_utc_plus8;
     String lastColor;
     std::array<RGB,10> arrRGB;
     RGB rgb;
+    uint16_t max;
+    String log;
     while(true){
 
         osEvent evt =  _mail_box_collection.get();
@@ -34,17 +38,37 @@ void ColorCollector::run_task_collection()
             os::mail_ws_t *mail = (os::mail_ws_t *)evt.value.p;
 
             _colorSensor.loopMeasure(_rgb_reg,Kernel::Clock::duration_milliseconds(200),arrRGB);
+
+            max=_rgb_reg.R.u16bit;
+            if(max>_rgb_reg.G.u16bit){
+                std::sort(arrRGB.begin(),arrRGB.end(),[](const RGB& left,const RGB& right)->bool{
+                    return left.R.u16bit < right.R.u16bit;
+                });
+            }else{
+                max=_rgb_reg.G.u16bit;
+                std::sort(arrRGB.begin(),arrRGB.end(),[](const RGB& left,const RGB& right)->bool{
+                    return left.G.u16bit < right.G.u16bit;
+                });
+            }
+            
+            if(max < _rgb_reg.B.u16bit){
+                max=_rgb_reg.B.u16bit;
+                std::sort(arrRGB.begin(),arrRGB.end(),[](const RGB& left,const RGB& right)->bool{
+                    return left.B.u16bit < right.G.u16bit;
+                });
+            }
+            
             _rgb_reg.R.u16bit =  arrRGB[arrRGB.size()-1].R.u16bit;
             _rgb_reg.G.u16bit =  arrRGB[arrRGB.size()-1].G.u16bit;
             _rgb_reg.B.u16bit =  arrRGB[arrRGB.size()-1].B.u16bit;
-            TracePrinter::printTrace(String(_rgb_reg.R.u16bit,DEC)+": "+ String(_rgb_reg.G.u16bit,DEC)+": "+
-                                     String(_rgb_reg.B.u16bit,DEC)+": "+ String(_rgb_reg.IR.u16bit,DEC) ); 
 
             rgb.R.u16bit   = abs(product_api::get_rgb_properties().r_offset-_rgb_reg.R.u16bit);
             rgb.G.u16bit   = abs(product_api::get_rgb_properties().g_offset-_rgb_reg.G.u16bit);
             rgb.B.u16bit   = abs(product_api::get_rgb_properties().b_offset-_rgb_reg.B.u16bit);
 
             doc.clear();
+            doc["version"] = platformio_api::get_version();
+
             JsonArray data = doc.createNestedArray("TowerColor");
             if(_rgb_reg.R.u16bit<10&&_rgb_reg.G.u16bit<10&&_rgb_reg.B.u16bit<10){
                 data.add("Black");
@@ -53,10 +77,25 @@ void ColorCollector::run_task_collection()
             }else{
                 ColorConverter::getColorConverter().color(rgb,data);
             }   
-         
-            doc["unix_timestamp"]= (uint32_t)_rtc.getEpoch();
-            _rtc.getDateTime(timepoint);
-            doc["datetime"]= timepoint;    
+   
+            doc["time_sync_countup"]   =RTC::TimeSyncCountup();
+            doc["last_time_sync_epoch"]=RTC::TimeSyncEpoch();
+            time_t epoch= _rtc.getEpoch();
+            if(epoch < 1600000000){
+                Logger::error(String(__PRETTY_FUNCTION__)+String("<")+String(16,DEC),epoch);
+            }else if(epoch > 1700000000){
+                Logger::error(String(__PRETTY_FUNCTION__)+String(">")+String(17,DEC),epoch);
+            }
+            if(Logger::getInstance().get_error_count() > 0){
+                Logger::getInstance().error_functions_get(log);
+                invokeCallbackMqttPublish("error_functions/"+platformio_api::get_device_info().BoardID,log);
+            }
+            doc["unix_timestamp"]= epoch;
+            Convert::ToDateTime(epoch,time_utc_plus8);
+            doc["datetime"]= time_utc_plus8;   
+            //JsonArray error_logs = doc.createNestedArray("error_functions");
+            //Logger::getInstance().error_log_get(error_logs); 
+            doc["error_functions"] = Logger::getInstance().get_error_count();
             doc["r_reg"] = _rgb_reg.R.u16bit;
             doc["g_reg"] = _rgb_reg.G.u16bit;
             doc["b_reg"] = _rgb_reg.B.u16bit;
@@ -66,6 +105,7 @@ void ColorCollector::run_task_collection()
             doc["r_off"] = 0;
             doc["g_off"] = 0;
             doc["b_off"] = 0;
+            TracePrinter::printTrace(doc["TowerColor"].as<String>());
             switch (mail->eventType)
             {
                 case  MeasEventType::EventSystemMeasure:
@@ -75,11 +115,20 @@ void ColorCollector::run_task_collection()
                     doc["g_offset"] = product_api::get_rgb_properties().g_offset;
                     doc["b_offset"] = product_api::get_rgb_properties().b_offset;
                     doc["type"] = "system_measure";
-                    TracePrinter::printTrace(doc["TowerColor"].as<String>());
                     if(lastColor!=doc["TowerColor"].as<String>()){
                         lastColor = doc["TowerColor"].as<String>();
                         invokeCallbackMqttPublish("TowerColor/"+platformio_api::get_device_info().BoardID,doc.as<String>());
                     }
+                }
+                break;
+                case MeasEventType::EventTimeoutMeasure:
+                {
+                    doc["SentFrom"] = platformio_api::get_device_info().BoardID;
+                    doc["r_offset"] = product_api::get_rgb_properties().r_offset;
+                    doc["g_offset"] = product_api::get_rgb_properties().g_offset;
+                    doc["b_offset"] = product_api::get_rgb_properties().b_offset;
+                    doc["type"] = "timeout_measure";
+                    invokeCallbackMqttPublish("TowerColor/"+platformio_api::get_device_info().BoardID,doc.as<String>());
                 }
                 break;
                 case  MeasEventType::EventServerMeasure:

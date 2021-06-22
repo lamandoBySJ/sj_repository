@@ -24,6 +24,9 @@
 #include "hal/ticker_api.h"
 #include "platform/mbed_debug.h"
 #include "esp_attr.h"
+#include "esp_timer.h"
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -26,27 +26,22 @@ CriticalSectionLock::CriticalSectionLock()
 {
     //core_util_critical_section_enter();
     mtx.lock();
-     debug("-- 1-- CriticalSectionLock\n");
 }
 
 CriticalSectionLock::~CriticalSectionLock()
 {
    // core_util_critical_section_exit();
-    debug("-- 2-- ~CriticalSectionLock\n");
      mtx.unlock();
 }
 
 void CriticalSectionLock::enable()
 {
     mtx.lock();
-    debug("-- 3 -- enable()\n");
    // core_util_critical_section_enter();
 }
 
 void CriticalSectionLock::disable()
 {
-   
-    debug("-- 4 -- disable()\n");
     //core_util_critical_section_exit();
     mtx.unlock();
 }

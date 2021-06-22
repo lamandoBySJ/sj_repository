@@ -36,7 +36,8 @@ public:
     ColorSensor()=delete;
     ColorSensor(rtos::Mutex &mtx,TwoWire& wire,uint8_t rst=0);
     ~ColorSensor()=default;
-    bool init(bool pwrEnable=true);
+    void power_on();
+    bool init();
     bool getRGB(RGB& rgb);
     void measurementModeActive();
     void measurementModeInactive();
@@ -62,20 +63,19 @@ public:
         std::sort(_rgbTemp.begin(),_rgbTemp.end(),[](const RGB& left,const RGB& right)->bool{
            return left.R.u16bit < right.R.u16bit;
         });
+        rgb.R.u16bit=_rgbTemp[count-1].R.u16bit;
         std::sort(_rgbTemp.begin(),_rgbTemp.end(),[](const RGB& left,const RGB& right)->bool{
            return left.G.u16bit < right.G.u16bit;
         });
+         rgb.G.u16bit=_rgbTemp[count-1].G.u16bit;
         std::sort(_rgbTemp.begin(),_rgbTemp.end(),[](const RGB& left,const RGB& right)->bool{
            return left.B.u16bit < right.B.u16bit;
         });
-        std::sort(_rgbTemp.begin(),_rgbTemp.end(),[](const RGB& left,const RGB& right)->bool{
+        rgb.B.u16bit=_rgbTemp[count-1].B.u16bit;
+       /* std::sort(_rgbTemp.begin(),_rgbTemp.end(),[](const RGB& left,const RGB& right)->bool{
            return left.IR.u16bit < right.IR.u16bit;
         });
-
-        rgb.R.u16bit=_rgbTemp[count-1].R.u16bit;
-        rgb.G.u16bit=_rgbTemp[count-1].G.u16bit;
-        rgb.B.u16bit=_rgbTemp[count-1].B.u16bit;
-        rgb.IR.u16bit=_rgbTemp[count-1].IR.u16bit;
+        rgb.IR.u16bit=_rgbTemp[count-1].IR.u16bit;*/
     }
     using callbackFun=bool(BH1749NUC::*)(reg_uint16_t& value);
 

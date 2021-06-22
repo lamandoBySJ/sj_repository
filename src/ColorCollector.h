@@ -1,17 +1,17 @@
 #ifndef COLOR_COLLECTOR_H
 #define COLOR_COLLECTOR_H
 #include "Arduino.h"
-#include "ArduinoJson.h"
 #include "ESPWebService.h"
 #include "platform_debug.h"
-#include "ColorConverter.h"
 #include "AsyncWebSocket.h"
 #include <app/ColorSensor/ColorSensor.h>
 #include "app/RTC/RTC.h"
-#include "ColorConverter.h"
-#include "app/RTC/RTC.h"
+
+
+
 enum class MeasEventType : char{
         EventSystemMeasure = 0,
+        EventTimeoutMeasure, 
         EventManulRequest,
         EventServerMeasure,
         EventWebAppOffset,
@@ -75,7 +75,7 @@ explicit ColorCollector(RTC& rtc,ColorSensor& colorSensor):_rtc(rtc)
     }
     void startup();
     void run_task_test();
-    void run_task_collection();
+    void task_collection();
     void post_mail_measure(MeasEventType measEventType,AsyncWebSocketClient *client);
     void delegateMethodOnWsEvent(AsyncWebSocket * server, AsyncWebSocketClient *client, AwsEventType type, void * arg, uint8_t *data, size_t len);
 private:

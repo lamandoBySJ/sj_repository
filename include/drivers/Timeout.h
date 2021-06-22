@@ -16,7 +16,7 @@
  */
 #ifndef MBED_TIMEOUT_H
 #define MBED_TIMEOUT_H
-#include "HighResClock.h"
+#include "drivers/HighResClock.h"
 #include "drivers/Ticker.h"
 #include <chrono>
 namespace mbed {

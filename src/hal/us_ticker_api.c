@@ -4,6 +4,9 @@
 #include "esp_timer.h"
 #define CY_IP_MXTCPWM 1
 #define CY_US_TICKER_IRQ_PRIORITY 3
+
+
+/*
 typedef struct{
 
 }cyhal_timer_event_t;
@@ -25,10 +28,13 @@ typedef struct{
 
 }cy_stc_syspm_callback_t;
 
-static ticker_info_t cy_us_ticker_info;
-static cyhal_timer_t cy_us_timer;
-static bool cy_us_ticker_initialized = false;
 
+static cyhal_timer_t cy_us_timer;
+*/
+static bool cy_us_ticker_initialized = false;
+static ticker_info_t cy_us_ticker_info;
+static esp_timer_handle_t esp_timer=NULL;
+/*
 static cy_en_syspm_status_t cy_us_ticker_pm_callback(cy_stc_syspm_callback_params_t *params, cy_en_syspm_callback_mode_t mode)
 {
    // if (mode == CY_SYSPM_AFTER_TRANSITION) {
@@ -39,7 +45,7 @@ static cy_en_syspm_status_t cy_us_ticker_pm_callback(cy_stc_syspm_callback_param
 }
 
 static cy_stc_syspm_callback_params_t cy_us_ticker_pm_params;
-static cy_stc_syspm_callback_t cy_us_ticker_pm_data = {
+static cy_stc_syspm_callback_t  cy_us_ticker_pm_data = {
    // .callback = &cy_us_ticker_pm_callback,
    // .type = CY_SYSPM_DEEPSLEEP,
    // .callbackParams = &cy_us_ticker_pm_params,
@@ -49,7 +55,7 @@ static void cy_us_ticker_irq_handler(MBED_UNUSED void *arg, MBED_UNUSED cyhal_ti
 {
     us_ticker_irq_handler();
 }
-
+*/
 //static cyhal_timer_t cy_us_timer;
 void cy_us_ticker_start()
 {
@@ -60,7 +66,11 @@ void cy_us_ticker_stop()
 {
    // cyhal_timer_stop(&cy_us_timer);
 }
-
+static void IRAM_ATTR us_ticker_callback(void* arg)
+{
+    us_ticker_irq_handler();
+}
+//static portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 void us_ticker_init(void)
 {
     if (!cy_us_ticker_initialized) {
@@ -70,9 +80,26 @@ void us_ticker_init(void)
             * reserve the timer channels used by TF-M. This approach can be
             * replaced once we have a way to allocate dedicated timers for TF-M
             * and Mbed OS. */
-            uint32_t div_value = 80;
-            cy_us_ticker_info.frequency =  80000000/div_value;
-            cy_us_ticker_info.bits = 32;
+            //uint32_t div_value = 80;
+          //  cy_us_ticker_info.frequency =  1;
+           // cy_us_ticker_info.bits = 32;
+            uint32_t milliseconds=1000;
+            static esp_timer_create_args_t _timerConfig;
+            _timerConfig.arg = NULL;
+            _timerConfig.callback = us_ticker_callback;
+            _timerConfig.dispatch_method = ESP_TIMER_TASK;
+            _timerConfig.name = "Ticker";
+            if (esp_timer) {
+                esp_timer_stop(esp_timer);
+                esp_timer_delete(esp_timer);
+            }
+            esp_err_t err =  esp_timer_create(&_timerConfig, &esp_timer);
+            err = esp_timer_start_periodic(esp_timer, milliseconds * 1000ULL);
+            if(err == ESP_OK)
+            {
+                debug("timer1 create ok!\r\n");        
+            }
+
             cy_us_ticker_initialized = true;
     }
     us_ticker_disable_interrupt();
