@@ -11,14 +11,9 @@ namespace product_api
 
 void LoRaGateway::startup()
 {
-    _topicCommandResponse = platformio_api::DeviceInfo().Family+ String("/command/response/GW");
-    _topicCommandRequest = platformio_api::DeviceInfo().Family+ String("/command/request/GW");
-   // _topicTimeout = DeviceInfo::Family+String("/send_timeout/#");
-
-    _topics.push_back(_topicCommandRequest);
-    //_topics.push_back(_topicTimeout);
-    _threadMqttService.start(callback(this,&LoRaGateway::run_mqtt_service));
-    _threadLoraService.start(callback(this,&LoRaGateway::run_lora_service));
+    _topicCommandResponse = platformio_api::get_device_info().Family+ String("/command/response/GW");
+    _threadMqttService.start(mbed::callback(this,&LoRaGateway::run_mqtt_service));
+    _threadLoraService.start(mbed::callback(this,&LoRaGateway::run_lora_service));
 }
 void LoRaGateway::run_mqtt_service()
 {
@@ -72,20 +67,20 @@ void LoRaGateway::run_mqtt_service()
                                 String cmd = doc["cmd"].as<String>();
                                 if( cmd== "learn"){
                                     _mode="learn"; 
-                                    _loRaNetwork.sendMessage(tagID,platformio_api::get_device_info().BoardID,"{\"cmd\":\"learn\"}"); 
+                                    _loRaService.sendMessage(tagID,platformio_api::get_device_info().BoardID,"{\"cmd\":\"learn\"}"); 
                                 }else if( cmd == "track"){
                                     _mode="track";     
-                                    _loRaNetwork.sendMessage(tagID,platformio_api::get_device_info().BoardID,"{\"cmd\":\"track\"}"); 
+                                    _loRaService.sendMessage(tagID,platformio_api::get_device_info().BoardID,"{\"cmd\":\"track\"}"); 
                                 }else if( cmd == "ON"){
-                                    _loRaNetwork.sendMessage(tagID,platformio_api::get_device_info().BoardID,"{\"cmd\":\"ON\"}");
+                                    _loRaService.sendMessage(tagID,platformio_api::get_device_info().BoardID,"{\"cmd\":\"ON\"}");
                                 }else if( cmd == "OFF"){
-                                    _loRaNetwork.sendMessage(tagID,platformio_api::get_device_info().BoardID,"{\"cmd\":\"OFF\"}");
+                                    _loRaService.sendMessage(tagID,platformio_api::get_device_info().BoardID,"{\"cmd\":\"OFF\"}");
                                 }
                            // }    
                     }  
-                    _networkService.publish(_topicCommandResponse,"{\""+platformio_api::get_device_info().BoardID+"\":\"OK\"}");         
+                    _asyncMqttClientService.publish(_topicCommandResponse,"{\""+platformio_api::get_device_info().BoardID+"\":\"OK\"}");         
                 }else if(_topicSplit.size()== 3){
-                     _loRaNetwork.sendMessage(_topicSplit[2],platformio_api::get_device_info().BoardID,"{\"cmd\":\""+product_api::get_ips_protocol().mode+"\"}");
+                     _loRaService.sendMessage(_topicSplit[2],platformio_api::get_device_info().BoardID,"{\"cmd\":\""+product_api::get_ips_protocol().mode+"\"}");
                      TracePrinter::printTrace(String("[GW]:MQTT:[send_timeout]:"+mail->payload)); 
                 }else{
                     TracePrinter::printTrace(String("[GW]:MQTT:[x]:"+mail->topic));
@@ -108,31 +103,14 @@ void LoRaGateway::onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reaso
 {
     TracePrinter::printTrace("[GW]MQTT:onMqttDisconnectCallback");
 }
-void LoRaGateway::onMessageMqttCallback(const String& topic,const String& payload)
+void LoRaGateway::onMqttMessageCallback(const String& topic,const String& payload)
 {
-   /* _topicMatch.clear();
-    StringHelper::split(_topicMatch,topic.c_str(),"/");
-    if(_topicMatch.size() == 4 && _topicMatch[3]=="GW"){
-        mqtt::mail_on_message_t *mail =  _mail_box_mqtt.alloc();
-        if(mail!=NULL){
-            mail->topic = topic;
-            mail->payload = payload;
-            _mail_box_mqtt.put(mail) ;
-        }
-    }else if(_topicMatch.size() == 3 && _topicMatch[1]=="send_timeout"){
-        mqtt::mail_on_message_t *mail =  _mail_box_mqtt.alloc();
-        if(mail!=NULL){
-            mail->topic = topic;
-            mail->payload = payload;
-            _mail_box_mqtt.put(mail) ;
-        }
-    }*/
     mqtt::mail_on_message_t *mail =  _mail_box_mqtt.alloc();
-        if(mail!=NULL){
-            mail->topic = topic;
-            mail->payload = payload;
-            _mail_box_mqtt.put(mail) ;
-        }
+    if(mail!=NULL){
+        mail->topic = topic;
+        mail->payload = payload;
+        _mail_box_mqtt.put(mail) ;
+    }
 }
 
 
@@ -167,7 +145,7 @@ void LoRaGateway::run_lora_service()
         }
     }
 }
-void LoRaGateway::onMessageLoRaCallback(const lora::mail_t& lora_mail)
+void LoRaGateway::onLoRaMessageCallback(const lora::mail_t& lora_mail)
 {
       lora::mail_t *mail =  _mail_box_lora.alloc();
       if(mail!=NULL){

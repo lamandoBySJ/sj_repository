@@ -30,7 +30,6 @@
 
 #ifndef MBED_NO_GLOBAL_USING_DIRECTIVE
 using namespace rtos;
-using namespace mbed;
 #endif
 
 #endif

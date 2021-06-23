@@ -1,10 +1,7 @@
 #ifndef PLATFORM_DEBUG_H
 #define PLATFORM_DEBUG_H
-
 #include "platformio_api.h"
 #include "app/OLEDScreen/OLEDScreen.h"
-#include "LEDIndicator.h"
-#include <platform/mbed.h>
 
 //#define NDEBUG 
 class PlatformDebug
@@ -27,14 +24,14 @@ public:
         Serial.println("T is OLEDScreen");
         if( std::is_lvalue_reference<decltype(t)>::value){
             Serial.println("OLEDScreen--------------->LLLLLLLLLLLLLL");
-            getInstance()->_onPrintlnCallbacks.push_back( Callback<size_t(const String&)>(&t,&std::remove_reference_t<T>::println));
-            getInstance()->_onPrintLogoCallbacks.push_back(Callback<void()>(&t,&std::remove_reference_t<T>::logo));
+            getInstance()->_onPrintlnCallbacks.push_back( mbed::Callback<size_t(const String&)>(&t,&std::remove_reference_t<T>::println));
+            getInstance()->_onPrintLogoCallbacks.push_back(mbed::Callback<void()>(&t,&std::remove_reference_t<T>::logo));
            // getInstance()._onPrintfCallbacks.push_back(Callback<size_t(const char*, ...)>(&t,&std::remove_reference_t<T>::printf));
         }else{
             Serial.println("OLEDScreen--------------->RRRRRRRRRRRRRR");
             static OLEDScreen<12>* oled_ = new OLEDScreen<12>(std::forward<decltype(t)>(t));
-            getInstance()->_onPrintlnCallbacks.push_back( Callback<size_t(const String&)>(oled_,&std::remove_reference_t<T>::println));
-            getInstance()->_onPrintLogoCallbacks.push_back(Callback<void()>(oled_,&std::remove_reference_t<T>::logo));
+            getInstance()->_onPrintlnCallbacks.push_back( mbed::Callback<size_t(const String&)>(oled_,&std::remove_reference_t<T>::println));
+            getInstance()->_onPrintLogoCallbacks.push_back(mbed::Callback<void()>(oled_,&std::remove_reference_t<T>::logo));
         }
         #endif
     }
@@ -48,7 +45,7 @@ public:
         if( std::is_lvalue_reference<decltype(std::forward<T>(t))>::value){
             //Serial.println("HardwareSerial--------------->LLLLLLLLLLLLLL");
             //PlatformDebug::_platformDebug._onPrintlnCallbacks.push_back( Callback<size_t(const String&)>(&t,(FunPtrHardwareSerialPrintln)&HardwareSerial::println));
-            getInstance()->_onPrintlnCallbacks.push_back( Callback<size_t(const String&)>(&t,(FunPtrHardwareSerialPrintln)&std::remove_reference<decltype(t)>::type::println));
+            getInstance()->_onPrintlnCallbacks.push_back(mbed::Callback<size_t(const String&)>(&t,(FunPtrHardwareSerialPrintln)&std::remove_reference<decltype(t)>::type::println));
         }else{
             //Serial.println("HardwareSerial--------------->RRRRRRRRRRRRRR");
            // static HardwareSerial* serial_=new HardwareSerial(std::forward<decltype(t)>(t));
@@ -204,7 +201,7 @@ public:
     void  startup(){
         #if !defined(NDEBUG)
         if(_thread->get_state()!=Thread::Running){
-            _thread->start(callback(this,&TracePrinter::run_trace_back));
+            _thread->start(mbed::callback(this,&TracePrinter::run_trace_back));
         }
         #endif
     }
@@ -215,8 +212,8 @@ public:
              osEvent evt=  _mail_box.get();
             if (evt.status == osEventMail) {
                 mail_trace_t *mail = (mail_trace_t *)evt.value.p;
-                 PlatformDebug::println(mail->log);
-                 TracePrinter::getInstance()->_mail_box.free(mail); 
+                PlatformDebug::println(mail->log);
+                TracePrinter::getInstance()->_mail_box.free(mail); 
             }
         }
         #endif
@@ -225,7 +222,7 @@ public:
     static inline void printf(const char* format,...)
     {
         #if !defined(NDEBUG)
-       
+       /*
         char loc_buf[64];
         char * temp = loc_buf;
         va_list arg;
@@ -249,10 +246,10 @@ public:
         }
         va_end(arg);
        // len = write((uint8_t*)temp, len);
-        TracePrinter::getInstance()->println(temp);
+        TracePrinter::getInstance()->println(String(temp));
         if(temp != loc_buf){
             free(temp);
-        }
+        }*/
         #endif
     }
     static inline void printTrace(const String& e)
@@ -271,7 +268,7 @@ public:
     
     static inline void init(){
         #if !defined(NDEBUG)
-        getInstance()->startup();
+        TracePrinter::getInstance()->startup();
         #endif
     }
  
@@ -284,16 +281,17 @@ private:
         #if !defined(NDEBUG)
         std::lock_guard<rtos::Mutex> lck(_mtx);
         mail_trace_t *mail = _mail_box.alloc();
-        mail->log = e;
-        _mail_box.put(mail);
+        if(mail){
+             mail->log = String(e);
+            _mail_box.put(mail);
+        }
         #endif
     }
     static TracePrinter* getInstance(){
        static TracePrinter *tracePrinter = new TracePrinter();
         return tracePrinter;
     }
-    //rtos::MemoryPool<char*,8> _buf;
-    rtos::Mail<mail_trace_t, 8>  _mail_box;
+    rtos::Mail<mail_trace_t, 16>  _mail_box;
     rtos::Thread *_thread;
     rtos::Mutex _mtx;
     #endif

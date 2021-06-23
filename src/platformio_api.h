@@ -13,24 +13,31 @@ struct I2C_BUS_NUM_RTC : public std::integral_constant<unsigned int, 1> {};
 struct I2C_BUS_SCL_RTC : public std::integral_constant<unsigned int, 32> {};
 struct I2C_BUS_SDA_RTC : public std::integral_constant<unsigned int, 33> {};
 struct I2C_BUS_RST_RTC : public std::integral_constant<unsigned int, 0> {};
+
 #else
 struct I2C_BUS_NUM_RTC : public std::integral_constant<unsigned int, 0> {};
 struct I2C_BUS_SCL_RTC : public std::integral_constant<unsigned int, 21> {};
 struct I2C_BUS_SDA_RTC : public std::integral_constant<unsigned int, 22> {};
 struct I2C_BUS_RST_RTC : public std::integral_constant<unsigned int, 13> {};
+
 #endif
+
 struct DeviceInfo
 {   
-    DeviceInfo(){
+    explicit  DeviceInfo(){
         BoardID="ABCD";
         Family="k49a";
     }
+
+    DeviceInfo&  operator= (DeviceInfo& other)=delete;
+    DeviceInfo&  operator= (DeviceInfo&& other)=delete;
+
     String BoardID;
     String Family;
 };
 
 struct  UserProperties{
-    UserProperties()
+    explicit UserProperties()
     {   
         path="/user_constant";
         ssid = "IoTwlan";
@@ -38,6 +45,7 @@ struct  UserProperties{
         host = "mslmqtt.mic.com.cn";
         port = 1883;
     }
+    
     String  path ;
     String  ssid ;
     String  pass ;
@@ -54,7 +62,7 @@ struct  UserProperties{
 };
 struct WebProperties
 {   
-        WebProperties(){
+      explicit WebProperties(){
             ap_ssid="STLB";
             ap_pass="Aa000000";
             http_user="admin";
@@ -132,5 +140,33 @@ struct alloc_error:public std::exception
             return this->detail;
         }
 };
+struct rtc_error:public std::exception
+{
+        rtc_error(const String& detail)
+        {
+            this->detail = detail.c_str();
+        }
+        const char* detail;
+        const char* what() const throw(){
+            return this->detail;
+        }
+};
+
 }// namespace os
+
+namespace i2c
+{
+struct pin_error:public std::exception
+{
+        pin_error(const String& detail)
+        {
+            this->detail = detail.c_str();
+        }
+        const char* detail;
+        const char* what() const throw(){
+            return this->detail;
+        }
+};
+
+}//namespace i2c
 #endif

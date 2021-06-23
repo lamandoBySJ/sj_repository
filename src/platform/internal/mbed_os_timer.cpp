@@ -19,7 +19,7 @@
 //#include "platform/CriticalSectionLock.h"
 #include "platform/internal/SysTimer.h"
 #include "platform/internal/mbed_os_timer.h"
-//#include "us_ticker_api.h"
+#include "hal/us_ticker_api.h"
 //#include "lp_ticker_api.h"
 //#include "mbed_critical.h"
 #include "platform/mbed_error.h"
@@ -40,7 +40,7 @@ OsTimer *os_timer;
 namespace {
 uint64_t os_timer_data[(sizeof(OsTimer) + 7) / 8];
 }
-
+#define DEVICE_USTICKER 1
 OsTimer *init_os_timer()
 {
     // Do not use SingletonPtr since this relies on the RTOS.

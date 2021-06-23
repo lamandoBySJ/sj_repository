@@ -2,7 +2,7 @@
 #define LOOP_TASK_GUARD_H
 
 #include "platform_debug.h"
-#include "LEDIndicator.h"
+
 namespace guard
 {
     struct mail_control_t{
@@ -29,24 +29,23 @@ public:
         void loop(){
             while(true){
                 TracePrinter::printTrace("-- LoopTaskGuard --");
-                LEDIndicator::getLEDIndicator().io_state_sys(true);
+
                 ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
                 set_signal_id(1);
-                LEDIndicator::getLEDIndicator().io_state_sys(false);
+
                 ThisThread::sleep_for(Kernel::Clock::duration_seconds(3));
             }
         }
         void loop_start(){
            if(_thread.get_state()!=Thread::Running){
-               LEDIndicator::getLEDIndicator().io_state_sys(true);
-                _thread.start(callback(this,&LoopTaskGuard::loop));
+
+                _thread.start(mbed::callback(this,&LoopTaskGuard::loop));
            }
         }
         void loop_stop(){
             if(_thread.get_state()==Thread::Running){
                _thread.terminate();
                ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(200));
-               LEDIndicator::getLEDIndicator().io_state_sys(false);
            }
         }
         uint32_t get_signal_id(){

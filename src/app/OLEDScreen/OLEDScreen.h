@@ -21,11 +21,11 @@ class OLEDScreen
 public:
     OLEDScreen():_head(0),_tail(0),_display(nullptr)
     {
-      Serial.printf("default construct:this:%p\n",this);
+
     }
     OLEDScreen(SSD1306Wire* ssd1306):_head(0),_tail(0),_display(ssd1306)
     {
-      Serial.printf("overload construct:this:%p\n",this);
+
     }
     ~OLEDScreen()
     {
@@ -36,11 +36,15 @@ public:
     }
     OLEDScreen(const OLEDScreen& other)
     {
-      Serial.printf("copy construct:this:%p\n",this);
       if (this != &other) {
         if (other._display != nullptr){
-            this->~OLEDScreen();
-            this->_display = other._display;
+             /*
+             this-> _display = new SSD1306Wire(other._display->_address
+             ,other._display->_sda
+             ,other._display->_scl
+             ,other._display->_rst
+             ,other._display->geometry);*/
+             this-> _display=other._display;
             _head=other._head;
             _tail=other._tail;
           // textVector.clear();
@@ -52,7 +56,6 @@ public:
     OLEDScreen(OLEDScreen&& other):OLEDScreen()
     {   
      //new (this)OLEDScreen();
-      Serial.printf("move construct:this:%p\n",this);
       if (this != &other) {
           if (other._display != nullptr){
               this->~OLEDScreen();
@@ -69,13 +72,11 @@ public:
 
   OLEDScreen&  operator=(const OLEDScreen& other)
     {
-      Serial.println("assign=&");
       if (this != &other) {
-        this->~OLEDScreen();
         if(other._display!=nullptr){
-             this->_display = other._display;
-             _head=other._head;
-              _tail=other._tail;
+            this-> _display=other._display;
+            _head=other._head;
+            _tail=other._tail;
         }else{
               generate();
         }
@@ -85,7 +86,6 @@ public:
 
  OLEDScreen&  operator=(OLEDScreen&& other)
   {
-      Serial.println("move=&&");
       if (this != &other){
             this->~OLEDScreen();
             if(other._display!=nullptr){

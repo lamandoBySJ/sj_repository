@@ -10,12 +10,9 @@ BeaconProperties& get_beacon_properties()
 }
 
 void LoRaBeacon::startup()
-{
-    
-    _topicCommand = platformio_api::DeviceInfo().Family+ String("/command/request/BCN");
-    _topics.push_back(_topicCommand);
-    _threadMqttService.start(callback(this,&LoRaBeacon::run_mqtt_service));
-    _threadLoraService.start(callback(this,&LoRaBeacon::run_lora_service));
+{   
+    _threadMqttService.start(mbed::callback(this,&LoRaBeacon::run_mqtt_service));
+    _threadLoraService.start(mbed::callback(this,&LoRaBeacon::run_lora_service));
 }
 void LoRaBeacon::run_mqtt_service()
 {
@@ -39,7 +36,7 @@ void LoRaBeacon::run_mqtt_service()
         }
     }
 }
-
+/*
 void LoRaBeacon::onMqttConnectCallback(bool sessionPresent)
 {
     TracePrinter::printTrace("[BCN]MQTT:onMqttConnectCallback");
@@ -47,21 +44,7 @@ void LoRaBeacon::onMqttConnectCallback(bool sessionPresent)
 void LoRaBeacon::onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reason)
 {
     TracePrinter::printTrace("[BCN]MQTT:onMqttDisconnectCallback");
-}
-void LoRaBeacon::onMessageMqttCallback(const String& topic,const String& payload)
-{
-    if (std::find(_topics.begin(), _topics.end(), topic)!=_topics.end())
-    {
-        mqtt::mail_on_message_t *mail =  _mail_box_mqtt.alloc();
-        if(mail!=NULL){
-            mail->topic = topic;
-            mail->payload = payload;
-            _mail_box_mqtt.put(mail) ;
-        }
-    }
-}
-
-
+}*/
 void LoRaBeacon::run_lora_service()
 {
     while(true){
@@ -69,7 +52,7 @@ void LoRaBeacon::run_lora_service()
         if (evt.status == osEventMail) {
             lora::mail_t *mail = (lora::mail_t *)evt.value.p;
             TracePrinter::printTrace("[BCN]lora:Rx:"+mail->receiver+":Tx:"+mail->sender+"Packet:"+mail->packet);
-            if(mail->receiver == platformio_api::DeviceInfo().BoardID){
+            if(mail->receiver == platformio_api::get_device_info().BoardID){
                 DynamicJsonDocument  doc(mail->packet.length()+128);
                 DeserializationError error = deserializeJson(doc,mail->packet);
                 if (!error)
@@ -81,10 +64,10 @@ void LoRaBeacon::run_lora_service()
             }else if(mail->receiver == String("FAFA")){
                 DynamicJsonDocument endNodeDoc(1024);
                 endNodeDoc[mail->sender]= mail->rssi; 
-                _networkService.publish("k49a/send_rssi/"+platformio_api::DeviceInfo().BoardID,endNodeDoc.as<String>());
+                _asyncMqttClientService.publish("k49a/send_rssi/"+platformio_api::get_device_info().BoardID,endNodeDoc.as<String>());
                 endNodeDoc.clear();
                 TracePrinter::printTrace("[BCN]lora:Rx:PUB:send_rssi:beaconID:"+
-                    platformio_api::DeviceInfo().BoardID+
+                    platformio_api::get_device_info().BoardID+
                     ",tagID:"+mail->sender+
                     ",rssi:"+mail->rssi);
             }else {
@@ -96,7 +79,7 @@ void LoRaBeacon::run_lora_service()
         }
     }
 }
-void LoRaBeacon::onMessageLoRaCallback(const lora::mail_t& lora_mail)
+void LoRaBeacon::onLoRaMessageCallback(const lora::mail_t& lora_mail)
 {
       lora::mail_t *mail =  _mail_box_lora.alloc();
       if(mail!=NULL){

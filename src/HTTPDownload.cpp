@@ -1,7 +1,5 @@
 #include "HTTPDownload.h"
 
-extern FFatHelper<rtos::Mutex> FatHelper;
-
 bool HTTPDownload::execute(const String& url,const String& file)
     {
       _path =  String("/")+file; 

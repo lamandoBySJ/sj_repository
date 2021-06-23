@@ -3,38 +3,30 @@
 void LoRaCollector::startup(WirelessTechnologyType type)
 {
     _topicCommandResponse = platformio_api::get_device_info().Family+ String("/command/response/DC");
-    _topicCommandRequest = platformio_api::get_device_info().Family+ String("/command/request/DC");
-   _topicSendRssi = platformio_api::get_device_info().Family+String("/send_rssi/#");
-  
-    _topics.push_back(_topicSendRssi);
-    _topics.push_back(_topicCommandRequest);
-
     if(type == WirelessTechnologyType::WiFi){
-        _threadMqttService.start(callback(this,&LoRaCollector::run_mqtt_service));
-      // _thread = std::thread(&LoRaCollector::run_mqtt_service,this);
+        _threadMqttService.start(mbed::callback(this,&LoRaCollector::run_mqtt_service));
     }else{
-       _threadLoraService.start(callback(this,&LoRaCollector::run_lora_service));
+       _threadLoraService.start(mbed::callback(this,&LoRaCollector::run_lora_service));
     }
   
-   _threadBackgroundService.start(callback(this,&LoRaCollector::run_background_service));
+   _threadBackgroundService.start(mbed::callback(this,&LoRaCollector::run_background_service));
 }
 void LoRaCollector::run_mqtt_service()
 {
-    std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
+  
     while(true){
         osEvent evt= _mail_box_mqtt.get();
         if (evt.status == osEventMail) {
-
-            lck.lock();
 
             mqtt::mail_on_message_t *mail = (mqtt::mail_on_message_t *)evt.value.p;
             TracePrinter::printTrace("[DC]MQTT:"+mail->topic);
             TracePrinter::printTrace("[DC]MQTT:"+mail->payload);
             
-           
-            _topicSplit.clear();
+             _mtx.lock();
+
+             _topicSplit.clear();
             StringHelper::split( _topicSplit,mail->topic.c_str(),"/");
-            DynamicJsonDocument  doc(mail->payload.length()+1024);
+           DynamicJsonDocument  doc(mail->payload.length()+1024);
             DeserializationError error = deserializeJson(doc,mail->payload);
           
            
@@ -92,30 +84,26 @@ void LoRaCollector::run_mqtt_service()
                             product_api::get_ips_protocol().mode       = doc["mode"].as<String>();
                         }
               
-                _networkService.publish(_topicCommandResponse,"{\""+platformio_api::get_device_info().BoardID+"\":\"OK\"}");
+                _asyncMqttClientService.publish(_topicCommandResponse,"{\""+platformio_api::get_device_info().BoardID+"\":\"OK\"}");
             }
             
            
             _mail_box_mqtt.free(mail); 
-            lck.unlock();
+            _mtx.unlock();
         }
     }
 }
 
 void LoRaCollector::run_background_service()
 {   
-   
- 
     while(true)
     {
        
         osEvent evt = _mail_box_background_signal.get(2000);
 
-        std::unique_lock<std::mutex> lck(_mtx, std::defer_lock);
-        lck.lock();
+        _mtx.lock();
 
         if (evt.status == osEventMail) {
-             TracePrinter::printTrace("[DC]MQTT:BKGD:osEventMail:"+String(millis()-_millis,DEC));
             // _mail_box_background_signal.free((int*)evt.value.p);
             background::mail_t *mail_background = (background::mail_t *)evt.value.p;
             _payload="{";
@@ -132,7 +120,7 @@ void LoRaCollector::run_background_service()
                 _topicLT =  product_api::get_ips_protocol().family+String("/track/")+mail_background->TAG_ID;
             }
                   
-            _networkService.publish(_topicLT,_payload);
+            _asyncMqttClientService.publish(_topicLT,_payload);
 
             _mapDataCollector[mail_background->TAG_ID].clear();
             _mapDataCollector.erase(mail_background->TAG_ID);
@@ -150,9 +138,7 @@ void LoRaCollector::run_background_service()
         }else if (evt.status == osEventTimeout){
  
             for(auto& tagTimeout:_mapTagTimeout){
-                for(auto& v : _mapSetupBeacons){
-                        TracePrinter::printTrace("v:"+v.first);
-                }
+                
                 if(millis()-tagTimeout.second > 2000){
                     
                     DynamicJsonDocument  d(_mapOnlineDevices.size()*10+1024);
@@ -179,11 +165,11 @@ void LoRaCollector::run_background_service()
                                 _topicLT =  product_api::get_ips_protocol().family+String("/track/")+tagTimeout.first;
                             }
                                 
-                            _networkService.publish(_topicLT,_payload);
+                            _asyncMqttClientService.publish(_topicLT,_payload);
                             
                     }else{
                             _topicTimeout = product_api::get_ips_protocol().family+String("/send_timeout/"+tagTimeout.first);
-                            _networkService.publish(_topicTimeout,_fingerprints);
+                            _asyncMqttClientService.publish(_topicTimeout,_fingerprints);
                     }
                     
                     _mapDataCollector[tagTimeout.first].clear();
@@ -199,7 +185,7 @@ void LoRaCollector::run_background_service()
                 }
             }     
         }
-        lck.unlock();	
+         _mtx.unlock();
     }      
 }
 
@@ -211,9 +197,8 @@ void LoRaCollector::onMqttDisconnectCallback(AsyncMqttClientDisconnectReason rea
 {
     TracePrinter::printTrace("[DC]]MQTT:onMqttDisconnectCallback");
 }
-void LoRaCollector::onMessageMqttCallback(const String& topic,const String& payload)
+void LoRaCollector::onMqttMessageCallback(const String& topic,const String& payload)
 {   
-
     mqtt::mail_on_message_t *mail =  _mail_box_mqtt.alloc();
     if(mail!=NULL){
         mail->topic = topic;
@@ -250,7 +235,7 @@ void LoRaCollector::run_lora_service()
         }
     }
 }
-void LoRaCollector::onMessageLoRaCallback(const lora::mail_t& lora_mail)
+void LoRaCollector::onLoRaMessageCallback(const lora::mail_t& lora_mail)
 {
       lora::mail_t *mail =  _mail_box_lora.alloc();
       if(mail!=NULL){

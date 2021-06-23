@@ -1,7 +1,5 @@
 #include "ESPWebService.h"
 
-extern FFatHelper<rtos::Mutex> FatHelper;
-
 void ESPWebService::delegateMethodWebSocketClientText(AsyncWebSocketClient *client,const String& text){
     client->text(text);
 }
@@ -15,8 +13,9 @@ void ESPWebService::run_web_service()
 {
     TracePrinter::printTrace(platformio_api::get_web_properties().ap_ssid);
     TracePrinter::printTrace(platformio_api::get_web_properties().ap_pass);
-    LEDIndicator::getLEDIndicator().io_state_web(true);
-    ThisThread::flags_wait_all(1);
+
+    ThisThread::flags_wait_all(0x0);
+    
     WiFi.softAP(platformio_api::get_web_properties().ap_ssid.c_str(), platformio_api::get_web_properties().ap_pass.c_str());
     _dnsServer->start(53, "*", WiFi.softAPIP());
     //server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
@@ -28,8 +27,10 @@ void ESPWebService::run_web_service()
     });
     _server->serveStatic("/", FFat, "/data").setDefaultFile("index.html");
  
-    // _server->onNotFound([](AsyncWebServerRequest *request){});
-    _server->onNotFound(std::bind(&ESPWebService::notFound,this,std::placeholders::_1));
+     _server->onNotFound([](AsyncWebServerRequest *request){
+        request->send(404);
+     });
+   // _server->onNotFound(std::bind(&ESPWebService::notFound,this,std::placeholders::_1));
     _server->on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
             if(request->method() == HTTP_GET)
                 TracePrinter::printTrace("GET");
@@ -54,7 +55,7 @@ void ESPWebService::run_web_service()
                 TracePrinter::printf("_CONTENT_TYPE: %s\n", request->contentType().c_str());
                 TracePrinter::printf("_CONTENT_LENGTH: %u\n", request->contentLength());
             }
-       
+            /*
             int headers = request->headers();
             int i;
              for(i=0;i<headers;i++){
@@ -73,17 +74,17 @@ void ESPWebService::run_web_service()
                 } else {
                   //  TracePrinter::printf("_GET[%s]: %s\n", p->name().c_str(), p->value().c_str());
                 }
-            }
+            }*/
             request->send(200, "text/plain", "OK");
         },[](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
                 String path = String("/data/")+filename;
-                TracePrinter::printf("--Upload:path: %s\n", path.c_str());
+                Serial.printf("index:%d--Upload:path: %s\n",index, path.c_str());
                 if(index==0){
-                    TracePrinter::printf("--Upload:W: %s\n", filename.c_str());
-                  //  FatHelper.writeFile(FFat,path,data,len);
+                    //TracePrinter::printf("--Upload:W: %s\n", filename.c_str());
+                    FatHelper.writeFile(FFat,path,data,len);
                 }else{
-                    TracePrinter::printf("--Upload:Append: %s\n", filename.c_str());
-                 //   FatHelper.appendFile(FFat,path,data,len); 
+                   // TracePrinter::printf("--Upload:Append: %s\n", filename.c_str());
+                    FatHelper.appendFile(FFat,path,data,len); 
                 }
                 
         },[](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
@@ -216,9 +217,8 @@ void ESPWebService::notFound(AsyncWebServerRequest *request) {
     TracePrinter::printTrace("NOT_FOUND: ");
             if(request->method() == HTTP_GET){
                 TracePrinter::printTrace("GET");
-                //request->send(404);
-            }
-            else if(request->method() == HTTP_POST)
+                
+            }else if(request->method() == HTTP_POST)
                 TracePrinter::printTrace("POST");
             else if(request->method() == HTTP_DELETE)
                 TracePrinter::printTrace("DELETE");
@@ -232,6 +232,7 @@ void ESPWebService::notFound(AsyncWebServerRequest *request) {
                 TracePrinter::printTrace("OPTIONS");
             else
                 TracePrinter::printTrace("UNKNOWN");
+            request->send(404);
             /*
             TracePrinter::printTrace("http://"+String( request->host().c_str()));
             TracePrinter::printTrace("http://"+String( request->url().c_str()));

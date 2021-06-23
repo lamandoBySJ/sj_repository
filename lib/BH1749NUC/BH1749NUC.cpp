@@ -171,7 +171,7 @@ bool BH1749NUC::red_data_get(reg_uint16_t& rgb)
         data=_reg_value.i16bit;
         return ret;
         */
-    return std::all_of(_data.begin(),_data.end(),[&] (char& index){
+    return std::all_of(_data.begin(),_data.end(),[&] (uint8_t index){
         return platform_read(index==0?BH1749NUC_RED_DATA_L8BIT_REG_ADDR:BH1749NUC_RED_DATA_H8BIT_REG_ADDR, (uint8_t*)&rgb.u8bit[index], 1);
     });
 }
@@ -185,7 +185,7 @@ bool BH1749NUC::green_data_get(reg_uint16_t& rgb)
     data=_reg_value.i16bit;
     return ret;
     */   
-   return std::all_of(_data.begin(),_data.end(),[&] (char& index){
+   return std::all_of(_data.begin(),_data.end(),[&] (uint8_t index){
         return platform_read(index==0?BH1749NUC_GREEN_DATA_L8BIT_REG_ADDR:BH1749NUC_GREEN_DATA_H8BIT_REG_ADDR, (uint8_t*)&rgb.u8bit[index], 1);
     });
 }
@@ -199,7 +199,7 @@ bool BH1749NUC::blue_data_get(reg_uint16_t& rgb)
     data=_reg_value.i16bit;
     return ret;
     */   
-    return std::all_of(_data.begin(),_data.end(),[&] (char& index){
+    return std::all_of(_data.begin(),_data.end(),[&] (uint8_t index){
         return platform_read(index==0?BH1749NUC_BLUE_DATA_L8BIT_REG_ADDR:BH1749NUC_BLUE_DATA_H8BIT_REG_ADDR, (uint8_t*)&rgb.u8bit[index], 1);
     });
 }
@@ -213,7 +213,7 @@ bool BH1749NUC::ir_data_get(reg_uint16_t& rgb)
     data=_reg_value.i16bit;
     return ret;
     */   
-    return std::all_of(_data.begin(),_data.end(),[&] (char& index){
+    return std::all_of(_data.begin(),_data.end(),[&] (uint8_t index){
         return platform_read(index==0?BH1749NUC_IR_DATA_L8BIT_REG_ADDR:BH1749NUC_IR_DATA_H8BIT_REG_ADDR, (uint8_t*)&rgb.u8bit[index], 1);
     });
 }

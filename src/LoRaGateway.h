@@ -4,10 +4,9 @@
 #include <Arduino.h>
 #include <rtos/rtos.h>
 #include "platform_debug.h"
-#include "NetworkService.h"
-#include "LoRaNetwork.h"
+#include "AsyncMqttClientService.h"
 #include <ArduinoJson.h>
-#include <LoRaNetwork.h>
+#include <LoRaService.h>
 #include <map>
 #include <set>
 #include <vector>
@@ -39,9 +38,9 @@ class LoRaGateway
 {
 public:
     LoRaGateway()=delete;
-    LoRaGateway(NetworkService& networkService,LoRaNetwork& loRaNetwork):
-        _networkService(networkService),
-        _loRaNetwork(loRaNetwork),
+    LoRaGateway(AsyncMqttClientService& asyncMqttClientService,LoRaService& loRaService):
+        _asyncMqttClientService(asyncMqttClientService),
+        _loRaService(loRaService),
         _threadMqttService(osPriorityNormal,1024*4),
         _threadLoraService(osPriorityNormal,1024*4),
         _mail_box_mqtt(),_mail_box_lora(),
@@ -55,15 +54,19 @@ public:
     void run_mqtt_service();
     void run_lora_service();
 
-    void onMessageMqttCallback(const String& topic,const String& payload);
-    void onMessageLoRaCallback(const lora::mail_t& lora_mail);
+    void onMqttMessageCallback(const String& topic,const String& payload);
+    void onLoRaMessageCallback(const lora::mail_t& lora_mail);
     void onMqttConnectCallback(bool sessionPresent);
     void onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reason);
     std::vector<String>& getTopics(){
         return _topics;
     }
 
-    void setupBeacons(const String& text){
+    void setupBeacons(){
+        String text ="";
+        if(!FatHelper.readFile(FFat,product_api::get_beacon_properties().path,text)){
+            text="{\"beacons\":[{\"15BC\":\"a\"},{\"15E8\":\"b\"},{\"1570\":\"c\"},{\"16BC\":\"d\"},{\"1594\":\"e\"}]}";
+        }
         DynamicJsonDocument  doc(text.length()+1024);
         DeserializationError error = deserializeJson(doc,text);
         if(!error){
@@ -78,8 +81,8 @@ public:
         }
     }
 private:
-    NetworkService& _networkService;
-    LoRaNetwork& _loRaNetwork;
+    AsyncMqttClientService& _asyncMqttClientService;
+    LoRaService& _loRaService;
     Thread _threadMqttService;
     Thread _threadLoraService;
   

@@ -21,7 +21,11 @@
             "list.h": "c",
             "timers.h": "c",
             "inc_task.h": "c",
-            "tasks.h": "c"
+            "tasks.h": "c",
+            "mbed_debug.h": "c",
+            "freertos_mpool.h": "c",
+            "freertos_os2.h": "c",
+            "mbed_error.h": "c"
         }
     }
 }

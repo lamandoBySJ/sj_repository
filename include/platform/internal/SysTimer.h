@@ -19,7 +19,7 @@
 
 #include "platform/NonCopyable.h"
 #include "platform/mbed_atomic.h"
-#include "platform/TimerEvent.h"
+#include "drivers/TimerEvent.h"
 #include <chrono>
 //#include "cmsis.h"
 

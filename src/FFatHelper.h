@@ -19,11 +19,11 @@
 
 using namespace std;
 
-template<typename OSMutex>
+
 class FFatHelper {
 public:
    FFatHelper()=delete;
-   FFatHelper(OSMutex &mutex):_mtx(mutex)
+   FFatHelper(rtos::Mutex &mutex):_mtx(mutex)
    {
 
    }
@@ -49,9 +49,9 @@ public:
    
 
 private:
-   OSMutex &_mtx;
+   rtos::Mutex &_mtx;
 };
 
-extern FFatHelper<rtos::Mutex> FatHelper;
+extern FFatHelper FatHelper;
 
 #endif

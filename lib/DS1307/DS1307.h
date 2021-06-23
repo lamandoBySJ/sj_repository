@@ -33,34 +33,115 @@
 #define SQW32kHz 32
 
 #include <Arduino.h>
-#include <time.h>
 #include <Wire.h>
-#include <iostream>
-#include <iomanip>
-#include <sstream>
-/*
- * DateTime Class
- * */
- 
+#include <array>
+
+class Convert
+{
+public:
+
+
+static void ToDateTime(time_t in_timestamp,String& out_datetime,int32_t timezone_offset=0){
+  time_t epochTimeZone = in_timestamp + timezone_offset;
+  struct tm *_tm_zone = gmtime(&epochTimeZone);
+  out_datetime = String(_tm_zone->tm_year+1900,DEC) + 
+          String("-")+ 
+          String(_tm_zone->tm_mon+1,DEC)+
+          String("-")+ 
+          String(_tm_zone->tm_mday,DEC)+
+          String(" ")+ 
+          String(_tm_zone->tm_hour,DEC)+
+          String(":")+ 
+          String(_tm_zone->tm_min,DEC)+
+          String(":")+ 
+          String(_tm_zone->tm_sec,DEC);
+}
+
+
+
+static void ToLocalDate(time_t in_timestamp,String& out_datetime){
+  time_t epochTimeZone = in_timestamp + 28800;
+  struct tm *_tm_zone = gmtime(&epochTimeZone);
+  out_datetime = String(_tm_zone->tm_year+1900,DEC) + 
+          String("-")+ 
+          String(_tm_zone->tm_mon+1,DEC)+
+          String("-")+ 
+          String(_tm_zone->tm_mday,DEC)+
+          String(" ");
+}
+static void ToLocalTime(time_t in_timestamp,String& out_datetime){
+  time_t epochTimeZone = in_timestamp + 28800;
+  struct tm *_tm_zone = gmtime(&epochTimeZone);
+  out_datetime =  String(_tm_zone->tm_hour,DEC)+
+          String(":")+ 
+          String(_tm_zone->tm_min,DEC)+
+          String(":")+ 
+          String(_tm_zone->tm_sec,DEC);
+}
+static void ToLocalDateTime(time_t in_timestamp,String& out_datetime){
+  ToDateTime(in_timestamp,out_datetime,28800);
+}
+static void ToZonedDateTime(time_t in_timestamp,String& out_datetime){
+  ToDateTime(in_timestamp,out_datetime,28800);
+  out_datetime+="[Asia/Shanghai]";
+}
+
+
+static time_t ToEpoch(struct tm *epoch)
+{
+  return  mktime(epoch);
+}
+};
+
 #define DS1307_ADDR 0x68
 
 class DS1307 //: public RTCBase
 {
     public:
+        using callbackFun=uint8_t(DS1307::*)();
         DS1307() = delete;
-        DS1307(TwoWire& wire,uint8_t  sda,uint8_t scl,uint32_t frequency=100000):
-        _wire(wire),_sda(sda),_scl(scl),_frequency(frequency)
+        explicit DS1307(TwoWire& wire):_wire(wire)
         {
-            
+                ptrFuns[0]= &DS1307::getSeconds;
+                ptrFuns[1]= &DS1307::getMinutes;
+                ptrFuns[2]= &DS1307::getDay;        
+                ptrFuns[3]= &DS1307::getMonth;
         }
-    
+        explicit DS1307(const DS1307& ds1307):DS1307(ds1307._wire)
+        {
+                
+        }
+        DS1307(DS1307&& ds1307):DS1307(ds1307._wire)
+        {
+          
+        }
         ~DS1307(){
           
         }
-        //void setDateTime(time_t timestamp);
-       // time_t datetime(String& nowtime);
-       // virtual time_t timestamp(String& nowtime) override;
-        void getDateTime(String& datetime,bool duplicate=false);
+        DS1307& operator=(const DS1307& other)
+        {
+        if(this!= &other){
+                this->_wire=other._wire;
+                ptrFuns[0]= other.ptrFuns[0];
+                ptrFuns[1]= other.ptrFuns[1];
+                ptrFuns[2]= other.ptrFuns[2];    
+                ptrFuns[3]= other.ptrFuns[3];
+        }
+                return *this;
+        }
+        DS1307& operator=(DS1307&& other)
+        {
+         if(this!= &other){
+                this->_wire=other._wire;
+                ptrFuns[0]= other.ptrFuns[0];
+                ptrFuns[1]= other.ptrFuns[1];
+                ptrFuns[2]= other.ptrFuns[2];    
+                ptrFuns[3]= other.ptrFuns[3];
+         }
+         return *this;
+        }
+        void getDateTime(String& datetime);
+        void convertToDateTime(time_t in_timestamp,String& out_datetime);
         bool begin();
 
         bool isRunning(void);
@@ -84,7 +165,7 @@ class DS1307 //: public RTCBase
         void setDate(uint8_t day, uint8_t month, uint16_t year);
         void setTime(uint8_t hour, uint8_t minute, uint8_t second);
 
-        void setDateTime(const char* date,const  char* time);
+        bool setDateTime(const char* date,const  char* time);
 
         uint8_t getSeconds();
         uint8_t getMinutes();
@@ -102,16 +183,13 @@ class DS1307 //: public RTCBase
         bool isSqweEnabled();
 
         
-        static time_t _epoch;
-        
-    private:
-        TwoWire& _wire;
+  
+protected:
         uint8_t bin2bcd (uint8_t val);
-        uint8_t bcd2bin (uint8_t val);
-        uint8_t             _sda;
-        uint8_t             _scl;
-        uint32_t _frequency;
-       
+        uint8_t bcd2bin (uint8_t val);    
+private:
+        TwoWire& _wire;
+        std::array<callbackFun, 4> ptrFuns;
 };
 
 class NVRAM

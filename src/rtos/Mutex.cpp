@@ -110,7 +110,7 @@ bool Mutex::trylock_for(Kernel::Clock::duration_u32 rel_time)
     if (status != osOK ) {
         MBED_ERROR1(MBED_MAKE_ERROR(MBED_MODULE_KERNEL, MBED_ERROR_CODE_MUTEX_LOCK_FAILED), "Mutex lock failed", status);
     }
-    return false;
+    return success;
 }
 
 bool Mutex::trylock_until(uint64_t millisec)
