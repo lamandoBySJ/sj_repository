@@ -25,7 +25,8 @@ void ColorCollector::task_collection()
     _colorSensor.attachMeasurementHook(std::bind(&ColorCollector::invokeCallbackWebSocketClientPostEvent,this,
       std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
 
-    String time_utc_plus8;
+    String rtc_datetime,system_clock_datetime;
+    time_t rtc_epoch,system_clock_epoch;
     String lastColor;
     std::array<RGB,10> arrRGB;
     RGB rgb;
@@ -78,21 +79,22 @@ void ColorCollector::task_collection()
                 ColorConverter::getColorConverter().color(rgb,data);
             }   
    
-            doc["time_sync_countup"]   =RTC::TimeSyncCountup();
-            doc["last_time_sync_epoch"]=RTC::TimeSyncEpoch();
-            time_t epoch= _rtc.getEpoch();
-            if(epoch < 1600000000){
-                Logger::error(String(__PRETTY_FUNCTION__)+String("<")+String(16,DEC),epoch);
-            }else if(epoch > 1700000000){
-                Logger::error(String(__PRETTY_FUNCTION__)+String(">")+String(17,DEC),epoch);
+            system_clock_epoch = SystemClock::LocalDateTime::now(system_clock_datetime);
+            rtc_epoch = RTC::LocalDateTime::now(rtc_datetime);
+
+            if( abs(system_clock_epoch - rtc_epoch) > 43200){
+                Logger::error(String(__PRETTY_FUNCTION__)+String(":"),system_clock_epoch);
+                Logger::error(String(__PRETTY_FUNCTION__)+String(":"),rtc_epoch);
             }
             if(Logger::getInstance().get_error_count() > 0){
                 Logger::getInstance().error_functions_get(log);
                 invokeCallbackMqttPublish("error_functions/"+platformio_api::get_device_info().BoardID,log);
             }
-            doc["unix_timestamp"]= epoch;
-            Convert::ToDateTime(epoch,time_utc_plus8);
-            doc["datetime"]= time_utc_plus8;   
+            doc["unix_timestamp"]= rtc_epoch;
+            doc["datetime"]= rtc_datetime;  
+
+            doc["system_clock_epoch"]= system_clock_epoch;
+            doc["system_clock_datetime"]= system_clock_datetime;  
             //JsonArray error_logs = doc.createNestedArray("error_functions");
             //Logger::getInstance().error_log_get(error_logs); 
             doc["error_functions"] = Logger::getInstance().get_error_count();

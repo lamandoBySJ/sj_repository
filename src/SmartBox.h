@@ -14,7 +14,7 @@
 #include "StringHelper.h" 
 #include "HTTPDownload.h"
 #include "LoopTaskGuard.h" 
-#include "LEDIndicator.h"
+#include "LED.h"
 #include "WiFiService.h"
 #include <drivers/Timeout.h>
 #include "Logger.h"
@@ -36,10 +36,9 @@ enum class RequestType : uint8_t
 class  SmartBox
 {
 public:
-  SmartBox():_mtx(),_mtx_wire()
-  ,_rtc(_mtx,Wire,13)
-  ,_colorSensor(_mtx_wire,Wire1,2)
-  ,colorCollector(_rtc,_colorSensor)
+  SmartBox():_mtx()
+  ,_colorSensor(_mtx,Wire1,2)
+  ,colorCollector(_colorSensor)
 
   ,wifiService()
   
@@ -78,12 +77,12 @@ public:
       case SYSTEM_EVENT_STA_START:
         break;
       case SYSTEM_EVENT_STA_GOT_IP:
-        LEDIndicator::getLEDIndicator().io_state_wifi(true);
+        LED::io_state(LedName::WiFi,true);
         _asyncMqttClientService.connect();
         TracePrinter::printTrace("MQTT Connecting...");
         break;
       case SYSTEM_EVENT_STA_DISCONNECTED:
-          LEDIndicator::getLEDIndicator().io_state_wifi(false);
+        LED::io_state(LedName::WiFi,false);
         break;
       case SYSTEM_EVENT_STA_CONNECTED:
         break;
@@ -102,11 +101,9 @@ public:
   }
 private:
   rtos::Mutex _mtx;
-  rtos::Mutex _mtx_wire;
   rtos::Thread _threadCore;
   rtos::Mail<mqtt::mail_on_message_t, 64>  _mail_box_on_mqtt_message;
 
-  RTC _rtc;
   ColorSensor _colorSensor;
   ColorCollector colorCollector;
 

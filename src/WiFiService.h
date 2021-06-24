@@ -4,7 +4,6 @@
 #include <WiFiType.h>
 #include <WiFi.h>
 #include <drivers/Timeout.h>
-#include "LEDIndicator.h"
 
 struct [[gnu::may_alias]] mail_wifi_event_t{
     system_event_id_t event_id;
@@ -34,17 +33,6 @@ public:
         WiFi.enableAP(true);
         /* we never unlock this mtx */
         //_mtx.unlock();
-        
-       /* mbed::Timeout flipper;
-        flipper.attach([]{ESP.restart();},std::chrono::seconds(30));
-        do{
-            ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(200));
-            LEDIndicator::getLEDIndicator().io_state_wifi(true);
-            ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(200));
-            LEDIndicator::getLEDIndicator().io_state_wifi(false);
-            Serial.println(String((int)WiFi.status(),DEC));
-        }while(WiFi.status()!=WL_CONNECTED);
-        flipper.detach();*/
     }
 
     void WiFiEvent(system_event_id_t event)

@@ -7,8 +7,6 @@
 #include <app/ColorSensor/ColorSensor.h>
 #include "app/RTC/RTC.h"
 
-
-
 enum class MeasEventType : char{
         EventSystemMeasure = 0,
         EventTimeoutMeasure, 
@@ -30,8 +28,8 @@ class  ColorCollector
 {
 public:
     ColorCollector()=delete;
-explicit ColorCollector(RTC& rtc,ColorSensor& colorSensor):_rtc(rtc)
-    ,_colorSensor(colorSensor)
+explicit ColorCollector(ColorSensor& colorSensor):
+    _colorSensor(colorSensor)
     ,_thread(osPriorityNormal,1024*10),doc(1024)
     {
   
@@ -79,7 +77,7 @@ explicit ColorCollector(RTC& rtc,ColorSensor& colorSensor):_rtc(rtc)
     void post_mail_measure(MeasEventType measEventType,AsyncWebSocketClient *client);
     void delegateMethodOnWsEvent(AsyncWebSocket * server, AsyncWebSocketClient *client, AwsEventType type, void * arg, uint8_t *data, size_t len);
 private:
-    RTC &_rtc;
+
     ColorSensor &_colorSensor;
     rtos::Thread _thread;
     rtos::Mutex _mtx;

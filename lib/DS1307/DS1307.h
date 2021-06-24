@@ -35,16 +35,13 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <array>
-/*
- * DateTime Class
- * */
- 
-#define DS1307_ADDR 0x68
 
 class Convert
 {
 public:
-static void ToDateTime(time_t in_timestamp,String& out_datetime,int32_t timezone_offset=28800){
+
+
+static void ToDateTime(time_t in_timestamp,String& out_datetime,int32_t timezone_offset=0){
   time_t epochTimeZone = in_timestamp + timezone_offset;
   struct tm *_tm_zone = gmtime(&epochTimeZone);
   out_datetime = String(_tm_zone->tm_year+1900,DEC) + 
@@ -59,11 +56,45 @@ static void ToDateTime(time_t in_timestamp,String& out_datetime,int32_t timezone
           String(":")+ 
           String(_tm_zone->tm_sec,DEC);
 }
+
+
+
+static void ToLocalDate(time_t in_timestamp,String& out_datetime){
+  time_t epochTimeZone = in_timestamp + 28800;
+  struct tm *_tm_zone = gmtime(&epochTimeZone);
+  out_datetime = String(_tm_zone->tm_year+1900,DEC) + 
+          String("-")+ 
+          String(_tm_zone->tm_mon+1,DEC)+
+          String("-")+ 
+          String(_tm_zone->tm_mday,DEC)+
+          String(" ");
+}
+static void ToLocalTime(time_t in_timestamp,String& out_datetime){
+  time_t epochTimeZone = in_timestamp + 28800;
+  struct tm *_tm_zone = gmtime(&epochTimeZone);
+  out_datetime =  String(_tm_zone->tm_hour,DEC)+
+          String(":")+ 
+          String(_tm_zone->tm_min,DEC)+
+          String(":")+ 
+          String(_tm_zone->tm_sec,DEC);
+}
+static void ToLocalDateTime(time_t in_timestamp,String& out_datetime){
+  ToDateTime(in_timestamp,out_datetime,28800);
+}
+static void ToZonedDateTime(time_t in_timestamp,String& out_datetime){
+  ToDateTime(in_timestamp,out_datetime,28800);
+  out_datetime+="[Asia/Shanghai]";
+}
+
+
 static time_t ToEpoch(struct tm *epoch)
 {
   return  mktime(epoch);
 }
 };
+
+#define DS1307_ADDR 0x68
+
 class DS1307 //: public RTCBase
 {
     public:
@@ -76,11 +107,39 @@ class DS1307 //: public RTCBase
                 ptrFuns[2]= &DS1307::getDay;        
                 ptrFuns[3]= &DS1307::getMonth;
         }
-    
+        explicit DS1307(const DS1307& ds1307):DS1307(ds1307._wire)
+        {
+
+        }
+        DS1307(DS1307&& ds1307):DS1307(ds1307._wire)
+        {
+
+        }
         ~DS1307(){
           
         }
-
+        DS1307& operator=(const DS1307& other)
+        {
+        if(this!= &other){
+                this->_wire=other._wire;
+                ptrFuns[0]= other.ptrFuns[0];
+                ptrFuns[1]= other.ptrFuns[1];
+                ptrFuns[2]= other.ptrFuns[2];    
+                ptrFuns[3]= other.ptrFuns[3];
+        }
+                return *this;
+        }
+        DS1307& operator=(DS1307&& other)
+        {
+         if(this!= &other){
+                this->_wire=other._wire;
+                ptrFuns[0]= other.ptrFuns[0];
+                ptrFuns[1]= other.ptrFuns[1];
+                ptrFuns[2]= other.ptrFuns[2];    
+                ptrFuns[3]= other.ptrFuns[3];
+         }
+         return *this;
+        }
         void getDateTime(String& datetime);
         void convertToDateTime(time_t in_timestamp,String& out_datetime);
         bool begin();

@@ -2,6 +2,10 @@
 #include "FS.h"
 #include "FFat.h"
 #include "FFatHelper.h"
+#include "app/RTC/RTC.h"
+#include "app/RTC/RTCBase.h"
+#include "app/RTC/TimeDirector.h"
+#include "app/RTC/DS1307Builder.h" 
 
 extern FFatHelper<rtos::Mutex> FatHelper;
 
@@ -106,40 +110,20 @@ void SmartBox::platformio_init()
 
     guard::LoopTaskGuard::getLoopTaskGuard();
 
-    LEDIndicator::getLEDIndicator().io_state_reset();
+    LED::io_state_reset();
 
     attachInterrupt(0,&guard::LoopTaskGuard::set_signal_web_service,FALLING);
 
-    
+    bool  ok;
+    ok = RTC::BuildSchedule(DS1307Builder(_mtx,Wire,(uint8_t)13));
+    ok?Logger::cleanup_errors():Logger::error(__PRETTY_FUNCTION__,__LINE__);
+    LED::io_state(LedName::RTC,ok);
+
     _colorSensor.power_on();
     Wire1.begin(4,15,100000);
-    bool  ok = _colorSensor.init();
-    LEDIndicator::getLEDIndicator().io_state_als(ok);
+    ok = _colorSensor.init();
+    LED::io_state(LedName::ALS,ok);
     
-     _rtc.power_on();
-    char retry_count=3;
-    do
-    {   
-        ok = Wire.begin(21,22,100000);
-        if(ok){
-            ok = _rtc.init(CLOCK_H24); 
-        }else{
-            Logger::error(__PRETTY_FUNCTION__,__LINE__);
-        }
-        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(200));
-        if(ok){
-            ok = _rtc.setDateTime(__DATE__,__TIME__);
-        }else{
-            Logger::error(__PRETTY_FUNCTION__,__LINE__);
-        }
-        ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(200));
-
-    }while(ok==false && retry_count-- > 0);
-
-    ok?Logger::cleanup_errors():Logger::error(__PRETTY_FUNCTION__,__LINE__);
-
-    LEDIndicator::getLEDIndicator().io_state_rtc(ok);
-
     TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
 }
 
@@ -223,12 +207,8 @@ void SmartBox::start_core_task(){
               if( (millis() - time_sync_interval) > 3000){
                   if (doc.containsKey("unix_timestamp")) {
                     time_t ts = doc["unix_timestamp"].as<uint32_t>();
-                    time_t tm_rtc = _rtc.getEpoch();
-                    if(abs(ts - tm_rtc) > 2){
-                        _rtc.setEpoch(ts);
-                        RTC::TimeSyncEpoch() = ts;
-                        ++RTC::TimeSyncCountup();
-                    }
+                    SystemClock::SyncTime(ts);
+                    RTC::SyncTime(ts);
                   }
               }
 
@@ -309,7 +289,7 @@ void SmartBox::onMqttMessageCallback(const String& topic,const String& payload)
 }
 void SmartBox::onMqttConnectCallback(bool sessionPresent)
 {
-    LEDIndicator::getLEDIndicator().io_state_mqtt(true);
+    LED::io_state(LedName::MQTT,true);
     for(auto topic:_topics){
       TracePrinter::printTrace("subscribe topic:"+topic);
       _asyncMqttClientService.subscribe(topic);
@@ -319,7 +299,7 @@ void SmartBox::onMqttConnectCallback(bool sessionPresent)
 }
 void SmartBox::onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reason)
 {
-    LEDIndicator::getLEDIndicator().io_state_mqtt(false);
+    LED::io_state(LedName::MQTT,false);
     guard::LoopTaskGuard::getLoopTaskGuard().set_loop_state(Thread::Ready);
     _timeout_flipper.attach(mbed::callback(this,&SmartBox::restart), std::chrono::seconds(30));
     if(wifiService.isConnected()){
@@ -338,7 +318,7 @@ void  SmartBox::start_web_service()
   if(!espWebService.isRunning()){
     _boot_flipper.detach();
     _timeout_flipper.detach();
-    LEDIndicator::getLEDIndicator().io_state_web(true);
+    LED::io_state(LedName::WEB,true);
 
     wifiService.cleanupCallbacks();
     wifiService.shutdown();
