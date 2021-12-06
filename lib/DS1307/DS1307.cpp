@@ -13,16 +13,13 @@ bool DS1307::begin()
 
 bool DS1307::isRunning(void)
 {
-  uint8_t data;
-  bool flag;
-  
-       _wire.beginTransmission(DS1307_ADDR);
-       _wire.write(0x00);
-      _wire.endTransmission();
+  _wire.beginTransmission(DS1307_ADDR);
+  _wire.write(0x00);
+  _wire.endTransmission();
        
-        _wire.requestFrom(DS1307_ADDR, 1);
-        data = _wire.read();
-        flag = bitRead(data, 7);
+  _wire.requestFrom(DS1307_ADDR, 1);
+  uint8_t data = _wire.read();
+  bool flag = bitRead(data, 7);
 	return (!flag);
 }
 
@@ -433,16 +430,14 @@ setEpoch()
 
 void DS1307::setEpoch(time_t epoch)
 {
-	struct tm epoch_tm;
 	struct tm *_tm_zone = gmtime(&epoch);
-	epoch_tm = *_tm_zone;
-	setSeconds(epoch_tm.tm_sec); //0x00 - Seconds
-	setMinutes(epoch_tm.tm_min);
-	setHours(epoch_tm.tm_hour);
-	setWeek(epoch_tm.tm_wday+1);
-	setDay(epoch_tm.tm_mday);
-	setMonth(epoch_tm.tm_mon+1);
-	setYear(epoch_tm.tm_year + 1900);
+	setSeconds(_tm_zone->tm_sec); //0x00 - Seconds
+	setMinutes(_tm_zone->tm_min);
+	setHours(_tm_zone->tm_hour);
+	setWeek(_tm_zone->tm_wday+1);
+	setDay(_tm_zone->tm_mday);
+	setMonth(_tm_zone->tm_mon+1);
+	setYear(_tm_zone->tm_year + 1900);
 	_wire.endTransmission();
 
 }

@@ -1,9 +1,9 @@
 {
     "folders": [
-        {
-            "path": "."
-        }
-    ],
+		{
+			"path": "."
+		}
+	],
     "settings": {
         "files.associations": {
             "critical_section_api.h": "c",
@@ -25,7 +25,8 @@
             "mbed_debug.h": "c",
             "freertos_mpool.h": "c",
             "freertos_os2.h": "c",
-            "mbed_error.h": "c"
+            "mbed_error.h": "c",
+            "pinnames.h": "c"
         }
     }
 }

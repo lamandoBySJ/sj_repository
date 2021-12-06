@@ -76,11 +76,11 @@ public:
         }
         #endif
     }
- 
-    static inline size_t printf(const char *format, ...)
-    {   
-        #if !defined(NDEBUG)
-        getInstance()->print(format);
+    template <typename... T>
+    static inline size_t printf(const char* format,T&&... args)
+    {
+         #if !defined(NDEBUG)
+        getInstance()->_printf(format,std::forward<T>(args)...);
         #endif
         return 0;
     }
@@ -122,54 +122,59 @@ protected:
         #endif
     }
 
-    size_t print(const char* format,...) 
+    size_t _printf(const char* format,...) 
     {   
         #if !defined(NDEBUG)
         std::lock_guard<rtos::Mutex> lck(_mtx);
 
-        char loc_buf[64];
-        char * temp = loc_buf;
         va_list arg;
-        va_list copy;
         va_start(arg, format);
-        va_copy(copy, arg);
-        int len = vsnprintf(temp, sizeof(loc_buf), format, copy);
-        va_end(copy);
+        int len = vsnprintf(_loc_buf, _loc_buf_len, format, arg);
         if(len < 0) {
             va_end(arg);
-            return 0;
+            return len;
+        };
+
+ 
+        if(len>_loc_buf_len){
+            int i=1;
+            do{
+                _loc_buf_len=(len/_loc_buf_len+i)*_loc_buf_len;
+                _loc_buf =(char*) realloc(_loc_buf,_loc_buf_len+1);
+                if(len < 0) {
+                    va_end(arg);
+                    return len;
+                };
+                _loc_buf[_loc_buf_len]=0;
+                len = vsnprintf(_loc_buf, _loc_buf_len, format, arg);
+                ++i;
+            } while(len>_loc_buf_len);
         }
-        if(len >= sizeof(loc_buf)){
-            temp = (char*) malloc(len+1);
-            if(temp == NULL) {
-                va_end(arg);
-                return 0;
-            }
-            len = vsnprintf(temp, len+1, format, arg);
+        for(auto& v:_onPrintlnCallbacks){
+            v.call(_loc_buf);
         }
         va_end(arg);
-       // len = write((uint8_t*)temp, len);
-        for(auto& v:_onPrintlnCallbacks){
-            v.call(temp);
-        }
-        if(temp != loc_buf){
-            free(temp);
-        }
         return len;
         #else 
-            return 0;
+        return 0;
         #endif
     }
 
     ~PlatformDebug(){
+        free(_loc_buf);
         Serial.println("~platform_debug::PlatformDebug::pause():~PlatformDebug");
         PlatformDebug::pause();
     }
     
 private:
     #if !defined(NDEBUG)
-    
-    PlatformDebug(){}
+    char* _loc_buf;
+    int _loc_buf_len=128;
+    PlatformDebug(){ 
+         _loc_buf=(char*) malloc(_loc_buf_len+1);
+        _loc_buf[_loc_buf_len]=0;
+    }
+
     PlatformDebug(const PlatformDebug&)=delete;
     PlatformDebug& operator=(const PlatformDebug&)=delete;
     std::vector<mbed::Callback<size_t(const String& )>> _onPrintlnCallbacks;
@@ -190,11 +195,16 @@ public:
     TracePrinter()
     {
         #if !defined(NDEBUG)
+        _loc_buf=(char*) malloc(_loc_buf_len+1);
+        _loc_buf[_loc_buf_len]=0;
         _thread = new Thread(osPriorityNormal,1024*6);
         #endif
     }
      ~TracePrinter()
     {
+        free(_loc_buf);
+        _thread->terminate();
+        delete _thread;
         Serial.println("~platform_debug::PlatformDebug::pause():~TracePrinter");
     }
    
@@ -218,38 +228,11 @@ public:
         }
         #endif
     }
- 
-    static inline void printf(const char* format,...)
+    template <typename... T>
+    static inline void printf(const char* format,T&&... args)
     {
         #if !defined(NDEBUG)
-       /*
-        char loc_buf[64];
-        char * temp = loc_buf;
-        va_list arg;
-        va_list copy;
-
-        va_start(arg, format);
-        va_copy(copy, arg);
-        int len = vsnprintf(temp, sizeof(loc_buf), format, copy);
-        va_end(copy);
-        if(len < 0) {
-            va_end(arg);
-            return;
-        };
-        if(len >= sizeof(loc_buf)){
-            temp = (char*) malloc(len+1);
-            if(temp == NULL) {
-                va_end(arg);
-                return;
-            }
-            len = vsnprintf(temp, len+1, format, arg);
-        }
-        va_end(arg);
-       // len = write((uint8_t*)temp, len);
-        TracePrinter::getInstance()->println(String(temp));
-        if(temp != loc_buf){
-            free(temp);
-        }*/
+        TracePrinter::getInstance()->_printf(format,std::forward<T>(args)...);
         #endif
     }
     static inline void printTrace(const String& e)
@@ -258,14 +241,6 @@ public:
        TracePrinter::getInstance()->println(e);
        #endif
     }
-    static inline void print(const char* e)
-    {
-        #if !defined(NDEBUG)
-       TracePrinter::getInstance()->println(e);
-       #endif
-    }
- 
-    
     static inline void init(){
         #if !defined(NDEBUG)
         TracePrinter::getInstance()->startup();
@@ -280,19 +255,63 @@ private:
     void println(const String& e){
         #if !defined(NDEBUG)
         std::lock_guard<rtos::Mutex> lck(_mtx);
-        mail_trace_t *mail = _mail_box.alloc();
+        mail_trace_t* mail = _mail_box.alloc();
         if(mail){
              mail->log = String(e);
             _mail_box.put(mail);
         }
         #endif
     }
+ 
+
+    void _printf(const char* format,...)
+    {
+     
+        #if !defined(NDEBUG)
+        std::lock_guard<rtos::Mutex> lck(_mtx);
+        va_list arg;
+        va_start(arg, format);
+        int len = vsnprintf(_loc_buf, _loc_buf_len, format, arg);
+        if(len < 0) {
+            va_end(arg);
+            return;
+        };
+
+        mail_trace_t* mail = _mail_box.alloc();
+        if(mail){
+            if(len>_loc_buf_len){
+                int i=1;
+                do{
+                    _loc_buf_len=(len/_loc_buf_len+i)*_loc_buf_len;
+                    _loc_buf =(char*) realloc(_loc_buf,_loc_buf_len+1);
+                    if(len < 0) {
+                        va_end(arg);
+                         _mail_box.free(mail);
+                        return;
+                    };
+                    _loc_buf[_loc_buf_len]=0;
+                    len = vsnprintf(_loc_buf, _loc_buf_len, format, arg);
+                    ++i;
+                } while(len>_loc_buf_len);
+            }
+                
+            mail->log = String(_loc_buf);
+            _mail_box.put(mail);
+            _mail_box.free(mail);
+        }
+
+        va_end(arg);
+        #endif
+    }
     static TracePrinter* getInstance(){
-       static TracePrinter *tracePrinter = new TracePrinter();
+       static TracePrinter* tracePrinter = new TracePrinter();
         return tracePrinter;
     }
+    char* _loc_buf;
+    int _loc_buf_len=128;
+
     rtos::Mail<mail_trace_t, 16>  _mail_box;
-    rtos::Thread *_thread;
+    rtos::Thread* _thread;
     rtos::Mutex _mtx;
     #endif
 };

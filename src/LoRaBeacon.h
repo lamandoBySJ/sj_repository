@@ -2,8 +2,8 @@
 #define LORA_BEACON_H
 
 #include <Arduino.h>
-#include <rtos/rtos.h>
 #include <ArduinoJson.h>
+#include <rtos/rtos.h>
 #include "platform_debug.h"
 #include "AsyncMqttClientService.h"
 #include <LoRaService.h>

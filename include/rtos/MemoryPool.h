@@ -98,7 +98,8 @@ public:
       
         //return try_alloc();
         while(t==NULL){
-          delay(100);
+          //delay(100);
+          ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(200));
           t = try_alloc();
         }
         return t;
