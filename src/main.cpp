@@ -28,7 +28,7 @@
 #include <mutex>
 #include "Button.h"
 #include "driver/adc.h"
-#include "app/Battery/BatteryTemp.h"
+#include "app/Battery/BatteryTemprature.h"
 #include "app/Battery/BatteryVoltage.h"
 using namespace mbed;
 using namespace std;
@@ -252,19 +252,24 @@ void setup() {
     #endif
   #endif
 
-  
-  
-   
+
+   int count=0;
     for(;;){
-      PlatformDebug::printf("BatteryTemp:\n\n");
-      app::BatteryTemp::measure();
-      ThisThread::sleep_for(3000);
-      PlatformDebug::printf("BatteryVoltage16:\n\n");
+      //PlatformDebug::printf("BatteryTemprature:\n\n");
+      //app::BatteryTemprature::measure();
+     // ThisThread::sleep_for(3000);
+      PlatformDebug::printf("BatteryVoltage16:%d\n",++count);
       app::BatteryVoltage::measure(16);
       ThisThread::sleep_for(3000);
 
-      PlatformDebug::printf("BatteryVoltage17:\n\n");
+      PlatformDebug::printf("BatteryVoltage17:%d\n",++count);
       app::BatteryVoltage::measure(17);
+      ThisThread::sleep_for(3000);
+
+      PlatformDebug::printf("USBPower:%.1f%%\n",app::BatteryVoltage::USBPower());
+      ThisThread::sleep_for(3000);
+
+      PlatformDebug::printf("BATPower:%.1f%%\n",app::BatteryVoltage::BATPower());
       ThisThread::sleep_for(3000);
     }
     

@@ -7,16 +7,16 @@
 
 namespace app{
 
-class BatteryTemp
+class BatteryTemprature
 {
 public:
-    BatteryTemp(uint8_t ctrlPin=12,uint8_t adcPin=13,adc_atten_t adc_atten=ADC_ATTEN_11db):_ctrlPin(ctrlPin),_adcPin(adcPin)
+    BatteryTemprature(uint8_t ctrlPin=12,uint8_t adcPin=13,adc_atten_t adc_atten=ADC_ATTEN_11db):_ctrlPin(ctrlPin),_adcPin(adcPin)
     {
       pinMode(_ctrlPin,INPUT);
       pinMode(_adcPin,INPUT);
       _full_scale_voltage=3.6;
     }
-    ~BatteryTemp(){
+    ~BatteryTemprature(){
         
     }
     static float measure()
@@ -53,9 +53,9 @@ protected:
       pinMode(_ctrlPin,INPUT);
       return _temperature;
     }
-    static BatteryTemp& getInstance()
+    static BatteryTemprature& getInstance()
     { 
-        static BatteryTemp* battTemp=new BatteryTemp();
+        static BatteryTemprature* battTemp=new BatteryTemprature();
         return *battTemp;
     }
 private:

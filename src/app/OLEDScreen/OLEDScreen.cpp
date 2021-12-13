@@ -147,7 +147,7 @@ void OLEDScreen<N>::printScreen(const char* data)
     }
  
   
-     _tail %= N;
+    _tail %= N;
     _head %= N;
  
     _display -> display();

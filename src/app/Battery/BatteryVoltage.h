@@ -6,7 +6,11 @@
 #include "platform/mbed.h"
 
 namespace app{
-
+enum class PowerType: char
+{
+  USB,
+  BAT
+};
 class BatteryVoltage
 {
 public:
@@ -14,6 +18,8 @@ public:
     {
       pinMode(_adcPin,INPUT);
       _full_scale_voltage=3.6;
+      _powerUsb=0;
+      _powerBat=0;
     }
     ~BatteryVoltage(){
         
@@ -21,7 +27,7 @@ public:
     static float measure(uint8_t ctrlPin=16){
       return getInstance()._measure(ctrlPin);
     }
-    static void init(uint8_t adcPin=39,adc_atten_t adc_atten=ADC_ATTEN_11db)
+    static void init(uint8_t csUsbPin=16,uint8_t csBatPin=17,uint8_t adcPin=39,adc_atten_t adc_atten=ADC_ATTEN_11db)
     { 
       /*switch(adc_atten){
         case ADC_ATTEN_DB_0   :_full_scale_voltage=1;break;
@@ -43,23 +49,44 @@ public:
       } */ 
       getInstance()._init(adcPin,adc_atten);
     }
+    static float USBPower(){
+      return getInstance().getPower(PowerType::USB);
+    }
+    static float BATPower(){
+      return getInstance().getPower(PowerType::BAT);
+    }
 protected:
-    void _init(uint8_t adcPin=39,adc_atten_t adc_atten=ADC_ATTEN_11db)
+    float getPower(PowerType type){
+        std::lock_guard<rtos::Mutex> lck(_mtx);
+        if(type==PowerType::USB){
+            return _powerUsb;
+        }else{
+          return _powerBat;
+        }
+    }
+    void _init(uint8_t csUsbPin=16,uint8_t csBatPin=17,uint8_t adcPin=39,adc_atten_t adc_atten=ADC_ATTEN_11db)
     { 
         std::lock_guard<rtos::Mutex> lck(_mtx);
+        pinMode(csUsbPin,INPUT);
+        pinMode(csBatPin,INPUT);
         _adcPin=adcPin;
         _full_scale_voltage=3.6;
     }
-    float _measure(uint8_t ctrlPin=16){
+    float _measure(uint8_t csPin=16){
         std::lock_guard<rtos::Mutex> lck(_mtx);
-        pinMode(ctrlPin,OUTPUT);
-        digitalWrite(ctrlPin,LOW);
+        pinMode(csPin,OUTPUT);
+        digitalWrite(csPin,LOW);
         _adcValue = analogRead(_adcPin);
         PlatformDebug::printf("_adcValue:%d\n",_adcValue);
-        _adcVoltage = _adcValue*_full_scale_voltage/4096-0.7;
+        _adcVoltage = 2*_adcValue*_full_scale_voltage/4096+0.251;
         PlatformDebug::printf("_adcVoltage:%f\n",_adcVoltage);
-        digitalWrite(ctrlPin,HIGH);
-        pinMode(ctrlPin,INPUT);
+        if(csPin==16){
+          _powerUsb= _adcVoltage<4.7?0: (_adcVoltage-4.7)*1000/4;
+        }else{
+          _powerBat= _adcVoltage<3.3?0: (_adcVoltage-3.3)*100/0.9;
+        }
+        digitalWrite(csPin,HIGH);
+        pinMode(csPin,INPUT);
         return _adcVoltage;
     }
     static BatteryVoltage& getInstance()
@@ -71,6 +98,8 @@ private:
   rtos::Mutex _mtx;
   uint8_t _adcPin;
   uint16_t _adcValue;
+  float _powerUsb;
+  float _powerBat;
   float _adcVoltage;
   float _full_scale_voltage=3.6;
 
