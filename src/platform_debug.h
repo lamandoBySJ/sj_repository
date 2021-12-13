@@ -79,7 +79,7 @@ public:
     template <typename... T>
     static inline size_t printf(const char* format,T&&... args)
     {
-         #if !defined(NDEBUG)
+        #if !defined(NDEBUG)
         getInstance()->_printf(format,std::forward<T>(args)...);
         #endif
         return 0;
@@ -99,7 +99,9 @@ public:
     }
     
     static inline void pause(){
+        #if !defined(NDEBUG)
         while(1){  Serial.println("pause");ThisThread::sleep_for(Kernel::Clock::duration_seconds(10));};
+        #endif
     }
 protected:  
  

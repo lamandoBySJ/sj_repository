@@ -28,12 +28,13 @@
 #include <mutex>
 #include "Button.h"
 #include "driver/adc.h"
-
+#include "app/Battery/BatteryTemp.h"
+#include "app/Battery/BatteryVoltage.h"
 using namespace mbed;
 using namespace std;
 #define BAND    470E6 
 
-//,public RadioInterface
+//,public SX1278Interface
 // PINOUT FOR MBED_NUCLEO_L053R8 BOARD
 #define SX1278_MOSI  IO27
 #define SX1278_MISO  IO19
@@ -46,19 +47,7 @@ using namespace std;
 #define SX1278_DIO3  NC
 #define SX1278_DIO4  NC
 #define SX1278_DIO5  NC
-/*
-#define SX1278_MOSI  IO27
-#define SX1278_MISO  IO19
-#define SX1278_SCLK  IO5
-#define SX1278_NSS   IO18
-#define SX1278_RST   IO14
-#define SX1278_DIO0  IO26
-#define SX1278_DIO1  IO35
-#define SX1278_DIO2  IO34
-#define SX1278_DIO3  IO36
-#define SX1278_DIO4  IO36
-#define SX1278_DIO5  NC
-*/
+
 // Defines
 #define DEBUG_ON 1
 
@@ -205,7 +194,7 @@ static char FMD_ENCODE_LOW_POWER[5] = {0x51,0x2A,0x21,0x00,0x00};
 
 static char dummy[8]      ={0x80,0x40,0x20,0x10,0x08,0x04,0x02,0x01};
 char data[125];
-class GW :public RadioInterface
+class GW :public SX1278Interface
 {
 public:
   GW()=default;
@@ -263,77 +252,31 @@ void setup() {
     #endif
   #endif
 
-
-
-  pinMode(12,OUTPUT);
-  pinMode(13,INPUT);
-
-   int read_raw;
-    adc2_config_channel_atten( ADC2_CHANNEL_4, ADC_ATTEN_11db);
+  
+  
+   
     for(;;){
-     
-      esp_err_t r = adc2_get_raw( ADC2_CHANNEL_4, ADC_WIDTH_12Bit, &read_raw);
-      if ( r == ESP_OK ) {
-       // Serial.println(read_raw);
-          PlatformDebug::printf("ADC2:%d\n", read_raw/3.9 );
-      } else if ( r == ESP_ERR_TIMEOUT ) {
-          PlatformDebug::printf("ADC2 used by Wi-Fi.\\n");
-      }   
-        ThisThread::sleep_for(1000);
+      PlatformDebug::printf("BatteryTemp:\n\n");
+      app::BatteryTemp::measure();
+      ThisThread::sleep_for(3000);
+      PlatformDebug::printf("BatteryVoltage16:\n\n");
+      app::BatteryVoltage::measure(16);
+      ThisThread::sleep_for(3000);
+
+      PlatformDebug::printf("BatteryVoltage17:\n\n");
+      app::BatteryVoltage::measure(17);
+      ThisThread::sleep_for(3000);
     }
     
-
-
-  digitalWrite(12,LOW);
-  PlatformDebug::printf("LOW:%d\n",analogRead(13));
-  ThisThread::sleep_for(1000);
-  digitalWrite(12,HIGH);
-  PlatformDebug::printf("HIGH:%d\n",analogRead(13));
-
 PlatformDebug::pause();
-  Thread thd[10];
-  for(int i=0;i<10;++i){
-    thd[i].start(mbed::callback([&,i](){
-      ThisThread::sleep_for(1000);
-          TracePrinter::printf("A:%d,%d\n",64,128);
-          thd[i].terminate();
-      }));
-  }
-
-
-
   //Button button1(36);
   
-  RadioInterface* gw=new GW();
-  Serial.printf("createDelegateObject:%ld\n",ESP.getFreeHeap());
-  sx1278.setDelegateObject(&gw);
-  //sx1278.dumpCallbacks();
-
+  SX1278Interface* gw=new GW();
+  sx1278.addDelegateObject(&gw);
   sx1278.IoInit(SX1278_MOSI, SX1278_MISO, SX1278_SCLK, SX1278_NSS,
                 SX1278_DIO0, SX1278_DIO1, SX1278_DIO2, SX1278_DIO3, NC, NC,
                 SX1278_RST); 
 
-  sx1278.ModuleInit();
-///*
-
- RadioIRQ IRQ= sx1278.receive(0);
-while(true)
-    {
-        //sx1278.SX1278SetRx(3000);
-    
-      sx1278.SX1278Send((uint8_t*)ClientMsg, sizeof(ClientMsg));
-    
-      sx1278.SX1278SetRx(1000);
-
-      sx1278.DelayMs(random(1000,4000));
-      debug_if(DEBUG_ON, "> Data sent to the client:%d\n\r",sizeof(ClientMsg));
-
-
-     
-    }
-//*/
-//sx1278.SX1278SetStandby();
-//sx1278.SX1278SetRx(RX_TIMEOUT_VALUE);
 
   static bool tagSetup=false;
   static bool tagAlert=false;

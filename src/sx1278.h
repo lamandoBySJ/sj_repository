@@ -11,6 +11,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <mutex>
+#include <atomic>
+#include <vector>
+
 #include "registers.h"
 #include "drivers/Timeout.h"
 #include "hal/PinNames.h"
@@ -20,7 +23,6 @@
 #include "drivers/DigitalOut.h"
 
 #include "RadioDelegator.h"
-#include <atomic>
 #include <rtos/rtos.h>
 #include "platform_debug.h"
 
@@ -576,10 +578,10 @@ typedef struct
  *
  * @param [IN] events Structure containing the driver callback functions
  */
-class RadioInterface
+class SX1278Interface
 {
 public:
-virtual ~RadioInterface()=default;
+virtual ~SX1278Interface()=default;
 virtual    void TxDone(void)=0;
 virtual    void TxTimeout(void)=0;
 virtual   void RxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr)=0;
@@ -594,17 +596,15 @@ virtual    void CadDetected ()=0;
 class Radio : public  OnTxRunningListener, public  OnRxRunningListener
 {
 public:
-Radio()=delete;
-Radio(RadioInterface* objectInterface):_thisObject(objectInterface)
-    
+Radio()
 {   
-    //_thisObject = std::make_shared<RadioInterface>(objectInterface);
-    dioIrq[0] = &Radio::OnDio0IrqEnqueue;
-    dioIrq[1] = &Radio::OnDio1IrqEnqueue;
-    dioIrq[2] = &Radio::OnDio2IrqEnqueue;
-    dioIrq[3] = &Radio::OnDio3IrqEnqueue;
-    dioIrq[4] = &Radio::OnDio4IrqEnqueue;
-    dioIrq[5] = &Radio::OnDio5IrqEnqueue;
+    //_thisObject = std::make_shared<SX1278Interface>(objectInterface);
+    dioIrq[0] = &Radio::OnDio0IrqRx;
+    dioIrq[1] = &Radio::OnDio1IrqRx;
+    dioIrq[2] = &Radio::OnDio2IrqRx;
+    dioIrq[3] = &Radio::OnDio3IrqRx;
+    dioIrq[4] = &Radio::OnDio4IrqRx;
+    dioIrq[5] = &Radio::OnDio5IrqRx;
     _paSelect=true;
 }
 
@@ -949,46 +949,42 @@ void OnDio3Irq();
 void OnDio4Irq();
 void OnDio5Irq();
 
-void OnDio0IrqEnqueue(){
-   message_t* message = _pool.alloc();
-   message->id= RadioIRQ::DIO0;
-    _queue.try_put_from_isr(message);
+void OnDio0IrqRx(){
+    RxEnqueue(RadioIRQ::DIO0);
 }
-void OnDio1IrqEnqueue(){
-   message_t* message = _pool.alloc();
-   message->id= RadioIRQ::DIO1;
-    _queue.try_put_from_isr(message);
+void OnDio1IrqRx(){
+   RxEnqueue(RadioIRQ::DIO1);
 }
-void OnDio2IrqEnqueue(){
-   message_t* message = _pool.alloc();
-  message->id= RadioIRQ::DIO2;
-    _queue.try_put_from_isr(message);
+void OnDio2IrqRx(){
+    RxEnqueue(RadioIRQ::DIO2);
 }
-void OnDio3IrqEnqueue(){
-   message_t* message = _pool.alloc();
-  message->id= RadioIRQ::DIO3;
-    _queue.try_put_from_isr(message);
+void OnDio3IrqRx(){
+    RxEnqueue(RadioIRQ::DIO3);
 }
-void OnDio4IrqEnqueue(){
-   message_t* message = _pool.alloc();
- message->id= RadioIRQ::DIO4;
- if(_queue.full()){
-     return;
- }else{
-      _queue.try_put_from_isr(message);
- }
+void OnDio4IrqRx(){
+    RxEnqueue(RadioIRQ::DIO4);
 }
-void OnDio5IrqEnqueue(){
-   message_t* message = _pool.alloc();
-   message->id= RadioIRQ::DIO5;
-    _queue.try_put_from_isr(message);
+void OnDio5IrqRx(){
+   RxEnqueue(RadioIRQ::DIO5);
+}
+void RxEnqueue(RadioIRQ irq){
+    if(_queueRx.full()){
+        return;
+    }else{
+        message_t* message = _pool.alloc();
+        message->id= irq;
+        _queueRx.try_put_from_isr(message);
+    }
+}
+bool  TxBusy(){
+    return _queueTx.count()!=0;
 }
 bool  RxBusy(){
-    return _queue.count()!=0;
+    return _queueRx.count()!=0;
 }
 RadioIRQ receive(uint32_t millis=osWaitForever){
     irq=RadioIRQ::NONE;
-    osEvent evt = _queue.get(millis);
+    osEvent evt =_queueRx.get(millis);
     if(evt.status == osEventMessage){
             message_t* message = (message_t*)evt.value.p;
             irq = message->id;
@@ -1138,22 +1134,15 @@ void query(){
      debug("SX1278Read(REG_LR_IRQFLAGS):%x\n",SX1278Read(REG_LR_IRQFLAGS));
 }
 
-void setDelegateObject(RadioInterface** obj){
-    this->_objectInterface=*obj;
+void addDelegateObject(SX1278Interface** obj){
+    this->_implementObjects.push_back(*obj); 
 }
 void destoryDelegateObject(){
-    if(this->_objectInterface!=nullptr){
-        delete this->_objectInterface;
-        this->_objectInterface=nullptr;
-    }
-}
-void dumpCallbacks(){
-    if(this->_objectInterface!=nullptr){
-    this->_objectInterface->TxDone();
-    this->_objectInterface->TxTimeout();
-    this->_objectInterface->RxTimeout();
-    this->_objectInterface->CadDone(true);
-    this->_objectInterface->CadDetected();
+    for(auto& v :this->_implementObjects){
+        if(v!=nullptr){
+            delete v;
+            v=nullptr;
+        }
     }
 }
 DioIrqHandler dioIrq[6];// = {&Radio::OnDio0Irq, &Radio::OnDio1Irq, &Radio::OnDio2Irq, &Radio::OnDio3Irq,&Radio::OnDio4Irq, NULL };
@@ -1183,23 +1172,12 @@ Timeout _CCATimeout;
      */
     DigitalOut* reset;
     rtos::Mutex _mtx;
-    rtos::Queue<message_t,32> _queue;
+    rtos::Mutex _mtxTx;
+    rtos::Queue<message_t,32> _queueRx;
+    rtos::Queue<int,32> _queueTx;
     rtos::MemoryPool<message_t,32> _pool;   
-
-    //rtos::Mail<mail_radio_event_t,32> _mail;
     std::atomic<bool> _paSelect;
-
-    //static RadioEvents_t* RadioEvents;
-    //mbed::Callback<void()> _onTxDone=nullptr;
-    //mbed::Callback<void()> _onTxTimeout=nullptr;
-    //mbed::Callback<void()> _onRxTimeout=nullptr;
-    //mbed::Callback<void(uint8_t*, uint16_t, int16_t, int8_t)> _onRxDone=nullptr;
-   // mbed::Callback<void()> _onRxError=nullptr;
-    //mbed::Callback<void(uint8_t)> _onFhssChangeChannel=nullptr;
-    //mbed::Callback<void(bool)> _onCadDone=nullptr;
-    //mbed::Callback<void()> _onCadDetected=nullptr;
-    RadioInterface* _objectInterface=nullptr;
-    std::shared_ptr<RadioInterface> _thisObject;
+    std::vector<SX1278Interface*>  _implementObjects;
 };
 
 #endif // __SX1278_H__

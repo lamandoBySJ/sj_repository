@@ -132,8 +132,6 @@ static uint8_t RxTxBuffer[RX_BUFFER_SIZE];
 //-----------------------------------------------------------------------------
 bool Radio::ModuleInit()
 {
-    
-
     RxChainCalibration();
     SX1278SetOpMode(RF_OPMODE_SLEEP);
 
@@ -142,7 +140,6 @@ bool Radio::ModuleInit()
     SX1278SetModem(MODEM_FSK);
     settings.State = RF_IDLE;
 
-      
     if (SX1278Read(REG_VERSION) == 0x00){ 
         while (1){
             debug("Radio could not be detected:%X,Check SPI\n\r",SX1278Read(REG_VERSION));
@@ -649,10 +646,13 @@ uint32_t Radio::SX1278TimeOnAir(RadioModems_t modem, uint8_t pktLen)
 //-----------------------------------------------------------------------------
 void Radio::SX1278Send(uint8_t *buffer, uint8_t size)
 {
+    _queueTx.put(0);
+    _mtxTx.lock();
     do
     {
         receive(random(0,200));
     }while(RxBusy());
+    _mtxTx.unlock();
 
   _mtx.lock();
 uint32_t txTimeout = 0;  
@@ -750,6 +750,10 @@ void Radio::SX1278SetStandby(void)
 //-----------------------------------------------------------------------------
 void Radio::SX1278SetRx(uint32_t timeout)
 {
+    while(TxBusy()){
+        ThisThread::sleep_for(500);
+    }
+
     _mtx.lock();
     bool rxContinuous = false;
     switch (settings.Modem)
@@ -1423,11 +1427,12 @@ void Radio::OnDio0Irq()
                       //  {
                           //  RxError();
                        // }
-                        if(_objectInterface!=nullptr){
-                            _objectInterface->RxError();
-                        }else{
-                            _thisObject->RxError();
+                        for(auto& v: this->_implementObjects){
+                            if(v!=nullptr){
+                               v->RxError();
+                            }
                         }
+                        
                         settings.FskPacketHandler.PreambleDetected = false;
                         settings.FskPacketHandler.SyncWordDetected = false;
                         settings.FskPacketHandler.NbBytes = 0;
@@ -1474,12 +1479,12 @@ void Radio::OnDio0Irq()
                // {
                   //  RxDone(RxTxBuffer, settings.FskPacketHandler.Size, settings.FskPacketHandler.RssiValue, 0);
                // }
-                if(_objectInterface!=nullptr){
-                    _objectInterface->RxDone(RxTxBuffer, settings.FskPacketHandler.Size, settings.FskPacketHandler.RssiValue, 0);
-                }else{
-                    _thisObject->RxDone(RxTxBuffer, settings.FskPacketHandler.Size, settings.FskPacketHandler.RssiValue, 0);
+                for(auto& v: this->_implementObjects){
+                    if(v!=nullptr){
+                        v->RxDone(RxTxBuffer, settings.FskPacketHandler.Size, settings.FskPacketHandler.RssiValue, 0);
+                    }
                 }
-    
+
                 settings.FskPacketHandler.PreambleDetected = false;
                 settings.FskPacketHandler.SyncWordDetected = false;
                 settings.FskPacketHandler.NbBytes = 0;
@@ -1506,11 +1511,12 @@ void Radio::OnDio0Irq()
                        // {
                           //  RxError();
                        // }
-                        if(_objectInterface!=nullptr){
-                            _objectInterface->RxError();
-                        }else{
-                            _thisObject->RxError();
+                        for(auto& v: this->_implementObjects){
+                            if(v!=nullptr){
+                                v->RxError();
+                            }
                         }
+
                         break;
                     }
                     // Returns SNR value [dB] rounded to the nearest integer value
@@ -1575,10 +1581,10 @@ void Radio::OnDio0Irq()
                     //{
                      //   RxDone(RxTxBuffer, settings.LoRaPacketHandler.Size, settings.LoRaPacketHandler.RssiValue, settings.LoRaPacketHandler.SnrValue);
                    // }
-                    if(_objectInterface!=nullptr){
-                        _objectInterface->RxDone(RxTxBuffer, settings.LoRaPacketHandler.Size, settings.LoRaPacketHandler.RssiValue, settings.LoRaPacketHandler.SnrValue);
-                    }else{
-                        _thisObject->RxDone(RxTxBuffer, settings.LoRaPacketHandler.Size, settings.LoRaPacketHandler.RssiValue, settings.LoRaPacketHandler.SnrValue);
+                    for(auto& v: this->_implementObjects){
+                        if(v!=nullptr){
+                            v->RxDone(RxTxBuffer, settings.LoRaPacketHandler.Size, settings.LoRaPacketHandler.RssiValue, settings.LoRaPacketHandler.SnrValue);
+                        }
                     }
                 }
                 break;
@@ -1603,10 +1609,10 @@ void Radio::OnDio0Irq()
                 //{
                 //    TxDone();
                // }
-                if(_objectInterface!=nullptr){
-                    _objectInterface->TxDone();
-                }else{
-                    _thisObject->TxDone();
+                for(auto& v: this->_implementObjects){
+                    if(v!=nullptr){
+                        v->TxDone();
+                    }
                 }
                 break;
             }
@@ -1670,10 +1676,10 @@ void Radio::OnDio1Irq()
                    // {
                       //  RxTimeout();
                     //}
-                    if(_objectInterface!=nullptr){
-                        _objectInterface->RxTimeout();
-                    }else{
-                        _thisObject->RxTimeout();
+                    for(auto& v: this->_implementObjects){
+                        if(v!=nullptr){
+                            v->RxTimeout();
+                        }
                     }
                     break;
                 default:
@@ -1747,11 +1753,12 @@ void Radio::OnDio2Irq()
                        // {
                           //  FhssChangeChannel((SX1278Read(REG_LR_HOPCHANNEL) & RFLR_HOPCHANNEL_CHANNEL_MASK));
                         //}
-                        if(_objectInterface!=nullptr){
-                           _objectInterface->FhssChangeChannel((SX1278Read(REG_LR_HOPCHANNEL) & RFLR_HOPCHANNEL_CHANNEL_MASK));
-                        }else{
-                            _thisObject->FhssChangeChannel((SX1278Read(REG_LR_HOPCHANNEL) & RFLR_HOPCHANNEL_CHANNEL_MASK));
+                        for(auto& v: this->_implementObjects){
+                            if(v!=nullptr){
+                                v->FhssChangeChannel((SX1278Read(REG_LR_HOPCHANNEL) & RFLR_HOPCHANNEL_CHANNEL_MASK));
+                            }
                         }
+
                     }
                     break;
                 default:
@@ -1773,11 +1780,12 @@ void Radio::OnDio2Irq()
                        // {
                          //   FhssChangeChannel((SX1278Read(REG_LR_HOPCHANNEL) & RFLR_HOPCHANNEL_CHANNEL_MASK));
                        // }
-                        if(_objectInterface!=nullptr){
-                           _objectInterface->FhssChangeChannel((SX1278Read(REG_LR_HOPCHANNEL) & RFLR_HOPCHANNEL_CHANNEL_MASK));
-                        }else{
-                            _thisObject->FhssChangeChannel((SX1278Read(REG_LR_HOPCHANNEL) & RFLR_HOPCHANNEL_CHANNEL_MASK));
+                       for(auto& v: this->_implementObjects){
+                            if(v!=nullptr){
+                                v->FhssChangeChannel((SX1278Read(REG_LR_HOPCHANNEL) & RFLR_HOPCHANNEL_CHANNEL_MASK));
+                            }
                         }
+    
                     }
                     break;
                 default:
@@ -1806,11 +1814,12 @@ void Radio::OnDio3Irq()
                 //{
                   //  CadDone(true);
                // }
-                if(_objectInterface!=nullptr){
-                    _objectInterface->CadDone(true);
-                }else{
-                    _thisObject->CadDone(true);
+                for(auto& v: this->_implementObjects){
+                    if(v!=nullptr){
+                         v->CadDone(true);
+                    }
                 }
+    
             }
             else
             {
@@ -1820,10 +1829,10 @@ void Radio::OnDio3Irq()
                // {
                //     CadDone(false);
                // }
-                if(_objectInterface!=nullptr){
-                    _objectInterface->CadDone(false);
-                }else{
-                    _thisObject->CadDone(false);
+                for(auto& v: this->_implementObjects){
+                    if(v!=nullptr){
+                         v->CadDone(false);
+                    }
                 }
             }
             //*/
@@ -1861,10 +1870,10 @@ void Radio::OnDio4Irq()
            // {
               //  CadDetected();
            // }
-            if(_objectInterface!=nullptr){
-               _objectInterface->CadDetected();
-            }else{
-                _thisObject->CadDetected();
+           for(auto& v: this->_implementObjects){
+                if(v!=nullptr){
+                    v->CadDetected();
+                }
             }
         }
         break;
@@ -1923,10 +1932,10 @@ void Radio::OnTimeoutIrq()
         //{
            // RxTimeout();
         //}
-        if(_objectInterface!=nullptr){
-            _objectInterface->RxTimeout();
-        }else{
-            _thisObject->RxTimeout();
+        for(auto& v: this->_implementObjects){
+            if(v!=nullptr){
+                v->RxTimeout();
+            }
         }
         break;
     case RF_TX_RUNNING:
@@ -1959,10 +1968,10 @@ void Radio::OnTimeoutIrq()
         //{
         //    TxTimeout();
        // }
-        if(_objectInterface!=nullptr){
-            _objectInterface->TxTimeout();
-        }else{
-            _thisObject->TxTimeout();
+        for(auto& v: this->_implementObjects){
+            if(v!=nullptr){
+                v->TxTimeout();
+            }
         }
         break;
     default:

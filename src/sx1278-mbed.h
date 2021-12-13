@@ -27,14 +27,14 @@
 #include <atomic>
 using namespace mbed;
 
-class SX1278:public RadioInterface,public Radio
+class SX1278:public SX1278Interface,public Radio
 {
 public:
-~SX1278(void)
+~SX1278()
 {
     MbedDeInit();
 }
-SX1278():Radio(this)
+SX1278()
 {
 
 }
@@ -50,7 +50,29 @@ void IoDeInit(void) override;
 void WriteBuffer(uint8_t addr, uint8_t *buffer, uint8_t size) override;
 void ReadBuffer(uint8_t addr, uint8_t *buffer, uint8_t size) override;
 void DelayMs(int ms) override;
+void startup()
+{
+   ModuleInit();
+   _thread.start(mbed::callback(this,&SX1278::run_service));
+}
+void run_service(){
+    //RadioIRQ IRQ= receive(0);
+    if(_implementObjects.size()==0){
+       SX1278Interface* _this=this;
+       addDelegateObject(&_this);
+    }
+    while(true)
+    {
+        //sx1278.SX1278SetRx(3000);
+    
+     // sx1278.SX1278Send((uint8_t*)ClientMsg, sizeof(ClientMsg));
+    
+      SX1278SetRx(1000);
 
+     // sx1278.DelayMs(random(1000,4000));
+      //debug_if(DEBUG_ON, "> Data sent to the client:%d\n\r",sizeof(ClientMsg));
+    }
+}
 void setSPIFrequency(uint32_t frequency)
 {
   _spiSettings = SPISettings(frequency, MSBFIRST, SPI_MODE0);
@@ -97,6 +119,7 @@ void TxDone(void)override{
  }
 private:
     SPISettings _spiSettings;
+    Thread _thread;
     SPIClass* spi; 
     //SPI* spi; // mosimiso, sclk
     DigitalOut* nss;

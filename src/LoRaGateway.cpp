@@ -1,11 +1,10 @@
 #include "LoRaGateway.h"
 namespace product_api
 {
-   
- IPSProtocol& get_ips_protocol()
- {
-     static IPSProtocol ipsProtocol;
-     return ipsProtocol;
+IPSProtocol& get_ips_protocol()
+{
+    static IPSProtocol ipsProtocol;
+    return ipsProtocol;
 }
 }
 
