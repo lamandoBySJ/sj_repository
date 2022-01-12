@@ -40,20 +40,13 @@ static String&  version(const char* date,const char* time)
     return version;
 }
 
-DeviceInfo& get_device_info(){
-    static DeviceInfo deviceInfo;
-    return deviceInfo;
-}
+
 WebProperties& get_web_properties()
 {
     static WebProperties webProperties;
     return webProperties;
 }
-UserProperties& get_user_properties()
-{
-    static  UserProperties  userProperties;
-    return userProperties;
-}
+
 String& get_version()
 {
     return version(__DATE__,__TIME__);

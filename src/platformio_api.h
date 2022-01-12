@@ -1,26 +1,38 @@
-#ifndef PLATFORMIO_API_H
-#define PLATFORMIO_API_H
+#pragma once
 
 #include "Arduino.h"
 #include <map>
 #include "platform/mbed.h"
-
-
-namespace platformio_api
-{
-
-struct DeviceInfo
-{   
-    DeviceInfo(){
-        BoardID="ABCD";
-        Family="k49a";
+#include "WiFi.h"
+struct Device{
+    Device(){
+        _WiFiMacAddress = WiFi.macAddress();
+        _WiFiMacAddress.replace(":","");
+        unsigned int len= _WiFiMacAddress.length();
+        for(char i=len;i>0;i--){
+            _map[i]= _WiFiMacAddress.substring(len-i,len);
+        }
     }
-    String BoardID;
-    String Family;
+    static Device& getInstance(){
+        static Device device;
+        return device;
+    }
+    static String& ID(char digits=4){
+      return getInstance()._map[digits];
+    }
+    static void dump(){
+        for(auto& v:getInstance()._map){
+            Serial.println(v.second);
+        }
+    }
+    static String& WiFiMacAddress(){
+        return getInstance()._WiFiMacAddress;
+    }
+    std::map<char,String> _map;
+     String _WiFiMacAddress;
 };
-
-struct  UserProperties{
-    UserProperties()
+struct  User{
+    User()
     {   
         path="/user_constant";
         ssid = "IoTwlan";
@@ -33,7 +45,7 @@ struct  UserProperties{
     String  pass ;
     String  host ;
     int     port ;
-    UserProperties& operator=(const UserProperties& properties){
+    User& operator=(const User& properties){
         this->path = properties.path;
         this->ssid = properties.ssid;
         this->pass = properties.pass;
@@ -41,7 +53,17 @@ struct  UserProperties{
         this->port = properties.port;
         return *this;
     }
+    static User& getProperties()
+    {
+        static  User userProperties;
+        return userProperties;
+    }
 };
+
+namespace platformio_api
+{
+
+
 struct WebProperties
 {   
         WebProperties(){
@@ -67,9 +89,9 @@ struct WebProperties
         }
 };
 
-DeviceInfo& get_device_info();
+//DeviceInfo& get_device_info();
 WebProperties& get_web_properties();
-UserProperties& get_user_properties();
+//UserProperties& get_user_properties();
 String& get_version();
 
 }//namespace platformio
@@ -122,5 +144,5 @@ struct alloc_error:public std::exception
             return this->detail;
         }
 };
+
 }// namespace os
-#endif

@@ -171,7 +171,7 @@ AsyncMqttClient& AsyncMqttClient::onUnsubscribe(mbed::Callback<void(uint16_t pac
   return *this;
 }
 
-AsyncMqttClient& AsyncMqttClient::onMessage(mbed::Callback<void(char*, char*, AsyncMqttClientMessageProperties, size_t, size_t, size_t)> callback) {
+AsyncMqttClient& AsyncMqttClient::onMessage(mbed::Callback<void(const char*,const char*, AsyncMqttClientMessageProperties, size_t, size_t, size_t)> callback) {
   _onMessageUserCallbacks.push_back(callback);
   return *this;
 }
@@ -374,9 +374,26 @@ void AsyncMqttClient::_onConnect(AsyncClient* client) {
 
 void AsyncMqttClient::_onDisconnect(AsyncClient* client) {
   (void)client;
-  if (!_disconnectFlagged) {
-    AsyncMqttClientDisconnectReason reason;
+  AsyncMqttClientDisconnectReason reason;
+  if(_disconnectFlagged){
+     reason = AsyncMqttClientDisconnectReason::MQTT_SERVER_UNAVAILABLE;
+  }else if (_connectPacketNotEnoughSpace) {
+      reason = AsyncMqttClientDisconnectReason::ESP8266_NOT_ENOUGH_SPACE;
+  }else if (_tlsBadFingerprint) {
+      reason = AsyncMqttClientDisconnectReason::TLS_BAD_FINGERPRINT;
+  }else{
+      reason = AsyncMqttClientDisconnectReason::TCP_DISCONNECTED;  
+  }
 
+  _clear();
+  for (auto callback : _onDisconnectUserCallbacks) callback(reason);
+  /*
+  bool connectionLost=!_disconnectFlagged;
+
+  _clear();
+
+  if(connectionLost){
+    AsyncMqttClientDisconnectReason reason;
     if (_connectPacketNotEnoughSpace) {
       reason = AsyncMqttClientDisconnectReason::ESP8266_NOT_ENOUGH_SPACE;
     } else if (_tlsBadFingerprint) {
@@ -386,7 +403,7 @@ void AsyncMqttClient::_onDisconnect(AsyncClient* client) {
     }
     for (auto callback : _onDisconnectUserCallbacks) callback(reason);
   }
-  _clear();
+  */
 }
 
 void AsyncMqttClient::_onError(AsyncClient* client, int8_t error) {
@@ -553,7 +570,7 @@ void AsyncMqttClient::_onMessage(char* topic, char* payload, uint8_t qos, bool d
     properties.qos = qos;
     properties.dup = dup;
     properties.retain = retain;
-    
+    //payload[len]=0;forbidden used
     for (auto callback : _onMessageUserCallbacks) callback(topic, payload, properties, len, index, total);
 
     //for (auto callback : _onRefMessageUserCallbacks) callback(String(topic),String(payload).substring(0,len), properties,index, total);
@@ -794,11 +811,16 @@ uint16_t AsyncMqttClient::subscribe(const char* topic, uint8_t qos) {
   _client.add(topicLengthBytes, 2);
   _client.add(topic, topicLength);
   _client.add(qosByte, 1);
-  _client.send();
+  bool ok =_client.send();
   _lastClientActivity = millis();
 
   SEMAPHORE_GIVE();
-  return packetId;
+  if(ok){
+      return packetId;
+  }else{
+      return 0;
+  }
+
 }
 
 uint16_t AsyncMqttClient::unsubscribe(const char* topic) {
@@ -834,11 +856,15 @@ uint16_t AsyncMqttClient::unsubscribe(const char* topic) {
   _client.add(packetIdBytes, 2);
   _client.add(topicLengthBytes, 2);
   _client.add(topic, topicLength);
-  _client.send();
+  bool ok = _client.send();
   _lastClientActivity = millis();
 
   SEMAPHORE_GIVE();
-  return packetId;
+  if(ok){
+      return packetId;
+  }else{
+      return 0;
+  }
 }
 
 uint16_t AsyncMqttClient::publish(const char* topic, uint8_t qos, bool retain, const char* payload, size_t length, bool dup, uint16_t message_id) {
@@ -901,17 +927,24 @@ uint16_t AsyncMqttClient::publish(const char* topic, uint8_t qos, bool retain, c
   _client.add(topic, topicLength);
   if (qos != 0) _client.add(packetIdBytes, 2);
   if (payload != nullptr) _client.add(payload, payloadLength);
-  _client.send();
+
+  bool ok = _client.send();
+
   _lastClientActivity = millis();
 
   SEMAPHORE_GIVE();
-  if (qos != 0) {
-    return packetId;
-  } else {
-    return 1;
+  if(ok){
+     if (qos != 0) {
+      return packetId;
+    } else {
+      return 1;
+    }
+  }else{
+    return 0;
   }
+ 
 }
-
+/*
 uint16_t AsyncMqttClient::publish(const esphome::mqtt::MQTTMessage &message)
 {
  return publish(message.topic.c_str(),message.qos,message.retain,message.payload.c_str(),message.payload.length(),message.dup,message.message_id);
@@ -926,3 +959,4 @@ uint16_t AsyncMqttClient::publish(const std::string &topic, const char *payload,
 {
   return publish(topic.c_str(),qos,retain,payload,payload_length,true,0);
 }
+*/

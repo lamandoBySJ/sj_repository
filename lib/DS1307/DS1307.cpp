@@ -437,8 +437,7 @@ void DS1307::setEpoch(time_t epoch)
 	setDay(epoch_tm->tm_mday);
 	setMonth(epoch_tm->tm_mon+1);
 	setYear(epoch_tm->tm_year + 1900);
-	_wire.endTransmission();
-
+	//_wire.endTransmission();
 }
 
 /*-----------------------------------------------------------

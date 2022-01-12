@@ -122,7 +122,7 @@ class AsyncMqttClient {
   AsyncMqttClient& onDisconnect(mbed::Callback<void(AsyncMqttClientDisconnectReason)> callback);
   AsyncMqttClient& onSubscribe(mbed::Callback<void(uint16_t, uint8_t)> callback);
   AsyncMqttClient& onUnsubscribe(mbed::Callback<void(uint16_t)> callback);
-  AsyncMqttClient& onMessage(mbed::Callback<void(char*, char*, AsyncMqttClientMessageProperties, size_t, size_t, size_t)> callback);
+  AsyncMqttClient& onMessage(mbed::Callback<void(const char*,const char*, AsyncMqttClientMessageProperties, size_t, size_t, size_t)> callback);
   AsyncMqttClient& onPublish(mbed::Callback<void(uint16_t)> callback);
  // AsyncMqttClient& onMessage(mbed::Callback<void(const String&,const String&, AsyncMqttClientMessageProperties,size_t, size_t)> callback);
   bool connected() const;
@@ -131,12 +131,16 @@ class AsyncMqttClient {
   uint16_t subscribe(const char* topic, uint8_t qos);
   uint16_t unsubscribe(const char* topic);
   uint16_t publish(const char* topic, uint8_t qos, bool retain, const char* payload = nullptr, size_t length = 0, bool dup = false, uint16_t message_id = 0);
-  uint16_t publish(const esphome::mqtt::MQTTMessage &message);
+  //uint16_t publish(const esphome::mqtt::MQTTMessage &message);
  
-  uint16_t publish(const std::string &topic, const std::string &payload, uint8_t qos = 0, bool retain = false);
+  //uint16_t publish(const std::string &topic, const std::string &payload, uint8_t qos = 0, bool retain = false);
  
-  uint16_t publish(const std::string &topic, const char *payload, size_t payload_length, uint8_t qos = 0,bool retain = false);
- 
+  //uint16_t publish(const std::string &topic, const char *payload, size_t payload_length, uint8_t qos = 0,bool retain = false);
+  /*uint16_t publish(const char* topic,const char* payload, size_t payload_length, uint8_t qos=0,bool retain=false)
+  {
+    return publish(topic,qos,retain,payload,payload_length,true,0);
+  }*/
+  
   //bool publish_json(const std::string &topic, const json::json_build_t &f, uint8_t qos = 0, bool retain = false);
   void setClientId(const String& id){
     sprintf(_generatedClientId, "%s", id.c_str());
@@ -186,7 +190,7 @@ class AsyncMqttClient {
   std::vector<mbed::Callback<void(AsyncMqttClientDisconnectReason)>> _onDisconnectUserCallbacks;
   std::vector<mbed::Callback<void(uint16_t, uint8_t)>> _onSubscribeUserCallbacks;
   std::vector<mbed::Callback<void(uint16_t)>> _onUnsubscribeUserCallbacks;
-  std::vector<mbed::Callback<void(char*, char*, AsyncMqttClientMessageProperties, size_t, size_t, size_t)>> _onMessageUserCallbacks;
+  std::vector<mbed::Callback<void(const char*,const char*, AsyncMqttClientMessageProperties, size_t, size_t, size_t)>> _onMessageUserCallbacks;
   std::vector<mbed::Callback<void(uint16_t)>> _onPublishUserCallbacks;
   std::vector<mbed::Callback<void(const String&, const String&, AsyncMqttClientMessageProperties, size_t, size_t)>> _onRefMessageUserCallbacks;
   AsyncMqttClientInternals::ParsingInformation _parsingInformation;

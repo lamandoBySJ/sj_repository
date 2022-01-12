@@ -1,16 +1,11 @@
 #include <heltec.h>
 //#include <SPI.h>
 //#include <MFRC522.h>
-extern "C" {
-	#include "freertos/FreeRTOS.h"
-	#include "freertos/timers.h"
-  #include "freertos/task.h"
-  #include "freertos/queue.h"
-}
 #include "esp_sleep.h"
 #include "SmartBox.h"
 #include "LoopTaskGuard.h"
 #include "Logger.h"
+
 
 using namespace std;
 #define BAND    470E6 
@@ -41,6 +36,7 @@ void setup() {
     #else
       Heltec.begin(false, false , true , true, BAND);
       PlatformDebug::getInstance()->init(Serial);
+      TracePrinter::startup();
     #endif
   #endif
 
@@ -55,11 +51,10 @@ void setup() {
 }
 
 void loop() {
-  
+
    //int64_t time_since_boot = esp_timer_get_time();
   PlatformDebug::println(" ----------- STLB2 ----------- ");
   smartBox->startup();
-
 
   while (true) {
     switch (guard::LoopTaskGuard::getLoopTaskGuard().get_signal_id())

@@ -1,11 +1,11 @@
 #ifndef PLATFORM_DEBUG_H
 #define PLATFORM_DEBUG_H
 
-#include "platformio_api.h"
 #include "app/OLEDScreen/OLEDScreen.h"
-#include <platform/mbed.h>
+#include "MemoryManager.h"
+//#define NDEBUG 
 
-#define NDEBUG 
+
 class PlatformDebug
 {
 public:
@@ -25,13 +25,12 @@ public:
         #if !defined(NDEBUG)
         Serial.println("T is OLEDScreen");
         if( std::is_lvalue_reference<decltype(t)>::value){
-            getInstance()->_onPrintlnCallbacks.push_back(mbed:: Callback<size_t(const String&)>(&t,&std::remove_reference_t<T>::println));
-            getInstance()->_onPrintLogoCallbacks.push_back(mbed::Callback<void()>(&t,&std::remove_reference_t<T>::logo));
-           // getInstance()._onPrintfCallbacks.push_back(Callback<size_t(const char*, ...)>(&t,&std::remove_reference_t<T>::printf));
+            Serial.println("OLEDScreen--------------->LLLLLLLLLLLLLL");
+            getInstance()->_onPrintlnCallbacks.push_back( mbed::Callback<size_t(const String&)>(&t,&std::remove_reference_t<T>::println));  
         }else{
+            Serial.println("OLEDScreen--------------->RRRRRRRRRRRRRR");
             static OLEDScreen<12>* oled_ = new OLEDScreen<12>(std::forward<decltype(t)>(t));
             getInstance()->_onPrintlnCallbacks.push_back( mbed::Callback<size_t(const String&)>(oled_,&std::remove_reference_t<T>::println));
-            getInstance()->_onPrintLogoCallbacks.push_back(mbed::Callback<void()>(oled_,&std::remove_reference_t<T>::logo));
         }
         #endif
     }
@@ -46,11 +45,11 @@ public:
             //Serial.println("HardwareSerial--------------->LLLLLLLLLLLLLL");
             //PlatformDebug::_platformDebug._onPrintlnCallbacks.push_back( Callback<size_t(const String&)>(&t,(FunPtrHardwareSerialPrintln)&HardwareSerial::println));
             getInstance()->_onPrintlnCallbacks.push_back(mbed::Callback<size_t(const String&)>(&t,(FunPtrHardwareSerialPrintln)&std::remove_reference<decltype(t)>::type::println));
+           
         }else{
             //Serial.println("HardwareSerial--------------->RRRRRRRRRRRRRR");
            // static HardwareSerial* serial_=new HardwareSerial(std::forward<decltype(t)>(t));
            //getInstance()._onPrintlnCallbacks.push_back( Callback<size_t(const String&)>(&t,(FunPtrHardwareSerialPrintln)&std::remove_reference<decltype(t)>::type::println));
-           // getInstance()._onPrintfCallbacks.push_back( Callback<size_t(const char*,...)>(&t,(FunPtrHardwareSerialPrintf)&(std::remove_reference<decltype(t)>::type::printf)));
         }
         #endif
     }
@@ -76,129 +75,127 @@ public:
         }
         #endif
     }
- 
-    static inline size_t printf(const char *format, ...)
-    {   
-        #if !defined(NDEBUG)
-        getInstance()->print(format);
-        #endif
-        return 0;
-    }
-    static inline void println(std::string& data) 
+    template <typename... T>
+    static inline size_t printf(const char* format,T&&... args)
     {
         #if !defined(NDEBUG)
-        getInstance()->print(data);
+        getInstance()->_printf(format,std::forward<T>(args)...);
         #endif
+        return 0;
     }
 
     static inline void println(const String& data)  
     {   
         #if !defined(NDEBUG)
-        getInstance()->print(data);
+        getInstance()->printf("%s\n",data.c_str());
         #endif
     }
     
     static inline void pause(){
-        while(1){  Serial.println("pause");ThisThread::sleep_for(Kernel::Clock::duration_seconds(10));};
+        #if !defined(NDEBUG)
+        while(1){ getInstance()->printf("\npause\n");ThisThread::sleep_for(Kernel::Clock::duration_seconds(30));};
+        #endif
     }
 protected:  
- 
-    void print(const String& data) 
-    {   
-        #if !defined(NDEBUG)
-        std::lock_guard<rtos::Mutex> lck(_mtx);
-        for(auto& v:_onPrintlnCallbacks){
-            v.call(data);
-        }
-        #endif
-    }
-    void print(const std::string& data) 
-    {   
-        #if !defined(NDEBUG)
-        std::lock_guard<rtos::Mutex> lck(_mtx);
-        for(auto& v:_onPrintlnCallbacks){
-            v.call(data.c_str());
-        }
-        #endif
-    }
 
-    size_t print(const char* format,...) 
+
+    size_t _printf(const char* format,...) 
     {   
         #if !defined(NDEBUG)
         std::lock_guard<rtos::Mutex> lck(_mtx);
 
-        char loc_buf[64];
-        char * temp = loc_buf;
         va_list arg;
-        va_list copy;
         va_start(arg, format);
-        va_copy(copy, arg);
-        int len = vsnprintf(temp, sizeof(loc_buf), format, copy);
-        va_end(copy);
+
+        int len = vsnprintf(_loc_buf, _loc_buf_len, format, arg);
         if(len < 0) {
             va_end(arg);
-            return 0;
-        }
-        if(len >= sizeof(loc_buf)){
-            temp = (char*) malloc(len+1);
-            if(temp == NULL) {
+            return len;
+        };
+
+        if(len > _loc_buf_len){
+            int buf_len=(len/_loc_buf_len+1)*_loc_buf_len;
+            char* temp = nullptr;
+            temp = _loc_buf == _buffer ? (char*)realloc(temp,buf_len+1):(char*)realloc(_loc_buf,buf_len+1);
+            
+            if(temp) {
+                _loc_buf_len=buf_len;
+                _loc_buf    =temp;
+            }else{
                 va_end(arg);
-                return 0;
+                return len;
             }
-            len = vsnprintf(temp, len+1, format, arg);
+            
+            len = vsnprintf(_loc_buf, _loc_buf_len, format, arg);
+            if(len < 0) {
+                va_end(arg);
+                return len;
+            }else{
+                
+            }
+            _loc_buf[_loc_buf_len]=0;
+        }
+            
+        for(auto& v:_onPrintlnCallbacks){
+            v.call(_loc_buf);
         }
         va_end(arg);
-       // len = write((uint8_t*)temp, len);
-        for(auto& v:_onPrintlnCallbacks){
-            v.call(temp);
-        }
-        if(temp != loc_buf){
-            free(temp);
-        }
         return len;
         #else 
-            return 0;
+        return 0;
         #endif
     }
 
     ~PlatformDebug(){
-        Serial.println("~platform_debug::PlatformDebug::pause():~PlatformDebug");
-        PlatformDebug::pause();
+        if(_loc_buf!=_buffer){
+             free(_loc_buf);
+        }
+        Serial.printf("~platform_debug\n");
     }
     
 private:
     #if !defined(NDEBUG)
-    
-    PlatformDebug(){}
+    char* _loc_buf;
+    int _loc_buf_len;
+    char _buffer[256];
+    PlatformDebug(){ 
+        _loc_buf_len=sizeof(_buffer)-1;
+        _loc_buf=_buffer;
+    }
+
     PlatformDebug(const PlatformDebug&)=delete;
     PlatformDebug& operator=(const PlatformDebug&)=delete;
-    std::vector<mbed::Callback<size_t(const String& )>> _onPrintlnCallbacks;
+
+    std::vector<mbed::Callback<size_t(const String&)>> _onPrintlnCallbacks;
     std::vector<mbed::Callback<void()>> _onPrintLogoCallbacks;
     rtos::Mutex _mtx;
     #endif
 };
-
+/*
 struct [[gnu::may_alias]] mail_trace_t{
     uint32_t id;
     String log;
 };
-
+*/
+struct mail_trace_t :public os_memory_t{
+   /* template <typename... T>
+    const char* copy(const char* format,T&&... args){
+       return os_allocator_t::copy(&log,format,std::forward<T>(args)...);
+    }*/
+     const char* log;
+};
 class TracePrinter
 {
 public:
-   
-    TracePrinter()
-    {
-        #if !defined(NDEBUG)
-        _thread = new Thread(osPriorityNormal,1024*6);
-        #endif
-    }
      ~TracePrinter()
     {
-        Serial.println("~platform_debug::PlatformDebug::pause():~TracePrinter");
+        free(_loc_buf);
+        _thread->terminate();
+        delete _thread;
+        Serial.println("~TracePrinter");
     }
    
-    void  startup(){
+    void  init(){
         #if !defined(NDEBUG)
         if(_thread->get_state()!=Thread::Running){
             _thread->start(mbed::callback(this,&TracePrinter::run_trace_back));
@@ -212,63 +209,34 @@ public:
              osEvent evt=  _mail_box.get();
             if (evt.status == osEventMail) {
                 mail_trace_t *mail = (mail_trace_t *)evt.value.p;
-                 PlatformDebug::println(mail->log);
-                 TracePrinter::getInstance()->_mail_box.free(mail); 
+                 PlatformDebug::printf(mail->log);
+                _mail_box.free(mail); 
             }
         }
         #endif
     }
- 
-    static inline void printf(const char* format,...)
+    template <typename... T>
+    static inline void printf(const char* format,T&&... args)
     {
         #if !defined(NDEBUG)
-       
-        char loc_buf[64];
-        char * temp = loc_buf;
-        va_list arg;
-        va_list copy;
-
-        va_start(arg, format);
-        va_copy(copy, arg);
-        int len = vsnprintf(temp, sizeof(loc_buf), format, copy);
-        va_end(copy);
-        if(len < 0) {
-            va_end(arg);
-            return;
-        };
-        if(len >= sizeof(loc_buf)){
-            temp = (char*) malloc(len+1);
-            if(temp == NULL) {
-                va_end(arg);
-                return;
-            }
-            len = vsnprintf(temp, len+1, format, arg);
-        }
-        va_end(arg);
-       // len = write((uint8_t*)temp, len);
-        TracePrinter::getInstance()->println(temp);
-        if(temp != loc_buf){
-            free(temp);
-        }
+        TracePrinter::getInstance()->_printf(format,std::forward<T>(args)...);
         #endif
     }
     static inline void printTrace(const String& e)
     {
         #if !defined(NDEBUG)
-       TracePrinter::getInstance()->println(e);
+       TracePrinter::getInstance()->_printf(e.c_str());
        #endif
     }
-    static inline void print(const char* e)
+    static inline void println(const String& e)
     {
         #if !defined(NDEBUG)
-       TracePrinter::getInstance()->println(e);
+       TracePrinter::getInstance()->_printf(e.c_str());
        #endif
     }
- 
-    
-    static inline void init(){
+    static inline void startup(){
         #if !defined(NDEBUG)
-        getInstance()->startup();
+        TracePrinter::getInstance()->init();
         #endif
     }
  
@@ -277,21 +245,70 @@ public:
     
 private:
     #if !defined(NDEBUG)
-    void println(const String& e){
+
+    void _printf(const char* format,...)
+    {
+     
         #if !defined(NDEBUG)
         std::lock_guard<rtos::Mutex> lck(_mtx);
-        mail_trace_t *mail = _mail_box.alloc();
-        mail->log = e;
-        _mail_box.put(mail);
+        va_list arg;
+        va_start(arg, format);
+        int len = vsnprintf(_loc_buf, _loc_buf_len, format, arg);
+        if(len < 0) {
+            va_end(arg);
+            return;
+        };
+
+        if(len > _loc_buf_len){
+            int buf_len=(len/_loc_buf_len+1)*_loc_buf_len;
+            char* temp = nullptr;
+            if(_loc_buf == _buffer){
+                temp=(char*)realloc(temp,buf_len+1);
+            }else{
+                temp=(char*)realloc(_loc_buf,buf_len+1);
+            }
+            
+            if(temp) {
+                _loc_buf_len=buf_len;
+                _loc_buf    =temp;
+            }else{
+                va_end(arg);
+                return;
+            }
+            
+            len = vsnprintf(_loc_buf, _loc_buf_len, format, arg);
+            if(len < 0) {
+                va_end(arg);
+                return;
+            };
+            _loc_buf[_loc_buf_len]=0;
+        }
+        va_end(arg);
+        mail_trace_t* mail = _mail_box.alloc();
+        if(mail){
+             mail->log = mail->copy(_loc_buf);
+            _mail_box.put(mail);
+        }
         #endif
     }
     static TracePrinter* getInstance(){
-       static TracePrinter *tracePrinter = new TracePrinter();
+       static TracePrinter* tracePrinter = new TracePrinter();
         return tracePrinter;
     }
-    //rtos::MemoryPool<char*,8> _buf;
+    TracePrinter()
+    {
+        #if !defined(NDEBUG)
+        _loc_buf_len=sizeof(_buffer)-1;
+        _loc_buf=_buffer;
+        _thread = new Thread(osPriorityNormal,1024*6);
+        #endif
+    }
+    char* _loc_buf;
+    char _buffer[256];
+    int _loc_buf_len;
+
     rtos::Mail<mail_trace_t, 8>  _mail_box;
-    rtos::Thread *_thread;
+    rtos::Thread* _thread;
     rtos::Mutex _mtx;
     #endif
 };

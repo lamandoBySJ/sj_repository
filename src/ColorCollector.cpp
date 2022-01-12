@@ -24,14 +24,11 @@ void ColorCollector::task_collection()
 
     _colorSensor.attachMeasurementHook(std::bind(&ColorCollector::invokeCallbackWebSocketClientPostEvent,this,
       std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
-
-    String rtc_datetime,system_clock_datetime;
-    time_t rtc_epoch,system_clock_epoch;
     String lastColor;
     std::array<RGB,10> arrRGB;
     RGB rgb;
     uint16_t max;
-    String log;
+
     while(true){
 
         osEvent evt =  _mail_box_collection.get();
@@ -67,85 +64,76 @@ void ColorCollector::task_collection()
             rgb.G.u16bit   = abs(product_api::get_rgb_properties().g_offset-_rgb_reg.G.u16bit);
             rgb.B.u16bit   = abs(product_api::get_rgb_properties().b_offset-_rgb_reg.B.u16bit);
 
+
             doc.clear();
             doc["version"] = platformio_api::get_version();
+            doc["r_reg"] = _rgb_reg.R.u16bit;
+            doc["g_reg"] = _rgb_reg.G.u16bit;
+            doc["b_reg"] = _rgb_reg.B.u16bit;
+            /*doc["r_on"] = 0;
+            doc["g_on"] = 0;
+            doc["b_on"] = 0;
+            doc["r_off"] = 0;
+            doc["g_off"] = 0;
+            doc["b_off"] = 0;
+            */
 
             JsonArray data = doc.createNestedArray("TowerColor");
-            if(_rgb_reg.R.u16bit<10&&_rgb_reg.G.u16bit<10&&_rgb_reg.B.u16bit<10){
+            if(_rgb_reg.R.u16bit<50&&_rgb_reg.G.u16bit<50&&_rgb_reg.B.u16bit<50){
                 data.add("Black");
             }else if(rgb.R.u16bit<10&&rgb.G.u16bit<10&&rgb.B.u16bit<10){
                  data.add("Black");
             }else{
                 ColorConverter::getColorConverter().color(rgb,data);
             }   
-   
-            system_clock_epoch = SystemClock::LocalDateTime::now(system_clock_datetime);
-            rtc_epoch = RTC::LocalDateTime::now(rtc_datetime);
 
-            if( abs(system_clock_epoch - rtc_epoch) > 43200){
-                Logger::error(String(__PRETTY_FUNCTION__)+String(":"),system_clock_epoch);
-                Logger::error(String(__PRETTY_FUNCTION__)+String(":"),rtc_epoch);
-            }
-            if(Logger::getInstance().get_error_count() > 0){
-                Logger::getInstance().error_functions_get(log);
-                invokeCallbackMqttPublish("error_functions/"+platformio_api::get_device_info().BoardID,log);
-            }
-            doc["unix_timestamp"]= rtc_epoch;
-            doc["datetime"]= rtc_datetime;  
-
-            doc["system_clock_epoch"]= system_clock_epoch;
-            doc["system_clock_datetime"]= system_clock_datetime;  
-            //JsonArray error_logs = doc.createNestedArray("error_functions");
-            //Logger::getInstance().error_log_get(error_logs); 
-            doc["error_functions"] = Logger::getInstance().get_error_count();
-            doc["r_reg"] = _rgb_reg.R.u16bit;
-            doc["g_reg"] = _rgb_reg.G.u16bit;
-            doc["b_reg"] = _rgb_reg.B.u16bit;
-            doc["r_on"] = 0;
-            doc["g_on"] = 0;
-            doc["b_on"] = 0;
-            doc["r_off"] = 0;
-            doc["g_off"] = 0;
-            doc["b_off"] = 0;
             TracePrinter::printTrace(doc["TowerColor"].as<String>());
             switch (mail->eventType)
             {
                 case  MeasEventType::EventSystemMeasure:
                 {
-                    doc["SentFrom"] = platformio_api::get_device_info().BoardID;
-                    doc["r_offset"] = product_api::get_rgb_properties().r_offset;
-                    doc["g_offset"] = product_api::get_rgb_properties().g_offset;
-                    doc["b_offset"] = product_api::get_rgb_properties().b_offset;
-                    doc["type"] = "system_measure";
+                    
                     if(lastColor!=doc["TowerColor"].as<String>()){
+                        doc["SentFrom"] = Device::WiFiMacAddress();
+                        doc["r_offset"] = product_api::get_rgb_properties().r_offset;
+                        doc["g_offset"] = product_api::get_rgb_properties().g_offset;
+                        doc["b_offset"] = product_api::get_rgb_properties().b_offset;
+                        doc["type"] = "system_measure";
                         lastColor = doc["TowerColor"].as<String>();
-                        invokeCallbackMqttPublish("TowerColor/"+platformio_api::get_device_info().BoardID,doc.as<String>());
+                        datetimeHandler();
+                        Serial.printf("%s\n",doc.as<String>().c_str());
+                        AsyncMqttClientService::publish("TowerColor/"+Device::WiFiMacAddress(),doc.as<String>());
                     }
                 }
                 break;
                 case MeasEventType::EventTimeoutMeasure:
                 {
-                    doc["SentFrom"] = platformio_api::get_device_info().BoardID;
+                    if(lastColor == doc["TowerColor"].as<String>()){
+                        doc["repeat"] = true;
+                    }
+                    doc["SentFrom"] = Device::WiFiMacAddress();
                     doc["r_offset"] = product_api::get_rgb_properties().r_offset;
                     doc["g_offset"] = product_api::get_rgb_properties().g_offset;
                     doc["b_offset"] = product_api::get_rgb_properties().b_offset;
                     doc["type"] = "timeout_measure";
-                    invokeCallbackMqttPublish("TowerColor/"+platformio_api::get_device_info().BoardID,doc.as<String>());
+                    datetimeHandler();
+                    AsyncMqttClientService::publish("TowerColor/"+Device::WiFiMacAddress(),doc.as<String>());
                 }
                 break;
                 case  MeasEventType::EventServerMeasure:
                 {
-                    doc["SentFrom"] = platformio_api::get_device_info().BoardID;
+                    doc["SentFrom"] = Device::WiFiMacAddress();
                     doc["r_offset"] = product_api::get_rgb_properties().r_offset;
                     doc["g_offset"] = product_api::get_rgb_properties().g_offset;
                     doc["b_offset"] = product_api::get_rgb_properties().b_offset;
                     doc["type"] = "server_measure";
-                    invokeCallbackMqttPublish("TowerColorMeasure/"+platformio_api::get_device_info().BoardID,doc.as<String>());
+                    datetimeHandler();
+                    AsyncMqttClientService::publish("TowerColorMeasure/"+Device::WiFiMacAddress(),doc.as<String>());
                 }
                 break;
                 case  MeasEventType::EventManulRequest:
                 {
-                    doc["SentFrom"] = platformio_api::get_device_info().BoardID;
+                    doc["SentFrom"] = Device::WiFiMacAddress();
                     doc["r_offset"] = product_api::get_rgb_properties().r_offset;
                     doc["g_offset"] = product_api::get_rgb_properties().g_offset;
                     doc["b_offset"] = product_api::get_rgb_properties().b_offset;
@@ -156,7 +144,8 @@ void ColorCollector::task_collection()
                     }else{
                         doc["data_override"] = true;
                     }
-                    invokeCallbackMqttPublish("TowerColor/"+platformio_api::get_device_info().BoardID,doc.as<String>());
+                    datetimeHandler();
+                    AsyncMqttClientService::publish("TowerColor/"+Device::WiFiMacAddress(),doc.as<String>());
                 }
                 break;
                 

@@ -2,6 +2,7 @@
 #define LOOP_TASK_GUARD_H
 
 #include "platform_debug.h"
+#include <FunctionalInterrupt.h>
 #include "LED.h"
 namespace guard
 {
@@ -31,25 +32,17 @@ public:
         void loop(){
             
             while(true){
-                if(get_loop_state()==Thread::Running){
-                    LED::io_state(LedName::SYS,true);
-                    ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-                    set_signal_id(1);
-                    LED::io_state(LedName::SYS,false);
-                    ThisThread::sleep_for(Kernel::Clock::duration_seconds(3)); 
-                }else{
-                    ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-                }
+                LED::io_state(LedName::SYS,true);
+                ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+                set_signal_id(1);
+                LED::io_state(LedName::SYS,false);
+                ThisThread::sleep_for(Kernel::Clock::duration_seconds(3)); 
             }
         }
-        
+       
         osStatus get_thread_state(){
             std::lock_guard<rtos::Mutex> lck(_mtx);
            return _thread.get_state();
-        }
-        void set_loop_state(osStatus state){
-             std::lock_guard<rtos::Mutex> lck(_mtx);
-            _loopState=state;
         }
 
         void loop_start(){
@@ -87,15 +80,19 @@ public:
             static LoopTaskGuard loopTaskGuard;
             return loopTaskGuard;
         }
-
-        static void set_signal_web_service(){
-            guard::LoopTaskGuard::getLoopTaskGuard().set_signal_id(0,true);
+        void init(){
+            attachInterrupt(0,std::bind(&guard::LoopTaskGuard::set_signal_web_service,this),FALLING);
+        }
+        void set_signal_web_service(){
+            detachInterrupt(0);
+            set_signal_id(0,true);
         }
 protected:
+        /*
         osStatus get_loop_state(){
             std::lock_guard<rtos::Mutex> lck(_mtx);
            return _loopState;
-        }
+        }*/
 private:
         rtos::Mail<guard::mail_control_t, 6> _mail_box_control;
         rtos::Mutex _mtx;

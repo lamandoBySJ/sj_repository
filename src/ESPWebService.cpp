@@ -18,10 +18,9 @@ void ESPWebService::run_web_service()
 
     ThisThread::flags_wait_all(0x0);
     
-    WiFi.softAP(platformio_api::get_web_properties().ap_ssid.c_str(), platformio_api::get_web_properties().ap_pass.c_str());
-    _dnsServer->start(53, "*", WiFi.softAPIP());
+   
+     _dnsServer->start(80, "*", WiFi.softAPIP());
     //server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
-    
      //MDNS.addService("http","tcp",80);
     _server->addHandler(new SPIFFSEditor(FFat, platformio_api::get_web_properties().http_user,platformio_api::get_web_properties().http_pass));
     _server->on("/heap", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -105,10 +104,10 @@ void ESPWebService::run_web_service()
     _server->on("/getSTLB", HTTP_GET, [&](AsyncWebServerRequest *request) {
             DynamicJsonDocument  _docucment(600);
             _docucment["box_mac_id"] = platformio_api::get_web_properties().ap_ssid;
-            _docucment["ssid"] = platformio_api::get_user_properties().ssid;
-            _docucment["pass"] = platformio_api::get_user_properties().pass;
-            _docucment["host"] = platformio_api::get_user_properties().host;
-            _docucment["port"] = platformio_api::get_user_properties().port;
+            _docucment["ssid"] = User::getProperties().ssid;
+            _docucment["pass"] = User::getProperties().pass;
+            _docucment["host"] = User::getProperties().host;
+            _docucment["port"] = User::getProperties().port;
             request->send(200, "application/json", _docucment.as<String>());
     });   
      
@@ -163,11 +162,11 @@ void ESPWebService::run_web_service()
         
             String text=json.as<String>();
             
-            if(FatHelper.writeFile(FFat,platformio_api::get_user_properties().path.c_str(),text) ){
-                platformio_api::get_user_properties().ssid =  jsonObj["ssid"].as<String>();
-                platformio_api::get_user_properties().pass =  jsonObj["pass"].as<String>();
-                platformio_api::get_user_properties().host =  jsonObj["host"].as<String>(); 
-                platformio_api::get_user_properties().port =  jsonObj["port"].as<int>();
+            if(FatHelper.writeFile(FFat,User::getProperties().path.c_str(),text) ){
+                User::getProperties().ssid =  jsonObj["ssid"].as<String>();
+                User::getProperties().pass =  jsonObj["pass"].as<String>();
+                User::getProperties().host =  jsonObj["host"].as<String>(); 
+                User::getProperties().port =  jsonObj["port"].as<int>();
             }else{
                 DynamicJsonDocument  doc(200);
                 doc["ssid"] = "n/a";
@@ -177,7 +176,7 @@ void ESPWebService::run_web_service()
                 text=doc.as<String>();
             }
             TracePrinter::printTrace(text);
-            request->send(200, "application/json",text.c_str());
+            request->send(200, "application/json",text);
     });
         
   
@@ -217,7 +216,7 @@ void ESPWebService::notFound(AsyncWebServerRequest *request) {
     TracePrinter::printTrace("NOT_FOUND: ");
             if(request->method() == HTTP_GET){
                 TracePrinter::printTrace("GET");
-                //request->send(404);
+                request->send(404);
             }
             else if(request->method() == HTTP_POST)
                 TracePrinter::printTrace("POST");
@@ -228,7 +227,7 @@ void ESPWebService::notFound(AsyncWebServerRequest *request) {
             else if(request->method() == HTTP_PATCH)
                 TracePrinter::printTrace("PATCH");
             else if(request->method() == HTTP_HEAD)
-                ::TracePrinter::printTrace("HEAD");
+                TracePrinter::printTrace("HEAD");
             else if(request->method() == HTTP_OPTIONS)
                 TracePrinter::printTrace("OPTIONS");
             else

@@ -191,7 +191,7 @@ uint32_t flags_wait_any_until(uint32_t flags, Kernel::Clock::time_point abs_time
   @note The equivalent functionality is accessible in C via thread_sleep_for.
   @deprecated Pass a chrono duration, not an integer millisecond count. For example use `5s` rather than `5000`.
 */
-MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Pass a chrono duration, not an integer millisecond count. For example use `5s` rather than `5000`.")
+//MBED_DEPRECATED_SINCE("mbed-os-6.0.0", "Pass a chrono duration, not an integer millisecond count. For example use `5s` rather than `5000`.")
 void sleep_for(uint32_t millisec);
 
 /** Sleep for a specified time period:

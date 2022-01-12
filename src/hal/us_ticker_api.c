@@ -5,7 +5,9 @@
 #define CY_IP_MXTCPWM 1
 #define CY_US_TICKER_IRQ_PRIORITY 3
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*
 typedef struct{
 

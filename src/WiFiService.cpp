@@ -1,63 +1,60 @@
 #include "WiFiService.h"
 
 //const char* MQTT_HOST="mslmqtt.mic.com.cn";
-const char* WIFI_SSID="Mitac IOT_GPS";
-const char* WIFI_PASSWORD="6789067890";
 
-void WiFiService::init(){
-    WIFI_SSID    = platformio_api::get_user_properties().ssid.c_str();
-    WIFI_PASSWORD= platformio_api::get_user_properties().pass.c_str();
-    _mtx.lock();
+void WiFiService::eventLooper(){
+   
+
     WiFi.setAutoReconnect(false);
     WiFi.setAutoConnect(false);
     WiFi.mode(WIFI_OFF);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD,_wifi_channel);
-    _mtx.unlock();
-}
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(_ssid,_pass);
 
-void WiFiService::task_system_event_service(){
-   
-    init();
-    mail_wifi_event_t wifi_event;
-    while(true){
+   while(true){
         osEvent evt = _mailBoxWiFiEvent.get();
         if (evt.status == osEventMail) {
-            mail_wifi_event_t* event = ( mail_wifi_event_t *)evt.value.p;
-            TracePrinter::printTrace("[WiFi-event] event: "+String(event->event_id,DEC));
-            if(_mtx.trylock()){
-                switch(event->event_id) {
+            mail_wifi_event_t* mail = ( mail_wifi_event_t *)evt.value.p;
+           
+            TracePrinter::printTrace("[Mail] WiFi-event: "+String(mail->event_id,DEC));
+            if(mail->mode==WIFI_MODE_STA){
+                switch(mail->event_id) {
                     case SYSTEM_EVENT_STA_STOP:
                         WiFi.mode(WIFI_STA);
-                        WiFi.begin(WIFI_SSID, WIFI_PASSWORD,_wifi_channel);
-                        TracePrinter::printTrace("WiFi Connecting...");
+                        WiFi.begin(_ssid,_pass);
+                        TracePrinter::printTrace("*SYSTEM_EVENT_STA_STOP");
                     break;
                     case SYSTEM_EVENT_STA_START:
+                        TracePrinter::printTrace("*SYSTEM_EVENT_STA_START"); 
+                        TimeoutManager::countdown(this);
+
                     break;
                     case SYSTEM_EVENT_STA_GOT_IP:
-                        TracePrinter::printTrace("WiFi connected:SYSTEM_EVENT_STA_GOT_IP,IP address: "+WiFi.localIP().toString());
-                        _mtx_connected.lock();
-                        _connected =true;
-                        _mtx_connected.unlock();
+                        TracePrinter::printTrace("*SYSTEM_EVENT_STA_GOT_IP->IP address: "+WiFi.localIP().toString());
+ 
+                        TimeoutManager::remove(this);
+                         _connected=true;
                         break;
                     case SYSTEM_EVENT_STA_DISCONNECTED:
-                        TracePrinter::printTrace("WiFi lost connection"); 
-                        _mtx_connected.lock();
-                        _connected =false;
-                        _mtx_connected.unlock();
-                        WiFi.mode(WIFI_OFF);
+                        TracePrinter::printTrace("*SYSTEM_EVENT_STA_DISCONNECTED"); 
+                         _connected=false;
+                        WiFiEvent(SYSTEM_EVENT_STA_STOP);
                         break;
                     case SYSTEM_EVENT_STA_CONNECTED:
-                        TracePrinter::printTrace("WiFi connected:SYSTEM_EVENT_STA_CONNECTED"); 
+                        TracePrinter::printTrace("*SYSTEM_EVENT_STA_CONNECTED"); 
                         break;
                     default:
-                    TracePrinter::printTrace("WiFi Event Unknow"); 
+                    TracePrinter::printTrace("[x] WiFi-Event-Unknow"); 
                     break;
                 }
-                _mtx.unlock();
+            }else{
+                WiFi.mode(WIFI_OFF);
+                WiFi.mode(WIFI_MODE_AP);
+                WiFi.enableAP(true);
+                WiFi.softAP(_ap_ssid,_ap_pass);
             }
-            wifi_event.event_id=event->event_id;
-            invokeOnWiFiServiceCallback(wifi_event);
-            _mailBoxWiFiEvent.free(event);
+            onWiFiEvent(mail->event_id);
+            _mailBoxWiFiEvent.free(mail);
         }
     }
 }

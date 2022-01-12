@@ -6,6 +6,9 @@
 #include "AsyncWebSocket.h"
 #include <app/ColorSensor/ColorSensor.h>
 #include "app/RTC/RTC.h"
+#include "AsyncMqttClientService.h"
+#include "ClockTimer.h"
+
 
 enum class MeasEventType : char{
         EventSystemMeasure = 0,
@@ -15,6 +18,7 @@ enum class MeasEventType : char{
         EventWebAppOffset,
         EventWebAppMeasure
 };
+
 namespace os
 {
     struct mail_ws_t{
@@ -30,7 +34,7 @@ public:
     ColorCollector()=delete;
 explicit ColorCollector(ColorSensor& colorSensor):
     _colorSensor(colorSensor)
-    ,_thread(osPriorityNormal,1024*10),doc(1024)
+    ,_thread(osPriorityNormal,1024*10)
     {
   
     }
@@ -64,18 +68,24 @@ explicit ColorCollector(ColorSensor& colorSensor):
         std::lock_guard<rtos::Mutex> lck(_mtx);
         this->_cbMqttPublish=callback;
     }
-    void invokeCallbackMqttPublish(const String &topic,const String &payload)
-    {
-        std::lock_guard<rtos::Mutex> lck(_mtx);
-        if(_cbMqttPublish!=nullptr){
-            _cbMqttPublish.call(topic,payload);
-        }
-    }
+
     void startup();
     void run_task_test();
     void task_collection();
     void post_mail_measure(MeasEventType measEventType,AsyncWebSocketClient *client);
     void delegateMethodOnWsEvent(AsyncWebSocket * server, AsyncWebSocketClient *client, AwsEventType type, void * arg, uint8_t *data, size_t len);
+
+    void datetimeHandler(){
+        if(Logger::getInstance().get_error_count() > 0){
+                Logger::getInstance().error_functions_get(log);
+                AsyncMqttClientService::publish("error_functions/"+Device::WiFiMacAddress(),log);
+        }
+        doc["unix_timestamp"]= ClockTimerRecorder::Epoch();
+        doc["datetime"]= ClockTimerRecorder::Now();  
+            //JsonArray error_logs = doc.createNestedArray("error_functions");
+            //Logger::getInstance().error_log_get(error_logs); 
+        doc["error_functions"] = Logger::getInstance().get_error_count();
+    }
 private:
 
     ColorSensor &_colorSensor;
@@ -89,8 +99,8 @@ private:
 
     String text;
     RGB _rgb_reg;
-    DynamicJsonDocument  doc;
-   
+    StaticJsonDocument<8192>  doc;
+    String log;
 };
 
 #endif

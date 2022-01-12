@@ -48,14 +48,8 @@ void SmartBox::platformio_init()
       default:break;
     }
 
-    String mac_address=WiFi.macAddress();
-    mac_address.replace(":","");
-    platformio_api::get_web_properties().ap_ssid = WiFi.macAddress();
-    PlatformDebug::println("DeviceInfo::BoardID:"+mac_address);
-    ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-    platformio_api::get_device_info().BoardID = mac_address;
-    platformio_api::get_device_info().Family = "k49a";
-    PlatformDebug::println(platformio_api::get_device_info().BoardID);
+    platformio_api::get_web_properties().ap_ssid = Device::WiFiMacAddress();
+    PlatformDebug::println("DeviceInfo::BoardID:"+Device::WiFiMacAddress());
 
     if(FatHelper.init()){
         PlatformDebug::println("OK:File system mounted");
@@ -73,18 +67,17 @@ void SmartBox::platformio_init()
         FatHelper.createDir(FFat,"/data");
         PlatformDebug::println("Dir created:/data");
     }
-    
 
     DynamicJsonDocument  docProperties(1024);
     String text;
-  if(FatHelper.readFile(FFat,platformio_api::get_user_properties().path,text)){
+  if(FatHelper.readFile(FFat,User::getProperties().path,text)){
         PlatformDebug::println(text); 
         DeserializationError error = deserializeJson(docProperties, text);
         if(!error){
-            platformio_api::get_user_properties().ssid =  docProperties["ssid"].as<String>();
-            platformio_api::get_user_properties().pass =  docProperties["pass"].as<String>();
-            platformio_api::get_user_properties().host =  docProperties["host"].as<String>();
-            platformio_api::get_user_properties().port =  docProperties["port"].as<int>();
+            User::getProperties().ssid =  docProperties["ssid"].as<String>();
+            User::getProperties().pass =  docProperties["pass"].as<String>();
+            User::getProperties().host =  docProperties["host"].as<String>();
+            User::getProperties().port =  docProperties["port"].as<int>();
         }
     }
 
@@ -100,41 +93,35 @@ void SmartBox::platformio_init()
         }
     }
 
-    PlatformDebug::println("user_properties::path:"+platformio_api::get_user_properties().path);
-    PlatformDebug::println("user_properties::ssid:"+platformio_api::get_user_properties().ssid);
-    PlatformDebug::println("user_properties::pass:"+platformio_api::get_user_properties().pass);
-    PlatformDebug::println("user_properties::host:"+platformio_api::get_user_properties().host);
-    PlatformDebug::println(String(platformio_api::get_user_properties().port,DEC));
+    PlatformDebug::println("user_properties::path:"+User::getProperties().path);
+    PlatformDebug::println("user_properties::ssid:"+User::getProperties().ssid);
+    PlatformDebug::println("user_properties::pass:"+User::getProperties().pass);
+    PlatformDebug::println("user_properties::host:"+User::getProperties().host);
+    PlatformDebug::println(String(User::getProperties().port,DEC));
 
-    TracePrinter::init();
-
-    guard::LoopTaskGuard::getLoopTaskGuard();
+    guard::LoopTaskGuard::getLoopTaskGuard().init();
 
     LED::io_state_reset();
+    bool ok = RTC::BuildSchedule(DS1307Builder (_mtx,Wire,(uint8_t)13) );
 
-    attachInterrupt(0,&guard::LoopTaskGuard::set_signal_web_service,FALLING);
-
-    bool  ok;
-    ok = RTC::BuildSchedule(DS1307Builder(_mtx,Wire,(uint8_t)13));
-    ok?Logger::cleanup_errors():Logger::error(__PRETTY_FUNCTION__,__LINE__);
+    
+    ok ? Logger::cleanup_errors() : Logger::error(__PRETTY_FUNCTION__,__LINE__);
     LED::io_state(LedName::RTC,ok);
 
     _colorSensor.power_on();
     Wire1.begin(4,15,100000);
     ok = _colorSensor.init();
     LED::io_state(LedName::ALS,ok);
-    
-    TracePrinter::printTrace("\n---------------- "+String(__DATE__)+" "+String(__TIME__)+" ----------------\n");
+
+    time_t t= RTC::LocalDateTime::now(text);
+    TracePrinter::printf("\n---------------- %d,%s----------------\n",t,text.c_str());
+
+    TracePrinter::printTrace("\n---------------- "+platformio_api::get_version()+" ----------------\n");
 }
 
 
 
-void  SmartBox::task_collection_service(){
-      TracePrinter::printTrace("(*collection_->startup()");
-      while(true){
-          ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(1000));
-      }
-  }
+
 
 void SmartBox::color_measure(MeasEventType type)
 {   
@@ -144,33 +131,14 @@ void SmartBox::color_measure(MeasEventType type)
 void  SmartBox::startup(){
     
     try{
-      _topicTimeSync = "{\"DeviceID\":\""+platformio_api::get_device_info().BoardID;
-      _topicTimeSync+="\",\"version\":\""+platformio_api::get_version();
-      _topicTimeSync+="\",\"wifi_channel\":"+String(wifiService.getWiFiChannel(),DEC)+"}";
+        colorCollector.startup();
 
+      _topics.insert(Device::WiFiMacAddress()+"/ServerTime");
+      _topics.insert(Device::WiFiMacAddress()+"/ServerReq");
 
-      _boot_flipper.attach(mbed::callback(this,&SmartBox::restart), std::chrono::seconds(30));
-      _timeout_flipper.attach(mbed::callback(this,&SmartBox::restart), std::chrono::seconds(30));
+      WiFiService::startup(User::getProperties().ssid.c_str(),User::getProperties().pass.c_str(),this);
 
-      colorCollector.setCallbackMqttPublish(mbed::callback(&_asyncMqttClientService,&AsyncMqttClientService::delegateMethodPublish));
-      colorCollector.startup();
-
-
-      _topics.insert(platformio_api::get_device_info().BoardID+"/ServerTime");
-      _topics.insert(platformio_api::get_device_info().BoardID+"/ServerReq");
-
-       
-      _asyncMqttClientService.addOnMqttDisonnectCallback(mbed::callback(this,&SmartBox::onMqttDisconnectCallback));
-      _asyncMqttClientService.addOnMqttConnectCallback(mbed::callback(this,&SmartBox::onMqttConnectCallback));
-      _asyncMqttClientService.addOnMqttMessageCallback(mbed::callback(this,&SmartBox::onMqttMessageCallback));
-      _asyncMqttClientService.addOnMqttSubscribeCallback(mbed::callback(this,&SmartBox::onMqttSubscribeCallback));
-      _asyncMqttClientService.startup();
-
-      
-      wifiService.addOnWiFiServiceCallback(mbed::callback(this,&SmartBox::onWiFiServiceCallback));
-      wifiService.startup();
-       
-      _threadCore.start(mbed::callback(this,&SmartBox::start_core_task));
+      AsyncMqttClientService::startup(User::getProperties().host.c_str(),User::getProperties().port,this);
 
     }catch(const os::thread_error& e){
         TracePrinter::printTrace(e.what());
@@ -178,156 +146,29 @@ void  SmartBox::startup(){
     }
     
 }
-void SmartBox::start_core_task(){
-  DynamicJsonDocument  doc(8192);
-  TracePrinter::printTrace(String(ESP.getFreeHeap(),DEC));
-  ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-  //UBaseType_t x =uxTaskGetStackHighWaterMark(NULL);
-  //TracePrinter::printTrace("stack left:"+String((int)x,DEC));
-  String event_type;
-  unsigned long time_sync_interval=0;
 
-  while(true)
-  {
-    osEvent evt=  _mail_box_on_mqtt_message.get();
-    if (evt.status == osEventMail) {
-        mqtt::mail_on_message_t* mail= (mqtt::mail_on_message_t*)evt.value.p;
-        DeserializationError error = deserializeJson(doc, mail->payload); 
-        if (error){
-            _mail_box_on_mqtt_message.free(mail);
-            continue;
-        }
-        StringHelper::split(_splitTopics,mail->topic.c_str(),"/");
-        if(_splitTopics.size()!=2){
-            _mail_box_on_mqtt_message.free(mail);
-            continue;
-        }
-
-        if(_splitTopics[1]=="ServerTime"){
-              if( (millis() - time_sync_interval) > 3000){
-                  if (doc.containsKey("unix_timestamp")) {
-                    time_t ts = doc["unix_timestamp"].as<uint32_t>();
-                    SystemClock::SyncTime(ts);
-                    RTC::SyncTime(ts);
-                  }
-              }
-
-              if( guard::LoopTaskGuard::getLoopTaskGuard().get_thread_state()!=Thread::Running){
-                  guard::LoopTaskGuard::getLoopTaskGuard().loop_start();        
-                  _boot_flipper.detach();
-                  _timeout_measure_flipper.attach(mbed::callback(this,&SmartBox::timeout_measure),std::chrono::seconds(43200));
-              }
-              time_sync_interval=millis();
-              
-
-        }else if(_splitTopics[1]=="ServerReq"){
-              if (doc.containsKey("url")) {
-                mbed::Timeout _update_timeout;
-                _update_timeout.attach(mbed::callback([]{
-                    ESP.restart();
-                }),std::chrono::seconds(300));
-                start_http_update(doc["url"].as<String>());
-              }else if( doc.containsKey("event_type") ){
-                  event_type=doc["event_type"].as<String>();
-                              switch( str_map_type[event_type] ){
-                                case RequestType::SYSTEM_MEASURE:
-                                colorCollector.post_mail_measure(MeasEventType::EventSystemMeasure,nullptr);
-                                break;
-                                case RequestType::SERVER_MEASURE:
-                                colorCollector.post_mail_measure(MeasEventType::EventServerMeasure,nullptr);
-                                break;
-                                case RequestType::MANUAL_REQUEST:
-                                colorCollector.post_mail_measure(MeasEventType::EventManulRequest,nullptr);
-                                break;
-                                case RequestType::OTA_CANCEL:
-                                break;
-                                case RequestType::FILE_DOWNLOAD:
-                                {
-                                  if (doc.containsKey("file_url")) {
-                                    String path = doc["file_url"].as<String>()+String("/");
-                                    if (doc.containsKey("file_list")) {
-                                        JsonArray filelist=doc["file_list"].as<JsonArray>();
-                                        for(String filename :  filelist){
-                                            _httpDownload.execute(path+filename,filename);
-                                            ThisThread::sleep_for(Kernel::Clock::duration_milliseconds(500));
-                                        }                          
-                                    }                  
-                                  }
-                                }
-                                break;
-                                case RequestType::FILE_DELETE:
-                                {
-                                  if (doc.containsKey("file_list")) {
-                                      JsonArray filelist=doc["file_list"].as<JsonArray>();
-                                      for(String filename :  filelist){
-                                        if(FatHelper.exists(filename) ){
-                                          FatHelper.deleteFile(FFat,filename.c_str());
-                                        }
-                                      }
-                                  }
-                                  
-                                }
-                                break;
-                                case RequestType::ESP_RESTART:
-                                ESP.restart();
-                                break;
-                                default:break;
-                              }                  
-              }
-        }
-        _mail_box_on_mqtt_message.free(mail);  
-    }
-  }
-}
-
-void SmartBox::onMqttMessageCallback(const String& topic,const String& payload)
-{   
-      mqtt::mail_on_message_t* mail=  _mail_box_on_mqtt_message.alloc();
-      mail->topic = topic;
-      mail->payload = payload;
-      _mail_box_on_mqtt_message.put(mail);
-}
-void SmartBox::onMqttConnectCallback(bool sessionPresent)
-{
-    LED::io_state(LedName::MQTT,true);
-    for(auto topic:_topics){
-      TracePrinter::printTrace("subscribe topic:"+topic);
-      _asyncMqttClientService.subscribe(topic);
-    }
-    _timeout_flipper.detach();
-     guard::LoopTaskGuard::getLoopTaskGuard().set_loop_state(Thread::Running);
-}
-void SmartBox::onMqttDisconnectCallback(AsyncMqttClientDisconnectReason reason)
-{
-    LED::io_state(LedName::MQTT,false);
-    guard::LoopTaskGuard::getLoopTaskGuard().set_loop_state(Thread::Ready);
-    _timeout_flipper.attach(mbed::callback(this,&SmartBox::restart), std::chrono::seconds(30));
-    if(wifiService.isConnected()){
-         _asyncMqttClientService.connect();
-    }
-}
-void SmartBox::onMqttSubscribeCallback(uint16_t packetId, uint8_t qos)
-{
-    if(packetId == _topics.size()){
-        _asyncMqttClientService.publish("SmartBox/TimeSync",_topicTimeSync);
-    }
-}
 void  SmartBox::start_web_service()
 {   
   
   if(!espWebService.isRunning()){
-    _boot_flipper.detach();
-    _timeout_flipper.detach();
+    std::lock_guard<rtos::Mutex> lck(_mtxNetwork);
+
     LED::io_state(LedName::WEB,true);
-
-    wifiService.cleanupCallbacks();
-    wifiService.shutdown();
-
-    _asyncMqttClientService.cleanupCallbacks();
-    _asyncMqttClientService.shutdown();
-    _asyncMqttClientService.disconnect();
     
-    guard::LoopTaskGuard::getLoopTaskGuard().set_loop_state(Thread::Ready);
+    guard::LoopTaskGuard::getLoopTaskGuard().loop_stop();
+
+    if(AsyncMqttClientService::connected()){
+        AsyncMqttClientService::disconnect();
+    }
+    AsyncMqttClientService::shutdown();
+  
+    WiFiService::setSoftAP(platformio_api::get_web_properties().ap_ssid.c_str(),platformio_api::get_web_properties().ap_pass.c_str());
+    
+    WiFiService::switchWifiMode(WIFI_MODE_AP);
+
+    ThisThread::sleep_for(1000);
+
+    TimeoutManager::remove(this);
     
     colorCollector.setCallbackWebSocketClientText(mbed::callback(&espWebService,&ESPWebService::delegateMethodWebSocketClientText));
     colorCollector.setCallbackWebSocketClientEvent(mbed::callback(&espWebService,&ESPWebService::delegateMethodWebSocketClientEvent));
@@ -335,47 +176,36 @@ void  SmartBox::start_web_service()
     espWebService.addCallbackOnWsEvent(mbed::callback(&colorCollector,&ColorCollector::delegateMethodOnWsEvent));
     espWebService.startup();  
 
-    wifiService.switch_wifi_mode_to_AP();
     espWebService.set_start_signal();
+   
   }
 }
 void SmartBox::start_http_update(const String& url){
       
-      guard::LoopTaskGuard::getLoopTaskGuard().set_loop_state(Thread::Ready);
+      guard::LoopTaskGuard::getLoopTaskGuard().loop_stop();
 
-      _asyncMqttClientService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_BEGIN\"}");
-      ThisThread::sleep_for(Kernel::Clock::duration_seconds(2));
-      _asyncMqttClientService.cleanupCallbacks();
-      _asyncMqttClientService.shutdown();
  
-
-      //Countdown timeoutChecker("http_update",90);
-     // timeoutChecker.startup();
       ESPhttpUpdate.rebootOnUpdate(false);
       t_httpUpdate_return ret =  ESPhttpUpdate.update(url);
-      PlatformDebug::printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-      _asyncMqttClientService.connect();
-      do{
-        ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-        
-      }while(!_asyncMqttClientService.connected());
-
+      
       switch(ret) {
         case HTTP_UPDATE_FAILED:
             PlatformDebug::printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-             _asyncMqttClientService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
+           // AsyncMqttClientService::publish("upgrade/status/"+Device::WiFiMacAddress(),"{\"status\":\"ESP_OTA_FAIL\"}");
             break;
          case HTTP_UPDATE_NO_UPDATES:
             PlatformDebug::println("HTTP_UPDATE_NO_UPDATES");
-            _asyncMqttClientService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
+           // AsyncMqttClientService::publish("upgrade/status/"+Device::WiFiMacAddress(),"{\"status\":\"ESP_OTA_FAIL\"}");
             break;
         case HTTP_UPDATE_OK:
             PlatformDebug::println("HTTP_UPDATE_OK");
-            _asyncMqttClientService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_OK\"}");
+           // AsyncMqttClientService::publish("upgrade/status/"+Device::WiFiMacAddress(),"{\"status\":\"ESP_OTA_OK\"}");
             break;
-        default:break;
+        default:
+            PlatformDebug::printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+            break;
       }
-      ThisThread::sleep_for(Kernel::Clock::duration_seconds(2));
+
       ESP.restart();
 }
 void SmartBox::start_https_update(const String& url){
@@ -384,20 +214,20 @@ void SmartBox::start_https_update(const String& url){
       switch(ret) {
         case HTTP_UPDATE_FAILED:
             PlatformDebug::printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-            _asyncMqttClientService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
+            AsyncMqttClientService::publish("upgrade/status/"+Device::WiFiMacAddress(),"{\"status\":\"ESP_OTA_FAIL\"}");
             break;
          case HTTP_UPDATE_NO_UPDATES:
             PlatformDebug::println("HTTP_UPDATE_NO_UPDATES");
-            _asyncMqttClientService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_FAIL\"}");
+            AsyncMqttClientService::publish("upgrade/status/"+Device::WiFiMacAddress(),"{\"status\":\"ESP_OTA_FAIL\"}");
             break;
         case HTTP_UPDATE_OK:
             PlatformDebug::println("HTTP_UPDATE_OK");
-            _asyncMqttClientService.publish("upgrade/status/"+platformio_api::get_device_info().BoardID,"{\"status\":\"ESP_OTA_OK\"}");
+            AsyncMqttClientService::publish("upgrade/status/"+Device::WiFiMacAddress(),"{\"status\":\"ESP_OTA_OK\"}");
             break;
         default:break;
       }
       ThisThread::sleep_for(Kernel::Clock::duration_seconds(3));
       ESP.restart();
-  }
+}
 
 

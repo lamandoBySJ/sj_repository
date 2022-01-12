@@ -5,7 +5,8 @@
 #include "platform_debug.h"
 #include "app/RTC/TimeDirector.h"
 #include <sys/time.h>
-
+#include <time.h>
+#include "lwip/apps/sntp.h"
 template<typename T>
 class UniversalTime 
 {
@@ -91,16 +92,24 @@ public:
 	~SystemClock()=delete;
 	static time_t now() 
 	{
-		struct timeval tv;
-		gettimeofday(&tv, NULL);
-		return tv.tv_sec;
+		//struct timeval tv;
+		//gettimeofday(&tv, NULL);
+		//return tv.tv_sec;
+		struct tm t;
+    	getLocalTime(&t, 0);
+		time_t tt = mktime(&t);
+		return tt;
 	}
 	static void SyncTime(time_t t)
 	{
+	
 		struct timeval tv;
 		tv.tv_sec = t;
-		timezone tz;
-		settimeofday(&tv,&tz);
+		tv.tv_usec = 0;
+		//timezone tz;
+		//tz.tz_dsttime = 8;
+		//tz.tz_minuteswest=0;
+		settimeofday(&tv,NULL);
 	}
 private:
 
@@ -116,7 +125,7 @@ class RTC : virtual public UniversalTime<RTC>
             
 {
 public:
-    explicit RTC()=delete;
+    RTC()=delete;
     explicit RTC(const RTC&)=delete;
     explicit RTC(RTC&&)=delete;
     RTC& operator=(const RTC&)=delete;
@@ -142,9 +151,10 @@ public:
 	{
 		Builder().setEpoch(t);
 	}
-private:
+//private:
 	static RTCBase& Builder()
 	{
         return **RTCBase::getInstance();
     }
 };
+
