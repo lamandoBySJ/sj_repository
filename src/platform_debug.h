@@ -3,7 +3,7 @@
 
 #include "app/OLEDScreen/OLEDScreen.h"
 #include "MemoryManager.h"
-//#define NDEBUG 
+#define NDEBUG 
 
 
 class PlatformDebug
@@ -147,10 +147,12 @@ protected:
     }
 
     ~PlatformDebug(){
+        #if !defined(NDEBUG)
         if(_loc_buf!=_buffer){
              free(_loc_buf);
         }
         Serial.printf("~platform_debug\n");
+        #endif
     }
     
 private:
@@ -189,10 +191,12 @@ class TracePrinter
 public:
      ~TracePrinter()
     {
+        #if !defined(NDEBUG)
         free(_loc_buf);
         _thread->terminate();
         delete _thread;
         Serial.println("~TracePrinter");
+        #endif
     }
    
     void  init(){

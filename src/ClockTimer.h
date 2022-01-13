@@ -29,7 +29,7 @@ String _payloadTimeSync;
 class ClockTimer : public TimeoutCountup
 {
 public:
-    ClockTimer():TimeoutCountup(0,30,"ClockTimer")
+    ClockTimer():TimeoutCountup(0,60,"ClockTimer")
     {
 
     }
@@ -42,22 +42,14 @@ public:
         if( abs(rtc_epoch-counter()) < 10){
             syncCounter(rtc_epoch);
         }else{
-            if(++CNT == 10){
+            system_clock_epoch = SystemClock::LocalDateTime::now(system_clock_datetime);
+            syncCounter(system_clock_epoch);
+            PlatformDebug::printf("\nsystem_clock_epoch : %d,%s\n",system_clock_epoch,system_clock_datetime.c_str());
+            if(++CNT == 100){
                 CNT=0;
                 AsyncMqttClientService::publish("SmartBox/TimeSync",TimeSyncBuffer::Payload());
             }
         }
-        system_clock_epoch = SystemClock::LocalDateTime::now(system_clock_datetime);
-        PlatformDebug::printf("\nsystem_clock_epoch : %d,%s\n",system_clock_epoch,system_clock_datetime.c_str());
-
-        //if( abs(EpochRecorder::getEpoch()-rtc_epoch) > 60 ){
-                //PlatformDebug::printf("\n1----------------rtc_epoch %d,%s----------------\n",rtc_epoch,rtc_datetime.c_str());
-              //  system_clock_epoch = SystemClock::LocalDateTime::now(system_clock_datetime);
-               // doc["system_clock_epoch"]= system_clock_epoch;
-                //doc["system_clock_datetime"]= system_clock_datetime;  
-               // rtc_epoch = system_clock_epoch;
-               // rtc_datetime = system_clock_datetime;
-        //}
         reset();
     }
     String& datetime(){

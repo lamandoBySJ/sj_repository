@@ -160,8 +160,7 @@ void  SmartBox::start_web_service()
     if(AsyncMqttClientService::connected()){
         AsyncMqttClientService::disconnect();
     }
-    AsyncMqttClientService::shutdown();
-  
+
     WiFiService::setSoftAP(platformio_api::get_web_properties().ap_ssid.c_str(),platformio_api::get_web_properties().ap_pass.c_str());
     
     WiFiService::switchWifiMode(WIFI_MODE_AP);
