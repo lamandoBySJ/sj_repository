@@ -116,8 +116,8 @@ void ESPWebService::run_web_service()
                 TracePrinter::printTrace(request->getParam("reboot")->value());
             }
             request->send(200, "text/plain", "OK:Reboot Now!" );
-            ThisThread::sleep_for(Kernel::Clock::duration_seconds(3));
-            esp_restart();
+            ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
+            ESP.restart();
     });
     
     _server->on("/als", HTTP_GET, [] (AsyncWebServerRequest *request) {
