@@ -42,9 +42,7 @@ class SyncTimeCountdown : public TimeoutCountdown
 {
 public:
   SyncTimeCountdown():TimeoutCountdown(43200){}
-  void init(){
-    
-  }
+
   void onTimeout() override{
       AsyncMqttClientService::publish("SmartBox/TimeSync",TimeSyncBuffer::Payload());
       guard::LoopTaskGuard::getLoopTaskGuard().set_signal_id(2);
@@ -94,15 +92,7 @@ public:
   void restart(){
     ESP.restart();
   }
-  /*
-  void timeout_measure(){
-    AsyncMqttClientService::publish("SmartBox/TimeSync",_payloadTimeSync);
-    ThisThread::sleep_for(Kernel::Clock::duration_seconds(2));
-    guard::LoopTaskGuard::getLoopTaskGuard().set_signal_id(2);
-    TimeoutManager::countdown();
-    _timeout_measure_flipper.attach(mbed::callback(this,&SmartBox::timeout_measure),std::chrono::seconds(43200));
-  }*/
-  
+
   void system_clock_time_sync(){
       _time_sync_epoch+=60;
       SystemClock::SyncTime(_time_sync_epoch);

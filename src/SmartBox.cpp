@@ -138,7 +138,7 @@ void  SmartBox::startup(){
 
       WiFiService::startup(User::getProperties().ssid.c_str(),User::getProperties().pass.c_str(),this);
 
-      AsyncMqttClientService::startup(User::getProperties().host.c_str(),User::getProperties().port,this);
+      AsyncMqttClientService::startup(User::getProperties().host.c_str(),User::getProperties().port,Device::WiFiMacAddress().c_str(),this);
 
     }catch(const os::thread_error& e){
         TracePrinter::printTrace(e.what());

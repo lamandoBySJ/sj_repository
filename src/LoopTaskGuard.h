@@ -17,6 +17,7 @@ public:
         LoopTaskGuard(){
             _loopState =Thread::Ready;
         }
+
         osStatus set_signal_id(uint32_t id,bool fromISR=false){
             if(_mail_box_control.full()){
                 return osError;
@@ -29,12 +30,29 @@ public:
                 return _mail_box_control.put(mail);
             }
         }
+
+        uint32_t get_signal_id(){
+            osEvent evt;
+            do{
+                evt =  _mail_box_control.get();
+                
+                if(evt.status == osEventMail){
+                    guard::mail_control_t* mail = (guard::mail_control_t*)evt.value.p;
+                    int id=mail->id;
+                    _mail_box_control.free(mail);
+                    return id;
+                }
+            }while(evt.status != osEventMail);
+            return -1;
+        }
         void loop(){
             
             while(true){
                 LED::io_state(LedName::SYS,true);
                 ThisThread::sleep_for(Kernel::Clock::duration_seconds(1));
-                set_signal_id(1);
+                if(AsyncMqttClientService::connected()){
+                     set_signal_id(1);
+                }
                 LED::io_state(LedName::SYS,false);
                 ThisThread::sleep_for(Kernel::Clock::duration_seconds(3)); 
             }
@@ -62,20 +80,7 @@ public:
                LED::io_state(LedName::SYS,false);
            }
         }
-        uint32_t get_signal_id(){
-            osEvent evt;
-            do{
-                evt =  _mail_box_control.get();
-                
-                if(evt.status == osEventMail){
-                    guard::mail_control_t* mail = (guard::mail_control_t*)evt.value.p;
-                    int id=mail->id;
-                    _mail_box_control.free(mail);
-                    return id;
-                }
-            }while(evt.status != osEventMail);
-            return -1;
-        }
+        
         static LoopTaskGuard& getLoopTaskGuard(){
             static LoopTaskGuard loopTaskGuard;
             return loopTaskGuard;

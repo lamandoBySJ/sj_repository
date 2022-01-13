@@ -91,8 +91,7 @@ public:
 
     AsyncMqttClientService()try:
     _threadTx(0,osPriorityNormal,1024*4,nullptr,"_thdTx"),
-    _threadRx(0,osPriorityNormal,1024*4,nullptr,"_thdRx"),
-    _clientId("IPS_MQTT_CLIENT")
+    _threadRx(0,osPriorityNormal,1024*4,nullptr,"_thdRx")
     {   
 
     }catch(const std::bad_alloc &e) {
@@ -214,7 +213,7 @@ public:
     void eventRxLooper();
 
     
-    void init(const char* host,uint16_t port);
+    void init(const char* host,uint16_t port,const char* id="IPSBox");
 
     void addMqttEventListener(MqttEventListener* mqttEventListener){
         if(mqttEventListener){
@@ -231,10 +230,12 @@ public:
            _threadRx.terminate(); 
         }
     }
-    static void startup(const char* host,uint16_t port,MqttEventListener* mqttEventlistner) 
+    static void startup(const char* host,uint16_t port,const char* id,MqttEventListener* mqttEventlistner=nullptr) 
     {   
-        getInstance().addMqttEventListener(mqttEventlistner);
-        getInstance().init(host,port);
+        if(mqttEventlistner!=nullptr){
+            getInstance().addMqttEventListener(mqttEventlistner);
+        }
+        getInstance().init(host,port,id);
     }
     static AsyncMqttClientService& getInstance(){
         static AsyncMqttClientService* clientService=new AsyncMqttClientService();

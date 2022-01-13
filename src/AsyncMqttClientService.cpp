@@ -1,11 +1,11 @@
 #include "AsyncMqttClientService.h"
 
-void AsyncMqttClientService::init(const char* host,uint16_t port)
+void AsyncMqttClientService::init(const char* host,uint16_t port,const char* id)
 {
       std::lock_guard<rtos::Mutex> lck(_mtx);
       _host=host;
       _port=port;
-
+      _clientId = id;
       _client.setWill("STLB_WILL",0,false,_clientId,strlen(_clientId));
       _client.setCleanSession(true);
       _client.setKeepAlive(300);
@@ -132,7 +132,7 @@ void AsyncMqttClientService::eventTxLooper()
                         break;
                         case MqttEventType::MQTT_PUBLISH:
                         {
-                            res  =_client.publish(mail->topic,mail->properties.qos,mail->properties.retain,mail->payload,mail->len);
+                            res = _client.publish(mail->topic,mail->properties.qos,mail->properties.retain,mail->payload,mail->len);
 
                             if(res==0){
                                 for(auto& v : _MqttEventListener){
@@ -153,7 +153,7 @@ void AsyncMqttClientService::eventTxLooper()
                         break;
                         case MqttEventType::MQTT_UNSUBSCRIBE:
                         {
-                            _client.unsubscribe(mail->topic);
+                            res = _client.unsubscribe(mail->topic);
                             if(res==0){
                                 for(auto& v : _MqttEventListener){
                                     v->onMqttUnsubscribeError(mail->topic);
